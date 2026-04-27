@@ -1,0 +1,220 @@
+import 'package:flutter/material.dart';
+import 'package:stoneguard/widgets/banner_ad_widget.dart';
+
+class EducationScreen extends StatefulWidget {
+  const EducationScreen({super.key});
+
+  @override
+  State<EducationScreen> createState() => _EducationScreenState();
+}
+
+class _EducationScreenState extends State<EducationScreen> {
+  final Map<String, bool> _expanded = {};
+
+  void _toggle(String title) {
+    setState(() {
+      _expanded[title] = !(_expanded[title] ?? false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // ── EXISTING CARDS ──
+          _expandableCard(
+            icon: Icons.info_outline,
+            color: Colors.teal,
+            title: 'What Are Calcium Oxalate Stones?',
+            body:
+                'Calcium oxalate stones are the most common type of kidney stone. '
+                'They form when oxalate — a natural compound found in many foods — '
+                'binds with calcium in the urine and crystallizes.',
+          ),
+          _expandableCard(
+            icon: Icons.water_drop,
+            color: Colors.blue,
+            title: 'Hydration Is #1',
+            body:
+                'Drinking enough water is the single most effective way to prevent kidney stones. '
+                'Aim for at least 2.5–3 liters (84–100 oz) of water per day. '
+                'Your urine should be pale yellow.',
+          ),
+          _expandableCard(
+            icon: Icons.no_meals,
+            color: Colors.orange,
+            title: 'High-Oxalate Foods to Limit',
+            body:
+                'Spinach, almonds, rhubarb, beets, Swiss chard, and dark chocolate are very high in oxalate. '
+                'You don\'t have to eliminate them, but portion control matters. '
+                'Pair them with calcium-rich foods to reduce absorption.',
+          ),
+          _expandableCard(
+            icon: Icons.check_circle_outline,
+            color: Colors.green,
+            title: 'Safe Foods to Enjoy',
+            body:
+                'Rice, pasta, white bread, eggs, meat, fish, most fruits (apples, bananas, grapes), '
+                'and dairy products are low in oxalate. Calcium from food (not supplements) actually helps — '
+                'it binds oxalate in the gut before it reaches your kidneys.',
+          ),
+          _expandableCard(
+            icon: Icons.science_outlined,
+            color: Colors.purple,
+            title: 'What About Calcium?',
+            body:
+                'Counterintuitively, eating MORE dietary calcium can help prevent stones — '
+                'it binds oxalate in the gut so less reaches the kidneys. '
+                'However, calcium supplements (pills) may increase risk. '
+                'Get calcium from food like dairy instead.',
+          ),
+          _expandableCard(
+            icon: Icons.local_cafe,
+            color: Colors.brown,
+            title: 'Sodium & Protein',
+            body:
+                'High sodium increases calcium in the urine, raising stone risk. '
+                'High animal protein lowers urine pH and citrate levels. '
+                'Limit processed foods, fast food, and excessive red meat.',
+          ),
+          _expandableCard(
+            icon: Icons.medical_services_outlined,
+            color: Colors.red,
+            title: 'When to See a Doctor',
+            body:
+                'See a doctor immediately if you have severe flank pain, blood in urine, '
+                'fever with stone symptoms, or repeated stones. '
+                'A urologist can order a 24-hour urine test to find your personal risk factors.',
+          ),
+
+          // ── NEW CARDS ──
+          _expandableCard(
+            icon: Icons.emoji_nature,
+            color: Colors.yellow.shade700,
+            title: 'The Power of Citrate',
+            body:
+                'Citrate is one of the most powerful natural defenses against kidney stones. '
+                'It binds calcium in the urine and prevents crystals from forming.\n\n'
+                '• Squeeze fresh lemon or lime into your water daily\n'
+                '• Orange juice and lemonade are good natural sources\n'
+                '• Your doctor may prescribe potassium citrate if dietary sources aren\'t enough\n\n'
+                'Even half a lemon squeezed into water each morning can make a meaningful difference over time.',
+          ),
+          _expandableCard(
+            icon: Icons.quiz_outlined,
+            color: Colors.indigo,
+            title: 'FAQ — Common Questions',
+            body:
+                'Q: Why do I keep getting kidney stones?\n'
+                'A: Recurring stones are usually due to a combination of genetics, diet, and not drinking enough fluids. '
+                'A 24-hour urine test from your urologist can pinpoint your exact risk factors.\n\n'
+                'Q: Is oxalate the only thing I need to worry about?\n'
+                'A: No. Sodium, animal protein, hydration, and low citrate levels all play a role. '
+                'StoneGuard tracks the most important daily factors.\n\n'
+                'Q: Can I ever eat high-oxalate foods again?\n'
+                'A: Yes — moderation and pairing them with calcium-rich foods (like cheese or milk) '
+                'significantly reduces how much oxalate your body absorbs.\n\n'
+                'Q: Does drinking more water really work?\n'
+                'A: Yes — it\'s the single most proven prevention method. '
+                'More fluid = more diluted urine = less chance of crystals forming.\n\n'
+                'Q: What\'s the fastest sign I\'m improving?\n'
+                'A: Pale yellow urine throughout the day means you\'re well hydrated. '
+                'That\'s your daily goal.',
+          ),
+          _expandableCard(
+            icon: Icons.favorite_outline,
+            color: Colors.pink,
+            title: 'Mental Support — You\'re Not Alone',
+            body:
+                'Kidney stones are one of the most painful experiences a person can go through — '
+                'and dealing with them repeatedly takes a real mental toll.\n\n'
+                'It\'s okay to feel frustrated. It\'s okay to have hard days. '
+                'What matters is that you keep showing up for yourself.\n\n'
+                '💧 Every glass of water is an act of self-care.\n'
+                '🥗 Every smart food choice is a win — even small ones.\n'
+                '📓 Tracking your patterns gives you power over your condition.\n'
+                '🏥 Your data can help your doctor help you better.\n\n'
+                'Prevention isn\'t perfect — but consistency over time makes a real difference. '
+                'StoneGuard is here to help you stay consistent, one day at a time.\n\n'
+                'You\'ve survived every stone so far. Keep going. 💪',
+          ),
+
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Text(
+              '⚠️ This app is for tracking and educational purposes only. '
+              'It is not a medical device and does not offer medical advice. '
+              'Always consult a doctor.',
+              style: TextStyle(fontSize: 12, color: Colors.black54),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox (height: 16),
+          const BannerAdWidget(),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _expandableCard({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String body,
+  }) {
+    final isOpen = _expanded[title] ?? false;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _toggle(title),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, color: color, size: 24),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    isOpen ? Icons.expand_less : Icons.expand_more,
+                    color: Colors.grey,
+                  ),
+                ],
+              ),
+              if (isOpen) ...[
+                const SizedBox(height: 10),
+                const Divider(height: 1),
+                const SizedBox(height: 10),
+                Text(
+                  body,
+                  style: const TextStyle(fontSize: 14, height: 1.6),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
