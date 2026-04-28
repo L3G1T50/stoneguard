@@ -15,7 +15,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
   int _bestStreak = 0;
   double _avgDailyOxalate = 0;
   double _avgDailyWater = 0;
-  double _oxalateGoal = 100;
+  double _oxalateGoal = 200;
   double _waterGoal = 80;
   bool _isLoading = true;
   int _totalDaysLogged = 0;
@@ -38,56 +38,74 @@ class _ProgressScreenState extends State<ProgressScreen> {
   @override
   void initState() {
     super.initState();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _loadProgressData();
   }
 
   Future<void> _loadProgressData() async {
     final prefs = await SharedPreferences.getInstance();
-    _oxalateGoal = prefs.getDouble('oxalate_goal') ?? 100.0;
-    _waterGoal = prefs.getDouble('water_goal') ?? 80.0;
 
-    final logJson = prefs.getStringList('oxalate_log') ?? [];
+    _oxalateGoal = prefs.getDouble('goal_oxalate') ?? 200.0;
+    _waterGoal   = prefs.getDouble('goal_water')   ?? 80.0;
+
+    // ── Read daily_history for past days ──
+    final dailyHistoryRaw = prefs.getStringList('daily_history') ?? [];
     final Map<String, double> dailyOxalate = {};
-    for (final entry in logJson) {
-      final map = jsonDecode(entry);
-      final date = map['date'] as String;
-      final mg = (map['oxalate_mg'] as num).toDouble();
-      dailyOxalate[date] = (dailyOxalate[date] ?? 0) + mg;
+    final Map<String, double> dailyWater   = {};
+
+    for (final entry in dailyHistoryRaw) {
+      try {
+        final map  = jsonDecode(entry) as Map<String, dynamic>;
+        final date = map['date'] as String?;
+        if (date == null) continue;
+        dailyOxalate[date] = (map['oxalate_mg'] as num?)?.toDouble() ?? 0.0;
+        dailyWater[date]   = (map['water_oz']   as num?)?.toDouble() ?? 0.0;
+      } catch (_) {}
     }
 
-    _totalDaysLogged = dailyOxalate.keys.length;//
+    // ── Inject TODAY's live data directly from its own keys ──
+    final now     = DateTime.now();
+    final todayKey = '${now.year}_${now.month}_${now.day}';
+    final todayStr =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
 
-    final waterLog = prefs.getStringList('water_log') ?? [];
-    final Map<String, double> dailyWater = {};
-    for (final entry in waterLog) {
-      final map = jsonDecode(entry);
-      final date = map['date'] as String;
-      final oz = (map['oz'] as num).toDouble();
-      dailyWater[date] = (dailyWater[date] ?? 0) + oz;
-    }
+    final todayOx    = prefs.getDouble('oxalate_$todayKey') ?? 0.0;
+    final todayWater = prefs.getDouble('water_$todayKey')   ?? 0.0;
 
-    final today = DateTime.now();
+    // Override whatever history says with today's live values
+    dailyOxalate[todayStr] = todayOx;
+    dailyWater[todayStr]   = todayWater;
+
+    _totalDaysLogged = dailyOxalate.values.where((v) => v > 0).length;
+
+    // ── Build last 7 days ──
+    final List<String> dayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     final List<Map<String, dynamic>> weeklyData = [];
-    final List<String> dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     for (int i = 6; i >= 0; i--) {
-      final day = today.subtract(Duration(days: i));
+      final day    = now.subtract(Duration(days: i));
       final dateKey =
-          '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
-      final oxalate = dailyOxalate[dateKey] ?? 0.0;
-      final water = dailyWater[dateKey] ?? 0.0;
+          '${day.year}-${day.month.toString().padLeft(2,'0')}-${day.day.toString().padLeft(2,'0')}';
+      final ox  = dailyOxalate[dateKey] ?? 0.0;
+      final wat = dailyWater[dateKey]   ?? 0.0;
+
       weeklyData.add({
-        'label': dayLabels[day.weekday % 7],
-        'date': dateKey,
-        'oxalate': oxalate,
-        'water': water,
-        'oxalateGoalMet': oxalate > 0 && oxalate <= _oxalateGoal,
-        'waterGoalMet': water >= _waterGoal,
+        'label'        : dayLabels[day.weekday % 7],
+        'date'         : dateKey,
+        'oxalate'      : ox,
+        'water'        : wat,
+        'oxalateGoalMet': ox > 0 && ox <= _oxalateGoal,
+        'waterGoalMet' : wat >= _waterGoal,
       });
     }
 
+    // ── Streak ──
     int streak = 0;
-    int best = prefs.getInt('best_streak') ?? 0;
+    int best   = prefs.getInt('best_streak') ?? 0;
     for (int i = weeklyData.length - 1; i >= 0; i--) {
       if (weeklyData[i]['oxalateGoalMet'] && weeklyData[i]['waterGoalMet']) {
         streak++;
@@ -97,27 +115,27 @@ class _ProgressScreenState extends State<ProgressScreen> {
     }
     if (streak > best) {
       best = streak;
-      prefs.setInt('best_streak', best);
+      await prefs.setInt('best_streak', best);
     }
 
-    final daysWithData = weeklyData.where((d) => d['oxalate'] > 0).toList();
-    final avgOx = daysWithData.isEmpty
+    // ── Averages ──
+    final daysWithOx = weeklyData.where((d) => (d['oxalate'] as double) > 0).toList();
+    final avgOx = daysWithOx.isEmpty
         ? 0.0
-        : daysWithData.fold(0.0, (sum, d) => sum + (d['oxalate'] as double)) /
-        daysWithData.length;
-    final daysWithWater = weeklyData.where((d) => d['water'] > 0).toList();
+        : daysWithOx.fold(0.0, (s, d) => s + (d['oxalate'] as double)) / daysWithOx.length;
+
+    final daysWithWater = weeklyData.where((d) => (d['water'] as double) > 0).toList();
     final avgWater = daysWithWater.isEmpty
         ? 0.0
-        : daysWithWater.fold(0.0, (sum, d) => sum + (d['water'] as double)) /
-        daysWithWater.length;
+        : daysWithWater.fold(0.0, (s, d) => s + (d['water'] as double)) / daysWithWater.length;
 
     setState(() {
-      _weeklyData = weeklyData;
-      _currentStreak = streak;
-      _bestStreak = best;
+      _weeklyData      = weeklyData;
+      _currentStreak   = streak;
+      _bestStreak      = best;
       _avgDailyOxalate = avgOx;
-      _avgDailyWater = avgWater;
-      _isLoading = false;
+      _avgDailyWater   = avgWater;
+      _isLoading       = false;
     });
   }
 

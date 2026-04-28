@@ -50,8 +50,8 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   }
 
   @override
-  void didUpdateWidget(covariant HomeShieldScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _loadData();
   }
 
@@ -77,7 +77,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     }).toList();
     updated.add(entry);
 
-    if (updated.length > 90) updated.removeAt(0);
+    if (updated.length > 730) updated.removeAt(0);
 
     await prefs.setStringList('daily_history', updated);
   }

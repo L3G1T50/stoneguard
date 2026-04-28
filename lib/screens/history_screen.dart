@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart';
+import 'doctor_view_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -11,7 +14,7 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
   List<Map<String, dynamic>> _history = [];
-  int _waterGoal = 80;
+  double _waterGoal = 80;
   int? _selectedIndex;
   int _selectedDays = 7;
 
@@ -31,7 +34,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Future<void> _loadHistory() async {
     final prefs = await SharedPreferences.getInstance();
-    final goal = prefs.getInt('water_goal') ?? 80;
+    final goal = prefs.getDouble('goal_water') ?? 80;
     final now = DateTime.now();
     final List<Map<String, dynamic>> days = [];
 
@@ -143,12 +146,52 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.medical_information, color: Colors.white),
+            tooltip: 'Doctor view',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const DoctorViewScreen(),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.ios_share, color: Colors.white),
+            tooltip: 'Export for doctor',
+            onPressed: _showExportSheet,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+            children: [
+        // ── DOCTOR TOOLS HINT ───────────────────────────────
+        Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Icon(Icons.local_hospital, color: Color(0xFF00BCD4), size: 18),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Use the icons in the top right to view charts for your doctor and export a summary of your last 30–365 days.',
+                style: TextStyle(
+                  color: Color(0xFF607D8B),
+                  fontSize: 11,
+                  height: 1.3,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+
             // ── TIMEFRAME SELECTOR ────────────────────────────
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -679,6 +722,157 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   fontSize: 13)),
         ],
       ),
+    );
+  }
+  void _showExportSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Export History for Your Doctor',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.calendar_view_month),
+              title: const Text('Last 30 days'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _exportHistory(daysBack: 30);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.calendar_view_month_outlined),
+              title: const Text('Last 6 months'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _exportHistory(daysBack: 180);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.calendar_today_outlined),
+              title: const Text('Last 12 months'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _exportHistory(daysBack: 365);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _exportHistory({required int daysBack}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final dailyHistoryRaw = prefs.getStringList('daily_history') ?? [];
+
+    if (dailyHistoryRaw.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No history available to export yet.'),
+        ),
+      );
+      return;
+    }
+
+    // Load current goals so we can show them and compute "goal met?"
+    final waterGoal = prefs.getDouble('goal_water') ?? 80.0;
+    final oxGoal = prefs.getDouble('goal_oxalate') ?? 200.0;
+
+    final now = DateTime.now();
+    final cutoff = now.subtract(Duration(days: daysBack));
+    final List<Map<String, dynamic>> entries = [];
+
+    for (final entry in dailyHistoryRaw) {
+      try {
+        final map = jsonDecode(entry) as Map<String, dynamic>;
+        final dateStr = map['date'] as String?;
+        if (dateStr == null) continue;
+
+        final date = DateTime.tryParse(dateStr);
+        if (date == null) continue;
+
+        if (date.isBefore(cutoff)) continue;
+
+        final water = (map['water_oz'] as num?)?.toDouble() ?? 0.0;
+        final oxalate = (map['oxalate_mg'] as num?)?.toDouble() ?? 0.0;
+
+        final waterMet = water >= waterGoal;
+        final oxMet = oxalate > 0 && oxalate <= oxGoal;
+
+        entries.add({
+          'date': dateStr,
+          'water_oz': water,
+          'oxalate_mg': oxalate,
+          'waterGoalMet': waterMet,
+          'oxGoalMet': oxMet,
+        });
+      } catch (_) {
+        // ignore malformed entries
+      }
+    }
+
+    if (entries.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No entries in the last $daysBack days to export.'),
+        ),
+      );
+      return;
+    }
+
+    // Sort by date ascending
+    entries.sort((a, b) => (a['date'] as String).compareTo(b['date'] as String));
+
+    // Build a doctor-friendly CSV/text report
+    final buffer = StringBuffer();
+    buffer.writeln('StoneGuard History Export');
+    buffer.writeln('Timeframe: Last $daysBack days');
+    buffer.writeln('Water goal: ${waterGoal.toStringAsFixed(0)} oz/day');
+    buffer.writeln('Oxalate limit: ${oxGoal.toStringAsFixed(0)} mg/day');
+    buffer.writeln('');
+    buffer.writeln(
+      'Note: This report is based on values you logged in StoneGuard and is for discussion with your healthcare provider only.',
+    );
+    buffer.writeln(
+      'It does not replace medical advice. Always follow your doctor or urologist’s recommendations.',
+    );
+    buffer.writeln('');
+    buffer.writeln(
+      'Date,Water (oz),Oxalate (mg),Water goal met?,Oxalate goal met?',
+    );
+
+    for (final e in entries) {
+      final water = (e['water_oz'] as double).toStringAsFixed(0);
+      final ox = (e['oxalate_mg'] as double).toStringAsFixed(1);
+      final waterMet = (e['waterGoalMet'] as bool) ? 'Yes' : 'No';
+      final oxMet = (e['oxGoalMet'] as bool) ? 'Yes' : 'No';
+
+      buffer.writeln(
+        '${e['date']},$water,$ox,$waterMet,$oxMet',
+      );
+    }
+
+    final text = buffer.toString();
+
+    await Share.share(
+      text,
+      subject: 'StoneGuard Kidney Stone History',
     );
   }
 }

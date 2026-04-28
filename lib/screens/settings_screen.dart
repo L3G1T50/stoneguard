@@ -133,6 +133,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (confirmed == true) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
+// Re-set flags that should survive a data clear
+      await prefs.setBool('seen_onboarding', true);
       await _loadSettings();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
