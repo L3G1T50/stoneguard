@@ -119,7 +119,7 @@ class _JournalScreenState extends State<JournalScreen> {
     final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
     final ampm = date.hour >= 12 ? 'PM' : 'AM';
     final min  = date.minute.toString().padLeft(2, '0');
-    return '${days[date.weekday - 1]}, ${months[date.month - 1]} ${date.day} . $hour:$min $ampm';
+    return '${days[date.weekday - 1]}, ${months[date.month - 1]} ${date.day} \u00B7 $hour:$min $ampm';
   }
 
   @override
