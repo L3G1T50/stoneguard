@@ -1,14 +1,10 @@
 // ─── SETTINGS SCREEN ────────────────────────────────────────────
-import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../widgets/banner_ad_widget.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
-import '../widgets/banner_ad_widget.dart';
 import '../screens/about_screen.dart';
 import '../main.dart';
 

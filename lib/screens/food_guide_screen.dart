@@ -75,7 +75,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
       ..sort((a, b) => a.name.compareTo(b.name));
   }
 
-  Future<void> _showTodaysLog(BuildContext context) async {
+  Future<void> _showTodaysLog() async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now();
     final logKey = 'oxalate_log_${now.year}_${now.month}_${now.day}';
@@ -84,6 +84,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
     List<String> log = prefs.getStringList(logKey) ?? [];
     double total = prefs.getDouble(oxKey) ?? 0;
 
+    if (!mounted) return;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -431,7 +432,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                   ),
                   const SizedBox(width: 10),
                   GestureDetector(
-                    onTap: () => _showTodaysLog(context),
+                    onTap: () => _showTodaysLog(),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(

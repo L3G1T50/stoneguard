@@ -42,9 +42,11 @@ class _JournalScreenState extends State<JournalScreen> {
     };
     raw.add(jsonEncode(entry));
     await prefs.setStringList('journal_entries', raw);
+    if (!mounted) return;
     _noteController.clear();
     setState(() => _painLevel = 1);
     _loadEntries();
+    if (!mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('Journal entry saved!')));
   }

@@ -212,7 +212,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: borderColor),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -233,7 +233,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: borderColor),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -258,7 +258,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: borderColor),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
       height: 200,
@@ -320,7 +320,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                             child: Container(
                               width: 26,
                               height: 1.5,
-                              color: goalLine.withOpacity(0.5),
+                              color: goalLine.withValues(alpha: 0.5),
                             ),
                           ),
                         ],
@@ -353,14 +353,14 @@ class _ProgressScreenState extends State<ProgressScreen> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: bothMet
-              ? accentGreen.withOpacity(0.35)
+              ? accentGreen.withValues(alpha: 0.35)
               : noData
-              ? borderColor.withOpacity(0.5)
+              ? borderColor.withValues(alpha: 0.5)
               : borderColor,
         ),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2)),
         ],
@@ -375,10 +375,10 @@ class _ProgressScreenState extends State<ProgressScreen> {
               height: 48,
               decoration: BoxDecoration(
                 color: bothMet
-                    ? accentGreen.withOpacity(0.1)
+                    ? accentGreen.withValues(alpha: 0.1)
                     : noData
-                    ? borderColor.withOpacity(0.3)
-                    : accentTeal.withOpacity(0.08),
+                    ? borderColor.withValues(alpha: 0.3)
+                    : accentTeal.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Column(
@@ -408,7 +408,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   ? Row(
                 children: [
                   Icon(Icons.remove_circle_outline,
-                      color: mutedColor.withOpacity(0.5), size: 16),
+                      color: mutedColor.withValues(alpha: 0.5), size: 16),
                   const SizedBox(width: 6),
                   const Text('No data logged',
                       style: TextStyle(
@@ -516,8 +516,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 height: 32,
                 decoration: BoxDecoration(
                   color: bothMet
-                      ? accentGreen.withOpacity(0.1)
-                      : Colors.orange.withOpacity(0.1),
+                      ? accentGreen.withValues(alpha: 0.1)
+                      : Colors.orange.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -618,10 +618,10 @@ class _ProgressScreenState extends State<ProgressScreen> {
             color: unlocked ? const Color(0xFFF0FAF4) : cardColor,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: unlocked ? accentGreen.withOpacity(0.35) : borderColor,
+              color: unlocked ? accentGreen.withValues(alpha: 0.35) : borderColor,
             ),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 1)),
+              BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 1)),
             ],
           ),
           child: Row(
@@ -629,7 +629,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
               Text(a['icon'] as String,
                   style: TextStyle(
                       fontSize: 28,
-                      color: unlocked ? null : Colors.grey.withOpacity(0.4))),
+                      color: unlocked ? null : Colors.grey.withValues(alpha: 0.4))),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(

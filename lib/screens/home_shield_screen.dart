@@ -5,9 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../widgets/banner_ad_widget.dart';
-import '../screens/settings_screen.dart';
-import '../screens/food_guide_screen.dart';
-import '../models/food_item.dart';
 import '../main.dart';
 
 
@@ -85,18 +82,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     await prefs.setStringList('daily_history', updated);
   }
 
-  Future<void> _logFoodToHistory(String foodName, double foodOxalateMg) async {
-    final prefs = await SharedPreferences.getInstance();
-    final today = DateTime.now();
-    final dateStr =
-        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-
-    final key = 'food_log_$dateStr';
-    final existing = prefs.getStringList(key) ?? [];
-    existing.add('$foodName (${foodOxalateMg.toStringAsFixed(0)}mg)');
-    await prefs.setStringList(key, existing);
-  }
-
   Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
     final savedWater = prefs.getDouble('water_$_todayKey') ?? 0;
@@ -127,6 +112,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
       waterOz = newOz;
     });
     await prefs.setDouble('water_$_todayKey', newOz);
+    await _saveTodayToHistory();
   }
 
   Future<void> _resetAll() async {
@@ -142,6 +128,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     await prefs.setDouble('water_$_todayKey', 0);
     await prefs.setDouble('oxalate_$_todayKey', 0);
     await prefs.setStringList('oxalate_log_$_todayKey', []);
+    await _saveTodayToHistory();
   }
 
   Color _shieldColor(double progress) {

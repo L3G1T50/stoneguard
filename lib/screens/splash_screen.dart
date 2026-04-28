@@ -1,6 +1,5 @@
 // ─── SPLASH SCREEN ────────────────────────────────────────────
 import 'package:flutter/material.dart';
-import '../models/food_item.dart';
 import '../main.dart';
 
 class SplashScreen extends StatefulWidget {
