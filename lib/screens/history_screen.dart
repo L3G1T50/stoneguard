@@ -50,7 +50,6 @@ class _HistoryScreenState extends State<HistoryScreen>
     _loadHistory();
   }
 
-  // Auto-refresh whenever the tab becomes visible
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -138,7 +137,6 @@ class _HistoryScreenState extends State<HistoryScreen>
     return grouped;
   }
 
-  // ── BUILD ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -203,7 +201,7 @@ class _HistoryScreenState extends State<HistoryScreen>
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Use the icons in the top right to view charts for your doctor and export a summary of your last 30–365 days.',
+                      'Use the icons in the top right to view charts for your doctor and export a summary of your last 30 days up to 2 years.',
                       style: TextStyle(
                         color: _accentDark,
                         fontSize: 12,
@@ -438,7 +436,6 @@ class _HistoryScreenState extends State<HistoryScreen>
     );
   }
 
-  // ── SUMMARY STATS ─────────────────────────────────────────────────────────
   Widget _buildSummaryStats() {
     final daysWithData = _history.where((d) => (d['oxalate_mg'] as num) > 0).toList();
     final daysGoalMet  = _history.where((d) => (d['water_oz'] as num) >= _waterGoal).length;
@@ -461,17 +458,17 @@ class _HistoryScreenState extends State<HistoryScreen>
         const SizedBox(height: 10),
         Row(
           children: [
-            Expanded(child: _summaryCard('📅 Days Logged',  '${daysWithData.length}',                  _accent)),
+            Expanded(child: _summaryCard('📅 Days Logged',    '${daysWithData.length}',              _accent)),
             const SizedBox(width: 10),
-            Expanded(child: _summaryCard('💧 Water Goal Met', '$daysGoalMet days',                     _accentDark)),
+            Expanded(child: _summaryCard('💧 Water Goal Met', '$daysGoalMet days',                   _accentDark)),
           ],
         ),
         const SizedBox(height: 10),
         Row(
           children: [
-            Expanded(child: _summaryCard('⚗️ Avg Oxalate', '${avgOx.toStringAsFixed(0)} mg',           _oxColor(avgOx))),
+            Expanded(child: _summaryCard('⚗️ Avg Oxalate',   '${avgOx.toStringAsFixed(0)} mg',       _oxColor(avgOx))),
             const SizedBox(width: 10),
-            Expanded(child: _summaryCard('💧 Avg Water',   '${avgWater.toStringAsFixed(0)} oz',         _accent)),
+            Expanded(child: _summaryCard('💧 Avg Water',     '${avgWater.toStringAsFixed(0)} oz',   _accent)),
           ],
         ),
         const SizedBox(height: 24),
@@ -498,7 +495,6 @@ class _HistoryScreenState extends State<HistoryScreen>
     );
   }
 
-  // ── DAY DETAIL CARD ───────────────────────────────────────────────────────
   Widget _buildDayDetail(int idx) {
     final day       = _history[idx];
     final date      = day['date'] as String;
@@ -520,7 +516,6 @@ class _HistoryScreenState extends State<HistoryScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
@@ -541,7 +536,6 @@ class _HistoryScreenState extends State<HistoryScreen>
                 ],
               ),
             ),
-            // Stats
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
               child: Row(
@@ -613,7 +607,6 @@ class _HistoryScreenState extends State<HistoryScreen>
     );
   }
 
-  // ── HELPERS ───────────────────────────────────────────────────────────────
   Widget _dot(Color color, String label) {
     return Row(
       children: [
@@ -645,7 +638,6 @@ class _HistoryScreenState extends State<HistoryScreen>
     );
   }
 
-  // ── EXPORT SHEET ──────────────────────────────────────────────────────────
   void _showExportSheet() {
     showModalBottomSheet(
       context: context,
@@ -684,6 +676,11 @@ class _HistoryScreenState extends State<HistoryScreen>
               title: const Text('Last 12 months', style: TextStyle(color: _textPri)),
               onTap: () { Navigator.pop(ctx); _exportHistory(daysBack: 365); },
             ),
+            ListTile(
+              leading: const Icon(Icons.calendar_month, color: _accentDark),
+              title: const Text('Last 2 years', style: TextStyle(color: _textPri)),
+              onTap: () { Navigator.pop(ctx); _exportHistory(daysBack: 730); },
+            ),
             const SizedBox(height: 8),
           ],
         ),
@@ -721,9 +718,9 @@ class _HistoryScreenState extends State<HistoryScreen>
         final oxalate = (map['oxalate_mg'] as num?)?.toDouble() ?? 0.0;
 
         entries.add({
-          'date':        dateStr,
-          'water_oz':    water,
-          'oxalate_mg':  oxalate,
+          'date':         dateStr,
+          'water_oz':     water,
+          'oxalate_mg':   oxalate,
           'waterGoalMet': water >= waterGoal,
           'oxGoalMet':    oxalate > 0 && oxalate <= oxGoal,
         });
