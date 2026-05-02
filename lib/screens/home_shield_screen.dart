@@ -43,7 +43,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     super.initState();
     _requestNotificationPermission();
     _animController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 600));
+        vsync: this, duration: const Duration(milliseconds: 900));
     _animation = Tween<double>(begin: 0, end: 0).animate(
         CurvedAnimation(parent: _animController, curve: Curves.easeOut));
     _loadData();
@@ -105,7 +105,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     final prefs = await SharedPreferences.getInstance();
     final newOz = (waterOz + oz).clamp(0.0, goalOz);
     _animation = Tween<double>(begin: _previousOz / goalOz, end: newOz / goalOz)
-        .animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+        .animate(CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic));
     _animController.forward(from: 0);
     setState(() {
       _previousOz = waterOz;
@@ -118,7 +118,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   Future<void> _resetAll() async {
     final prefs = await SharedPreferences.getInstance();
     _animation = Tween<double>(begin: waterOz / goalOz, end: 0)
-        .animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+        .animate(CurvedAnimation(parent: _animController, curve: Curves.easeInCubic));
     _animController.forward(from: 0);
     setState(() {
       _previousOz = 0;

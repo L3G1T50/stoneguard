@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
 import 'setup_screen.dart';
+import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
+
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
@@ -19,62 +21,61 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     );
+
     _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
         curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
       ),
     );
+
     _scaleAnim = Tween<double>(begin: 0.75, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
         curve: const Interval(0.0, 0.6, curve: Curves.easeOutBack),
       ),
     );
-    _controller.forward();
 
-    // Decide where to go after the splash
+    _controller.forward();
     _goNext();
   }
 
   Future<void> _goNext() async {
-    // Keep your existing 2.8s splash duration
     await Future.delayed(const Duration(milliseconds: 2800));
 
     final prefs = await SharedPreferences.getInstance();
-    final seenOnboarding = prefs.getBool('seen_onboarding') ?? false;
+
+    final hasSeenOnboarding =
+        prefs.getBool('has_seen_onboarding') ?? false;
+    final hasCompletedSetup =
+        prefs.getBool('has_completed_setup') ?? false;
 
     if (!mounted) return;
 
-    if (seenOnboarding) {
-      // User has already completed setup → go to main home
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          transitionDuration: const Duration(milliseconds: 600),
-          pageBuilder: (context, animation, secondaryAnimation) =>
-          const MyHomePage(),
-          transitionsBuilder:
-              (context, animation, secondaryAnimation, child) =>
-              FadeTransition(opacity: animation, child: child),
-        ),
-      );
+    Widget nextScreen;
+
+    if (!hasSeenOnboarding) {
+      nextScreen = const OnboardingScreen();
+    } else if (!hasCompletedSetup) {
+      nextScreen = const SetupScreen();
     } else {
-      // First‑time user → go to SetupScreen
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          transitionDuration: const Duration(milliseconds: 600),
-          pageBuilder: (context, animation, secondaryAnimation) =>
-          const SetupScreen(),
-          transitionsBuilder:
-              (context, animation, secondaryAnimation, child) =>
-              FadeTransition(opacity: animation, child: child),
-        ),
-      );
+      nextScreen = const MyHomePage();
     }
+
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 600),
+        pageBuilder: (context, animation, secondaryAnimation) => nextScreen,
+        transitionsBuilder:
+            (context, animation, secondaryAnimation, child) =>
+            FadeTransition(opacity: animation, child: child),
+      ),
+    );
   }
 
   @override
@@ -95,12 +96,15 @@ class _SplashScreenState extends State<SplashScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('StoneGuard',
-                    style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF263238),
-                        letterSpacing: 1.2)),
+                const Text(
+                  'StoneGuard',
+                  style: TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF263238),
+                    letterSpacing: 1.2,
+                  ),
+                ),
                 const SizedBox(height: 48),
                 Container(
                   height: 200,
@@ -121,52 +125,63 @@ class _SplashScreenState extends State<SplashScreen>
                       )
                     ],
                   ),
-                  child: Stack(alignment: Alignment.center, children: [
-                    Icon(Icons.shield,
-                        size: 130, color: Colors.grey.shade400),
-                    Positioned(
-                      top: 48,
-                      child: Container(
-                        width: 75,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.white.withValues(alpha: 0.65),
-                              Colors.white.withValues(alpha: 0.0),
-                            ],
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Icon(
+                        Icons.shield,
+                        size: 130,
+                        color: Colors.grey.shade400,
+                      ),
+                      Positioned(
+                        top: 48,
+                        child: Container(
+                          width: 75,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.white.withValues(alpha: 0.65),
+                                Colors.white.withValues(alpha: 0.0),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    ShaderMask(
-                      shaderCallback: (b) => const LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Color(0xFF00B8D4), Color(0xFF0097A7)],
-                      ).createShader(b),
-                      child: const Icon(Icons.water_drop,
-                          size: 54, color: Colors.white),
-                    ),
-                  ]),
+                      ShaderMask(
+                        shaderCallback: (b) => const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Color(0xFF00B8D4), Color(0xFF0097A7)],
+                        ).createShader(b),
+                        child: const Icon(
+                          Icons.water_drop,
+                          size: 54,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 36),
-                Text('Protect Your Health',
-                    style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey.shade500,
-                        letterSpacing: 0.8)),
+                Text(
+                  'Protect Your Health',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey.shade500,
+                    letterSpacing: 0.8,
+                  ),
+                ),
                 const SizedBox(height: 48),
                 const SizedBox(
                   height: 28,
                   width: 28,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.5,
-                    valueColor:
-                    AlwaysStoppedAnimation<Color>(Colors.teal),
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.teal),
                   ),
                 ),
               ],
