@@ -187,6 +187,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     const textGrey = PdfColor.fromInt(0xFF607D8B);
     const divider = PdfColor.fromInt(0xFFCFD8DC);
     const rowAlt = PdfColor.fromInt(0xFFF5FAFA);
+    // Semi-transparent white for subtitle text on the teal banner
+    const whiteSubtle = PdfColor.fromInt(0xCCFFFFFF); // ~80% opacity white
 
     final pdf = pw.Document();
 
@@ -290,12 +292,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     pw.Text('Kidney Stone Prevention & Tracking',
                         style: pw.TextStyle(
                             fontSize: 10,
-                            color: PdfColors.white70)),
+                            color: whiteSubtle)),
                   ],
                 ),
                 pw.Text('Generated: $dateStr',
                     style: pw.TextStyle(
-                        fontSize: 9, color: PdfColors.white70)),
+                        fontSize: 9, color: whiteSubtle)),
               ],
             ),
           ),
