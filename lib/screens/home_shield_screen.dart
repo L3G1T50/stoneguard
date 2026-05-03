@@ -8,7 +8,6 @@ import '../widgets/banner_ad_widget.dart';
 import '../main.dart';
 import 'settings_screen.dart';
 
-// ─── BACKGROUND STYLE ENUM ───────────────────────────────────────────
 enum BgStyle { tealGradient, warmGlow }
 
 class HomeShieldScreen extends StatefulWidget {
@@ -28,8 +27,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   double _previousOz = 0;
   String _userName = '';
   String _avatarPath = '';
-
-  // ─── A/B TOGGLE ────────────────────────────────────────────────────────────
   BgStyle _bgStyle = BgStyle.tealGradient;
 
   String get _todayKey {
@@ -104,9 +101,10 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   Future<void> _addWater(double oz) async {
     final prefs = await SharedPreferences.getInstance();
     final newOz = (waterOz + oz).clamp(0.0, goalOz);
-    _animation = Tween<double>(begin: _previousOz / goalOz, end: newOz / goalOz)
-        .animate(
-            CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic));
+    _animation =
+        Tween<double>(begin: _previousOz / goalOz, end: newOz / goalOz).animate(
+            CurvedAnimation(
+                parent: _animController, curve: Curves.easeOutCubic));
     _animController.forward(from: 0);
     setState(() {
       _previousOz = waterOz;
@@ -181,22 +179,24 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
         foregroundColor: Colors.white,
         elevation: 2,
         padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       child: Text('+$oz oz',
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          style:
+              const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
     );
   }
 
-  // ─── OPTION 1: TEAL GRADIENT HEADER BACKGROUND ───────────────────────────
+  // ─── BACKGROUND BUILDERS ────────────────────────────────────────────────
   Widget _buildTealGradientBackground(Widget child) {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
-          end: Alignment(0, 0.55), // fades to white by mid-screen
+          end: Alignment(0, 0.55),
           colors: [
-            Color(0xFF01696F), // StoneGuard teal
+            Color(0xFF01696F),
             Color(0xFF2A9DA5),
             Color(0xFFE0F4F5),
             Colors.white,
@@ -208,13 +208,11 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     );
   }
 
-  // ─── OPTION 4: WARM OFF-WHITE + RADIAL GLOW BACKGROUND ────────────────────
   Widget _buildWarmGlowBackground(Widget child) {
     return Container(
-      color: const Color(0xFFF5F7FA), // warm off-white base
+      color: const Color(0xFFF5F7FA),
       child: Stack(
         children: [
-          // Radial teal glow centered near the shield area
           Positioned(
             top: -60,
             left: 0,
@@ -237,7 +235,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
               ),
             ),
           ),
-          // Subtle secondary warm glow (bottom-right accent)
           Positioned(
             bottom: 80,
             right: -60,
@@ -261,53 +258,49 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     );
   }
 
-  // ─── A/B TOGGLE PILL ──────────────────────────────────────────────────────────
+  // ─── A/B TOGGLE (full-width row, sits BELOW the header) ──────────────────
   Widget _buildAbToggle() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _toggleChip('Teal', BgStyle.tealGradient, Icons.gradient),
-          _toggleChip('Warm', BgStyle.warmGlow, Icons.blur_circular),
-        ],
-      ),
+    return Row(
+      children: [
+        Expanded(child: _toggleChip('Option 1 — Teal', BgStyle.tealGradient)),
+        const SizedBox(width: 10),
+        Expanded(child: _toggleChip('Option 4 — Warm', BgStyle.warmGlow)),
+      ],
     );
   }
 
-  Widget _toggleChip(String label, BgStyle style, IconData icon) {
+  Widget _toggleChip(String label, BgStyle style) {
     final selected = _bgStyle == style;
     return GestureDetector(
       onTap: () => setState(() => _bgStyle = style),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        padding: const EdgeInsets.symmetric(vertical: 9),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF01696F) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
+          color: selected
+              ? const Color(0xFF01696F)
+              : Colors.black.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(12),
           boxShadow: selected
-              ? [BoxShadow(
-                  color: const Color(0xFF01696F).withValues(alpha: 0.30),
-                  blurRadius: 8, offset: const Offset(0, 2))]
+              ? [
+                  BoxShadow(
+                      color:
+                          const Color(0xFF01696F).withValues(alpha: 0.30),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2))
+                ]
               : [],
         ),
-        child: Row(
-          children: [
-            Icon(icon,
-                size: 14,
-                color: selected ? Colors.white : Colors.grey.shade600),
-            const SizedBox(width: 5),
-            Text(label,
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: selected ? Colors.white : Colors.grey.shade600)),
-          ],
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: selected ? Colors.white : Colors.grey.shade600,
+            ),
+          ),
         ),
       ),
     );
@@ -321,39 +314,44 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     final Color oxColor = _oxalateColor(oxalateMg);
     final double oxProgress = (oxalateMg / goalMg).clamp(0.0, 1.0);
 
-    // Adjust text colors for teal header (white text on dark teal)
     final bool onDarkHeader = _bgStyle == BgStyle.tealGradient;
     final Color headerTextColor =
         onDarkHeader ? Colors.white : Colors.grey.shade800;
-    final Color headerSubColor =
-        onDarkHeader ? Colors.white.withValues(alpha: 0.75) : Colors.grey.shade500;
-    final Color iconColor =
-        onDarkHeader ? Colors.white.withValues(alpha: 0.85) : Colors.grey.shade600;
+    final Color headerSubColor = onDarkHeader
+        ? Colors.white.withValues(alpha: 0.75)
+        : Colors.grey.shade500;
+    final Color iconColor = onDarkHeader
+        ? Colors.white.withValues(alpha: 0.85)
+        : Colors.grey.shade600;
 
     final Widget scrollContent = SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: Column(children: [
 
-          // ── HEADER ──
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Row(children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: onDarkHeader
-                    ? Colors.white.withValues(alpha: 0.25)
-                    : Colors.teal.shade100,
-                backgroundImage: _avatarPath.isNotEmpty
-                    ? FileImage(File(_avatarPath))
-                    : null,
-                child: _avatarPath.isEmpty
-                    ? Icon(Icons.person,
-                        color: onDarkHeader ? Colors.white : Colors.teal,
-                        size: 22)
-                    : null,
-              ),
-              const SizedBox(width: 10),
-              Column(
+          // ── HEADER ROW (avatar + name + settings only) ──
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: onDarkHeader
+                      ? Colors.white.withValues(alpha: 0.25)
+                      : Colors.teal.shade100,
+                  backgroundImage: _avatarPath.isNotEmpty
+                      ? FileImage(File(_avatarPath))
+                      : null,
+                  child: _avatarPath.isEmpty
+                      ? Icon(Icons.person,
+                          color:
+                              onDarkHeader ? Colors.white : Colors.teal,
+                          size: 22)
+                      : null,
+                ),
+                const SizedBox(width: 10),
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
@@ -366,14 +364,11 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                           color: headerTextColor),
                     ),
                     Text('Stay hydrated. Stay protected.',
-                        style:
-                            TextStyle(fontSize: 13, color: headerSubColor)),
-                  ]),
-            ]),
-            Row(children: [
-              // ── A/B TOGGLE ──
-              _buildAbToggle(),
-              const SizedBox(width: 4),
+                        style: TextStyle(
+                            fontSize: 13, color: headerSubColor)),
+                  ],
+                ),
+              ]),
               IconButton(
                 icon: Icon(Icons.settings_outlined, color: iconColor),
                 tooltip: 'Settings',
@@ -383,10 +378,14 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                       builder: (_) => const SettingsScreen()),
                 ),
               ),
-            ]),
-          ]),
+            ],
+          ),
 
-          const SizedBox(height: 28),
+          // ── A/B TOGGLE ROW (its own full-width row, no overflow possible) ──
+          const SizedBox(height: 12),
+          _buildAbToggle(),
+
+          const SizedBox(height: 24),
 
           // ── SHIELD RING ──
           AnimatedBuilder(
@@ -413,8 +412,8 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                           value: animProgress,
                           strokeWidth: 16,
                           backgroundColor: Colors.transparent,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(animColor))),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                              animColor))),
                   Container(
                     height: 162,
                     width: 162,
@@ -430,7 +429,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                               ]
                             : [
                                 const Color(0xFFF7F9FB),
-                                const Color(0xFFE0E5EC)
+                                const Color(0xFFE0E5EC),
                               ],
                       ),
                       boxShadow: [
@@ -459,7 +458,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                                     end: Alignment.bottomCenter,
                                     colors: [
                                       Colors.white.withValues(alpha: 0.65),
-                                      Colors.white.withValues(alpha: 0.0)
+                                      Colors.white.withValues(alpha: 0.0),
                                     ]),
                               ))),
                       _tealDropIcon(),
@@ -492,8 +491,8 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
           const SizedBox(height: 4),
           Text(_motivationalText(waterProgress),
               textAlign: TextAlign.center,
-              style:
-                  TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+              style: TextStyle(
+                  fontSize: 13, color: Colors.grey.shade600)),
 
           if (waterOz < goalOz) ...[
             const SizedBox(height: 6),
@@ -503,7 +502,8 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
               decoration: BoxDecoration(
                   color: Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(20)),
-              child: Text('${remaining.toStringAsFixed(0)} oz remaining',
+              child: Text(
+                  '${remaining.toStringAsFixed(0)} oz remaining',
                   style: TextStyle(
                       fontSize: 12, color: Colors.grey.shade600)),
             ),
@@ -517,7 +517,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              // Warm glow: frosted white card; Teal: subtle color gradient
               color: _bgStyle == BgStyle.warmGlow
                   ? Colors.white.withValues(alpha: 0.80)
                   : null,
@@ -645,7 +644,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
       ),
     );
 
-    // Wrap in the selected background
     return Scaffold(
       body: _bgStyle == BgStyle.tealGradient
           ? _buildTealGradientBackground(scrollContent)
