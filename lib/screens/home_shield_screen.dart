@@ -1,5 +1,6 @@
 // ─── HOME SHIELD SCREEN ──────────────────────────────────────────────
 import 'dart:io';
+import 'dart:math';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,6 +9,164 @@ import '../widgets/banner_ad_widget.dart';
 import '../main.dart';
 import 'settings_screen.dart';
 
+// ─── WAVE PAINTER ────────────────────────────────────────────────────
+class _WavePainter extends CustomPainter {
+  final double fillLevel;   // 0.0 – 1.0
+  final double wavePhase;   // driven by wave animation
+  final Color waterColor;
+
+  _WavePainter({
+    required this.fillLevel,
+    required this.wavePhase,
+    required this.waterColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final radius = size.width / 2;
+    final center = Offset(radius, radius);
+
+    // clip to circle
+    canvas.clipPath(Path()..addOval(Rect.fromCircle(center: center, radius: radius - 1)));
+
+    final waterTop = size.height * (1 - fillLevel);
+    final amplitude = size.height * 0.028;
+
+    final wavePath = Path();
+    wavePath.moveTo(0, waterTop);
+
+    for (double x = 0; x <= size.width; x++) {
+      final y = waterTop +
+          sin((x / size.width * 2 * pi) + wavePhase) * amplitude +
+          sin((x / size.width * 3 * pi) + wavePhase * 1.3) * (amplitude * 0.5);
+      wavePath.lineTo(x, y);
+    }
+
+    wavePath.lineTo(size.width, size.height);
+    wavePath.lineTo(0, size.height);
+    wavePath.close();
+
+    // back wave (lighter, offset)
+    final backWavePath = Path();
+    backWavePath.moveTo(0, waterTop + amplitude);
+    for (double x = 0; x <= size.width; x++) {
+      final y = waterTop +
+          amplitude +
+          sin((x / size.width * 2 * pi) + wavePhase + pi * 0.6) * amplitude;
+      backWavePath.lineTo(x, y);
+    }
+    backWavePath.lineTo(size.width, size.height);
+    backWavePath.lineTo(0, size.height);
+    backWavePath.close();
+
+    // draw back wave
+    canvas.drawPath(
+      backWavePath,
+      Paint()..color = waterColor.withValues(alpha: 0.25),
+    );
+
+    // draw front wave with gradient
+    final gradientPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          waterColor.withValues(alpha: 0.55),
+          waterColor.withValues(alpha: 0.85),
+        ],
+      ).createShader(Rect.fromLTWH(0, waterTop, size.width, size.height - waterTop));
+    canvas.drawPath(wavePath, gradientPaint);
+  }
+
+  @override
+  bool shouldRepaint(_WavePainter old) =>
+      old.fillLevel != fillLevel ||
+      old.wavePhase != wavePhase ||
+      old.waterColor != waterColor;
+}
+
+// ─── RING PAINTER (glow arc) ─────────────────────────────────────────
+class _GlowRingPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+  final double strokeWidth;
+  final bool isGlow;
+
+  _GlowRingPainter({
+    required this.progress,
+    required this.color,
+    required this.strokeWidth,
+    this.isGlow = false,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width - strokeWidth) / 2;
+
+    // track
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -pi / 2,
+      2 * pi,
+      false,
+      Paint()
+        ..color = color.withValues(alpha: isGlow ? 0.08 : 0.15)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.round,
+    );
+
+    if (progress <= 0) return;
+
+    // glow blur layer
+    if (isGlow) {
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        -pi / 2,
+        2 * pi * progress,
+        false,
+        Paint()
+          ..color = color.withValues(alpha: 0.35)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth + 10
+          ..strokeCap = StrokeCap.round
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+      );
+    }
+
+    // main arc
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -pi / 2,
+      2 * pi * progress,
+      false,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.round,
+    );
+
+    // bright tip dot
+    if (progress > 0.01) {
+      final angle = -pi / 2 + 2 * pi * progress;
+      final tipX = center.dx + radius * cos(angle);
+      final tipY = center.dy + radius * sin(angle);
+      canvas.drawCircle(
+        Offset(tipX, tipY),
+        strokeWidth / 2 + 1,
+        Paint()..color = Colors.white.withValues(alpha: 0.9),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GlowRingPainter old) =>
+      old.progress != progress || old.color != color;
+}
+
+// ─── MAIN SCREEN ─────────────────────────────────────────────────────
 class HomeShieldScreen extends StatefulWidget {
   const HomeShieldScreen({super.key});
   @override
@@ -15,14 +174,24 @@ class HomeShieldScreen extends StatefulWidget {
 }
 
 class HomeShieldScreenState extends State<HomeShieldScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   double waterOz = 0;
   double oxalateMg = 0;
   double goalOz = 80;
   double goalMg = 200;
-  late AnimationController _animController;
-  late Animation<double> _animation;
+
+  // fill + number animation
+  late AnimationController _fillController;
+  late Animation<double> _fillAnimation;
   double _previousOz = 0;
+
+  // continuous wave animation
+  late AnimationController _waveController;
+
+  // goal-reached pulse
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
   String _userName = '';
   String _avatarPath = '';
 
@@ -42,11 +211,33 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   void initState() {
     super.initState();
     _requestNotificationPermission();
-    _animController = AnimationController(
+
+    // fill controller (per tap)
+    _fillController = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 900));
-    _animation = Tween<double>(begin: 0, end: 0).animate(
-        CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+    _fillAnimation = Tween<double>(begin: 0, end: 0).animate(
+        CurvedAnimation(parent: _fillController, curve: Curves.easeOutCubic));
+
+    // continuous wave
+    _waveController = AnimationController(
+        vsync: this, duration: const Duration(seconds: 2))
+      ..repeat();
+
+    // goal pulse
+    _pulseController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 600));
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.06).animate(
+        CurvedAnimation(parent: _pulseController, curve: Curves.easeOut));
+
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _fillController.dispose();
+    _waveController.dispose();
+    _pulseController.dispose();
+    super.dispose();
   }
 
   @override
@@ -89,33 +280,40 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
       _previousOz = savedWater;
       _userName = prefs.getString('user_name') ?? '';
       _avatarPath = prefs.getString('avatar_path') ?? '';
-      _animation =
+      _fillAnimation =
           Tween<double>(begin: savedWater / goalOz, end: savedWater / goalOz)
-              .animate(_animController);
+              .animate(_fillController);
     });
   }
 
   Future<void> _addWater(double oz) async {
     final prefs = await SharedPreferences.getInstance();
     final newOz = (waterOz + oz).clamp(0.0, goalOz);
-    _animation =
-        Tween<double>(begin: _previousOz / goalOz, end: newOz / goalOz).animate(
-            CurvedAnimation(
-                parent: _animController, curve: Curves.easeOutCubic));
-    _animController.forward(from: 0);
+    _fillAnimation =
+        Tween<double>(begin: _previousOz / goalOz, end: newOz / goalOz)
+            .animate(CurvedAnimation(
+                parent: _fillController, curve: Curves.easeOutCubic));
+    _fillController.forward(from: 0);
     setState(() {
       _previousOz = waterOz;
       waterOz = newOz;
     });
     await prefs.setDouble('water_$_todayKey', newOz);
     await _saveTodayToHistory();
+
+    // trigger goal pulse
+    if (newOz >= goalOz) {
+      _pulseController.forward(from: 0).then((_) => _pulseController.reverse());
+    }
   }
 
   Future<void> _resetAll() async {
     final prefs = await SharedPreferences.getInstance();
-    _animation = Tween<double>(begin: waterOz / goalOz, end: 0).animate(
-        CurvedAnimation(parent: _animController, curve: Curves.easeInCubic));
-    _animController.forward(from: 0);
+    _fillAnimation =
+        Tween<double>(begin: waterOz / goalOz, end: 0).animate(
+            CurvedAnimation(
+                parent: _fillController, curve: Curves.easeInCubic));
+    _fillController.forward(from: 0);
     setState(() {
       _previousOz = 0;
       waterOz = 0;
@@ -127,12 +325,22 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     await _saveTodayToHistory();
   }
 
-  Color _shieldColor(double progress) {
-    if (progress >= 1.0) return const Color(0xFF00BCD4);
-    if (progress >= 0.75) return const Color(0xFF66BB6A);
-    if (progress >= 0.50) return const Color(0xFFFFEE58);
-    if (progress >= 0.25) return const Color(0xFFFFA726);
-    return const Color(0xFF78909C);
+  // ── smooth lerp color through gradient stops ──────────────────────
+  Color _lerpShieldColor(double p) {
+    const stops = [
+      (t: 0.00, c: Color(0xFF78909C)),
+      (t: 0.25, c: Color(0xFFFFA726)),
+      (t: 0.50, c: Color(0xFFFFEE58)),
+      (t: 0.75, c: Color(0xFF66BB6A)),
+      (t: 1.00, c: Color(0xFF00BCD4)),
+    ];
+    for (int i = 0; i < stops.length - 1; i++) {
+      if (p <= stops[i + 1].t) {
+        final t = (p - stops[i].t) / (stops[i + 1].t - stops[i].t);
+        return Color.lerp(stops[i].c, stops[i + 1].c, t)!;
+      }
+    }
+    return stops.last.c;
   }
 
   Color _oxalateColor(double mg) {
@@ -157,17 +365,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     return '🛡️ Start hydrating to build your shield!';
   }
 
-  Widget _tealDropIcon() {
-    return ShaderMask(
-      shaderCallback: (b) => const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFF00B8D4), Color(0xFF0097A7)],
-      ).createShader(b),
-      child: const Icon(Icons.water_drop, size: 40, color: Colors.white),
-    );
-  }
-
   Widget _waterButton(int oz) {
     return ElevatedButton(
       onPressed: () => _addWater(oz.toDouble()),
@@ -176,19 +373,137 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
         foregroundColor: Colors.white,
         elevation: 2,
         padding: const EdgeInsets.symmetric(vertical: 14),
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       child: Text('+$oz oz',
-          style:
-              const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+    );
+  }
+
+  // ── main water meter widget ───────────────────────────────────────
+  Widget _buildWaterMeter() {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_fillAnimation, _waveController, _pulseAnimation]),
+      builder: (context, _) {
+        final fillProg = _fillAnimation.value.clamp(0.0, 1.0);
+        final ringColor = _lerpShieldColor(fillProg);
+        final wavePhase = _waveController.value * 2 * pi;
+
+        // counting oz display
+        final displayOz = (_previousOz +
+                (_fillAnimation.value * goalOz - _previousOz))
+            .clamp(0.0, goalOz);
+
+        return ScaleTransition(
+          scale: _pulseAnimation,
+          child: SizedBox(
+            height: 230,
+            width: 230,
+            child: Stack(alignment: Alignment.center, children: [
+
+              // ── glow ring (blurred back layer) ──
+              SizedBox(
+                height: 230,
+                width: 230,
+                child: CustomPaint(
+                  painter: _GlowRingPainter(
+                    progress: fillProg,
+                    color: ringColor,
+                    strokeWidth: 18,
+                    isGlow: true,
+                  ),
+                ),
+              ),
+
+              // ── sharp ring (front) ──
+              SizedBox(
+                height: 230,
+                width: 230,
+                child: CustomPaint(
+                  painter: _GlowRingPainter(
+                    progress: fillProg,
+                    color: ringColor,
+                    strokeWidth: 14,
+                  ),
+                ),
+              ),
+
+              // ── inner circle with wave fill ──
+              ClipOval(
+                child: Container(
+                  height: 170,
+                  width: 170,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFFF0F4F8),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.12),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8)),
+                    ],
+                  ),
+                  child: CustomPaint(
+                    painter: _WavePainter(
+                      fillLevel: fillProg,
+                      wavePhase: wavePhase,
+                      waterColor: ringColor,
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ShaderMask(
+                            shaderCallback: (b) => LinearGradient(
+                              colors: [ringColor, ringColor.withValues(alpha: 0.7)],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ).createShader(b),
+                            child: const Icon(Icons.water_drop,
+                                size: 28, color: Colors.white),
+                          ),
+                          const SizedBox(height: 2),
+                          // counting number
+                          Text(
+                            displayOz.toStringAsFixed(0),
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: fillProg > 0.45
+                                  ? Colors.white
+                                  : const Color(0xFF2E3A45),
+                              shadows: fillProg > 0.45
+                                  ? [Shadow(color: Colors.black26, blurRadius: 4)]
+                                  : null,
+                            ),
+                          ),
+                          Text(
+                            'of ${goalOz.toInt()} oz',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: fillProg > 0.45
+                                  ? Colors.white.withValues(alpha: 0.85)
+                                  : Colors.grey.shade500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ]),
+          ),
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final double waterProgress = (waterOz / goalOz).clamp(0.0, 1.0);
-    final Color activeColor = _shieldColor(waterProgress);
+    final Color activeColor = _lerpShieldColor(waterProgress);
     final double remaining = (goalOz - waterOz).clamp(0.0, goalOz);
     final Color oxColor = _oxalateColor(oxalateMg);
     final double oxProgress = (oxalateMg / goalMg).clamp(0.0, 1.0);
@@ -210,8 +525,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                       ? FileImage(File(_avatarPath))
                       : null,
                   child: _avatarPath.isEmpty
-                      ? const Icon(Icons.person,
-                          color: Colors.white, size: 22)
+                      ? const Icon(Icons.person, color: Colors.white, size: 22)
                       : null,
                 ),
                 const SizedBox(width: 10),
@@ -219,9 +533,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _userName.isEmpty
-                          ? 'Today\'s Shield'
-                          : 'Hey, $_userName! 👋',
+                      _userName.isEmpty ? 'Today\'s Shield' : 'Hey, $_userName! 👋',
                       style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -240,8 +552,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                 tooltip: 'Settings',
                 onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => const SettingsScreen()),
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
                 ),
               ),
             ],
@@ -249,117 +560,27 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
 
           const SizedBox(height: 28),
 
-          // ── SHIELD RING ──
-          AnimatedBuilder(
-            animation: _animation,
-            builder: (context, child) {
-              final animProgress = _animation.value;
-              final animColor = _shieldColor(animProgress);
-              return SizedBox(
-                height: 220,
-                width: 220,
-                child: Stack(alignment: Alignment.center, children: [
-                  SizedBox(
-                      height: 220,
-                      width: 220,
-                      child: CircularProgressIndicator(
-                          value: 1,
-                          strokeWidth: 16,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                              animColor.withValues(alpha: 0.18)))),
-                  SizedBox(
-                      height: 220,
-                      width: 220,
-                      child: CircularProgressIndicator(
-                          value: animProgress,
-                          strokeWidth: 16,
-                          backgroundColor: Colors.transparent,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(animColor))),
-                  Container(
-                    height: 162,
-                    width: 162,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFFF7F9FB),
-                          Color(0xFFE0E5EC),
-                        ],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.10),
-                            blurRadius: 24,
-                            spreadRadius: 2,
-                            offset: const Offset(0, 14)),
-                      ],
-                    ),
-                    child: Stack(alignment: Alignment.center, children: [
-                      Icon(Icons.shield,
-                          size: 90, color: Colors.grey.shade400),
-                      Positioned(
-                          top: 44,
-                          child: Container(
-                              width: 60,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(18),
-                                gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      Colors.white.withValues(alpha: 0.65),
-                                      Colors.white.withValues(alpha: 0.0),
-                                    ]),
-                              ))),
-                      _tealDropIcon(),
-                    ]),
-                  ),
-                ]),
-              );
-            },
-          ),
+          // ── WATER METER ──
+          _buildWaterMeter(),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
-          // ── OZ DISPLAY ──
-          RichText(
-              textAlign: TextAlign.center,
-              text: TextSpan(children: [
-                TextSpan(
-                    text: waterOz.toStringAsFixed(0),
-                    style: TextStyle(
-                        fontSize: 42,
-                        fontWeight: FontWeight.bold,
-                        color: activeColor)),
-                TextSpan(
-                    text: ' / ${goalOz.toInt()} oz',
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey.shade500)),
-              ])),
-          const SizedBox(height: 4),
+          // ── MOTIVATIONAL TEXT ──
           Text(_motivationalText(waterProgress),
               textAlign: TextAlign.center,
-              style:
-                  TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
 
           if (waterOz < goalOz) ...[
             const SizedBox(height: 6),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
               decoration: BoxDecoration(
                   color: Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(20)),
               child: Text(
-                  '${remaining.toStringAsFixed(0)} oz remaining',
-                  style: TextStyle(
-                      fontSize: 12, color: Colors.grey.shade600)),
+                '${remaining.toStringAsFixed(0)} oz remaining',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
             ),
           ],
 
@@ -442,8 +663,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                     value: oxProgress,
                     minHeight: 10,
                     backgroundColor: Colors.grey.shade200,
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(oxColor),
+                    valueColor: AlwaysStoppedAnimation<Color>(oxColor),
                   ),
                 ),
                 const SizedBox(height: 12),
