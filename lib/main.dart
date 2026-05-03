@@ -1,4 +1,4 @@
-// ─── MAIN ENTRY POINT ────────────────────────────────────────────────────────
+// ─── MAIN ENTRY POINT ──────────────────────────────────────────────────────────────────────────────
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -61,7 +61,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// ─── MAIN SHELL ───────────────────────────────────────────────────────────────
+// ─── MAIN SHELL ───────────────────────────────────────────────────────────────────────────
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -84,6 +84,12 @@ class _MainShellState extends State<MainShell> {
     setState(() => _currentIndex = index);
   }
 
+  // Called by FoodGuideScreen when the user logs a food item.
+  // Refreshes the shield so the oxalate total updates immediately.
+  void _onLogFood(double mg, String name) {
+    _shieldKey.currentState?.loadData();
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<Widget> screens = [
@@ -103,7 +109,7 @@ class _MainShellState extends State<MainShell> {
             ),
           ),
         ],
-        body: const FoodGuideScreen(),
+        body: FoodGuideScreen(onLogFood: _onLogFood),
       ),
 
       // ── 2: History (swapped) ──
