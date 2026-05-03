@@ -7,9 +7,9 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home_shield_screen.dart';
+import 'screens/food_guide_screen.dart';
 import 'screens/journal_screen.dart';
 import 'screens/history_progress_screen.dart';
-import 'screens/food_guide_screen.dart';
 import 'screens/education_screen.dart';
 import 'screens/settings_screen.dart';
 import 'theme/app_theme.dart';
@@ -74,9 +74,9 @@ class _MainShellState extends State<MainShell> {
 
   final List<Widget> _screens = const [
     HomeShieldScreen(),
+    FoodGuideScreen(),
     JournalScreen(),
     HistoryProgressScreen(),
-    FoodGuideScreen(),
     EducationScreen(),
   ];
 
@@ -97,6 +97,11 @@ class _MainShellState extends State<MainShell> {
             label: 'Shield',
           ),
           NavigationDestination(
+            icon: Icon(Icons.restaurant_menu_outlined),
+            selectedIcon: Icon(Icons.restaurant_menu),
+            label: 'Food',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.book_outlined),
             selectedIcon: Icon(Icons.book),
             label: 'Journal',
@@ -105,11 +110,6 @@ class _MainShellState extends State<MainShell> {
             icon: Icon(Icons.bar_chart_outlined),
             selectedIcon: Icon(Icons.bar_chart),
             label: 'History',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.restaurant_menu_outlined),
-            selectedIcon: Icon(Icons.restaurant_menu),
-            label: 'Food',
           ),
           NavigationDestination(
             icon: Icon(Icons.school_outlined),
