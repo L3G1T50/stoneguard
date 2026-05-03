@@ -576,11 +576,13 @@ class _JournalScreenState extends State<JournalScreen> {
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredEntries;
-    // Extra bottom padding so content clears the nav bar on all devices
+    // Use MediaQuery for bottom inset — SafeArea is top-only so we own the bottom.
     final bottomPad = MediaQuery.of(context).padding.bottom + 16;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
+        // Only protect the top; the scroll view handles bottom via SliverToBoxAdapter spacer.
+        bottom: false,
         child: CustomScrollView(
           slivers: [
 
@@ -903,8 +905,8 @@ class _JournalScreenState extends State<JournalScreen> {
               ),
             ),
 
-          // ── Bottom spacer accounts for nav bar + safe area ──
-          SliverToBoxAdapter(child: SizedBox(height: bottomPad + 32)),
+          // ── Bottom spacer: clears nav bar + device home indicator ──
+          SliverToBoxAdapter(child: SizedBox(height: bottomPad)),
         ],
         ),
       ),
