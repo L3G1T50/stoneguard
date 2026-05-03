@@ -72,11 +72,23 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
+  // GlobalKey lets us call loadData() on the shield screen from here
+  final GlobalKey<HomeShieldScreenState> _shieldKey =
+      GlobalKey<HomeShieldScreenState>();
+
+  void _onTabSelected(int index) {
+    // Refresh shield data whenever the user returns to tab 0
+    if (index == 0) {
+      _shieldKey.currentState?.loadData();
+    }
+    setState(() => _currentIndex = index);
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<Widget> screens = [
       // ── 0: Shield ──
-      const HomeShieldScreen(),
+      HomeShieldScreen(key: _shieldKey),
 
       // ── 1: Food Guide ──
       GradientScaffold(
@@ -115,7 +127,7 @@ class _MainShellState extends State<MainShell> {
         selectedIndex: _currentIndex,
         backgroundColor: Colors.white,
         indicatorColor: const Color(0xFF01696F).withValues(alpha: 0.12),
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
+        onDestinationSelected: _onTabSelected,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.shield_outlined),

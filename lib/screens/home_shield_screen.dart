@@ -216,7 +216,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.06).animate(
         CurvedAnimation(parent: _pulseController, curve: Curves.easeOut));
 
-    _loadData();
+    loadData();
   }
 
   @override
@@ -231,13 +231,13 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   // Reload whenever the app comes back to the foreground
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _loadData();
+    if (state == AppLifecycleState.resumed) loadData();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _loadData();
+    loadData();
   }
 
   Future<void> _saveTodayToHistory() async {
@@ -260,7 +260,8 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     await prefs.setStringList('daily_history', updated);
   }
 
-  Future<void> _loadData() async {
+  // Public so MainShell can call it when switching back to the Shield tab
+  Future<void> loadData() async {
     final prefs = await SharedPreferences.getInstance();
     final savedWater = prefs.getDouble('water_$_todayKey') ?? 0;
     final savedOxalate = prefs.getDouble('oxalate_$_todayKey') ?? 0;
