@@ -105,6 +105,8 @@ class _MainShellState extends State<MainShell> {
     ];
 
     return Scaffold(
+      // Transparent so each tab's GradientScaffold background shows through
+      backgroundColor: Colors.transparent,
       body: IndexedStack(
         index: _currentIndex,
         children: screens,
