@@ -69,7 +69,7 @@ class _JournalScreenState extends State<JournalScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Journal entry saved!'),
-        backgroundColor: AppColors.primaryAppColors.primary,
+        backgroundColor: AppColors.primary,
       ),
     );
   }
@@ -98,7 +98,7 @@ class _JournalScreenState extends State<JournalScreen> {
     _loadEntries();
   }
 
-  // ── Edit Sheet ────────────────────────────────────────────────
+  // ── Edit Sheet ────────────────────────────────────────────
   void _showEditSheet(Map<String, dynamic> entry, int index) {
     final editNote = TextEditingController(text: entry['note'] as String);
     int editPain = entry['pain'] as int;
@@ -250,7 +250,7 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  // ── Detail Sheet ──────────────────────────────────────────────
+  // ── Detail Sheet ───────────────────────────────────────────
   void _showEntryDetail(Map<String, dynamic> entry, int index) {
     final pain        = entry['pain'] as int;
     final note        = entry['note'] as String;
@@ -392,11 +392,11 @@ class _JournalScreenState extends State<JournalScreen> {
               Expanded(
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.delete_outline,
-                      color: AppColors.dangerAccent, size: 18),
+                      color: AppColors.danger, size: 18),
                   label: const Text('Delete',
-                      style: TextStyle(color: AppColors.dangerAccent)),
+                      style: TextStyle(color: AppColors.danger)),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.dangerAccent),
+                    side: const BorderSide(color: AppColors.danger),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
@@ -566,7 +566,7 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  // ── Pain trend sparkline ──────────────────────────────────────
+  // ── Pain trend sparkline ──────────────────────────────────────────
   Widget _buildPainTrend() {
     if (_entries.length < 2) return const SizedBox.shrink();
     final recent = _entries.take(7).toList().reversed.toList();
@@ -610,7 +610,7 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  // ── Helpers ───────────────────────────────────────────────────
+  // ── Helpers ─────────────────────────────────────────────────────
   Color _painColor(int level) {
     if (level <= 3) return AppColors.success;
     if (level <= 6) return AppColors.warning;
@@ -759,7 +759,7 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  // ── Build ─────────────────────────────────────────────────────
+  // ── Build ─────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredEntries;
@@ -775,11 +775,11 @@ class _JournalScreenState extends State<JournalScreen> {
               color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 20),
         ),
       ),
-      // ── CustomScrollView: everything is a Sliver ─────────────
+      // ── CustomScrollView: everything is a Sliver ──────────────────────────
       body: CustomScrollView(
         slivers: [
 
-          // ── 1. Entry form ────────────────────────────────────
+          // ── 1. Entry form ──────────────────────────────────────────
           SliverToBoxAdapter(
             child: Container(
               margin: const EdgeInsets.all(16),
@@ -917,10 +917,10 @@ class _JournalScreenState extends State<JournalScreen> {
             ),
           ),
 
-          // ── 2. Pain trend sparkline ──────────────────────────
+          // ── 2. Pain trend sparkline ───────────────────────────────────
           SliverToBoxAdapter(child: _buildPainTrend()),
 
-          // ── 3. Past entries header + filter ─────────────────
+          // ── 3. Past entries header + filter ───────────────────────────
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -996,7 +996,7 @@ class _JournalScreenState extends State<JournalScreen> {
             ),
           ),
 
-          // ── 4. Entry list or empty state ─────────────────────
+          // ── 4. Entry list or empty state ─────────────────────────────
           filtered.isEmpty
               ? SliverFillRemaining(
             hasScrollBody: false,
@@ -1022,25 +1022,23 @@ class _JournalScreenState extends State<JournalScreen> {
                       margin: const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceAppColors.surface,
+                        color: AppColors.surface,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.borderAppColors.border),
+                        border: Border.all(color: AppColors.border),
                         boxShadow: [
                           BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
+                              color: Colors.black.withValues(alpha: 0.03),
                               blurRadius: 6,
-                              offset: const Offset(0, 1)),
+                              offset: const Offset(0, 2)),
                         ],
                       ),
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Pain badge
                           Container(
-                            width: 44, height: 44,
+                            width: 48, height: 48,
                             decoration: BoxDecoration(
                               color: _painColor(pain).withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Center(
                               child: Text('$pain',
@@ -1055,55 +1053,60 @@ class _JournalScreenState extends State<JournalScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(note,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                        color: AppColors.textPrimaryAppColors.textPrimary, fontSize: 14)),
-                                const SizedBox(height: 4),
-                                if (symptoms.isNotEmpty) ...[
-                                  Wrap(
-                                    spacing: 4,
-                                    children: symptoms.take(3).map((s) =>
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 7, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.warning.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                          child: Text(s,
-                                              style: const TextStyle(
-                                                  fontSize: 10,
-                                                  color: AppColors.warning)),
-                                        )).toList(),
-                                  ),
-                                  const SizedBox(height: 4),
-                                ],
                                 Row(children: [
-                                  Text(dateStr,
-                                      style: const TextStyle(
-                                          color: AppColors.textMuted, fontSize: 11)),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: _painColor(pain).withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(_painLabel(pain),
+                                        style: TextStyle(
+                                            color: _painColor(pain),
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold)),
+                                  ),
                                   if (stonePassed) ...[
                                     const SizedBox(width: 6),
                                     const Text('💎',
-                                        style: TextStyle(fontSize: 11)),
+                                        style: TextStyle(fontSize: 13)),
+                                  ],
+                                  if (symptoms.isNotEmpty) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.warning.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        '+${symptoms.length} symptom${symptoms.length > 1 ? 's' : ''}',
+                                        style: const TextStyle(
+                                            color: AppColors.warning,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
                                   ],
                                 ]),
+                                const SizedBox(height: 4),
+                                Text(note,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 13)),
+                                const SizedBox(height: 2),
+                                Text(dateStr,
+                                    style: const TextStyle(
+                                        color: AppColors.textMuted, fontSize: 11)),
                               ],
                             ),
                           ),
-                          // Chevron + delete
-                          Column(children: [
-                            const Icon(Icons.chevron_right_rounded,
-                                color: AppColors.textMuted, size: 20),
-                            const SizedBox(height: 4),
-                            GestureDetector(
-                              onTap: () => _deleteEntry(masterIndex),
-                              child: const Icon(Icons.delete_outline,
-                                  color: AppColors.dangerAccent, size: 20),
-                            ),
-                          ]),
+                          const Icon(Icons.chevron_right,
+                              color: AppColors.textFaint, size: 20),
                         ],
                       ),
                     ),
@@ -1119,73 +1122,46 @@ class _JournalScreenState extends State<JournalScreen> {
   }
 }
 
-// ── Sparkline painter ─────────────────────────────────────────
+// ── Sparkline painter ──────────────────────────────────────────────────────
 class _SparklinePainter extends CustomPainter {
-  final List<double> data;
-  _SparklinePainter(this.data);
+  final List<double> values;
+  _SparklinePainter(this.values);
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (data.length < 2) return;
+    if (values.length < 2) return;
+    final minVal = values.reduce(math.min);
+    final maxVal = values.reduce(math.max);
+    final range  = (maxVal - minVal).clamp(1.0, double.infinity);
 
-    final minV  = data.reduce(math.min);
-    final maxV  = data.reduce(math.max);
-    final range = (maxV - minV) == 0 ? 1.0 : (maxV - minV);
+    double x(int i) => size.width * i / (values.length - 1);
+    double y(double v) => size.height - (size.height * (v - minVal) / range);
 
-    double x(int i) => i * size.width / (data.length - 1);
-    double y(double v) => size.height - ((v - minV) / range) * size.height;
-
-    // Fill
-    final fillPath = Path();
-    fillPath.moveTo(x(0), size.height);
-    for (int i = 0; i < data.length; i++) {
-      fillPath.lineTo(x(i), y(data[i]));
+    final path = Path()..moveTo(x(0), y(values[0]));
+    for (int i = 1; i < values.length; i++) {
+      final cp1x = (x(i - 1) + x(i)) / 2;
+      path.cubicTo(cp1x, y(values[i - 1]), cp1x, y(values[i]), x(i), y(values[i]));
     }
-    fillPath.lineTo(x(data.length - 1), size.height);
-    fillPath.close();
-    canvas.drawPath(
-      fillPath,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            const Color(0xFF1A8A9A).withValues(alpha: 0.2),
-            const Color(0xFF1A8A9A).withValues(alpha: 0.0),
-          ],
-        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)),
-    );
 
-    // Line
-    final linePath = Path();
-    linePath.moveTo(x(0), y(data[0]));
-    for (int i = 1; i < data.length; i++) {
-      linePath.lineTo(x(i), y(data[i]));
-    }
     canvas.drawPath(
-      linePath,
+      path,
       Paint()
-        ..color = const Color(0xFF1A8A9A)
-        ..strokeWidth = 2
+        ..color = AppColors.primary
         ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
         ..strokeCap = StrokeCap.round,
     );
 
     // Dots
-    for (int i = 0; i < data.length; i++) {
-      final color = data[i] <= 3
-          ? AppColors.successAppColors.success
-          : data[i] <= 6
-          ? AppColors.warningAppColors.warning
-          : AppColors.dangerAppColors.danger;
+    for (int i = 0; i < values.length; i++) {
       canvas.drawCircle(
-        Offset(x(i), y(data[i])),
-        3.5,
-        Paint()..color = color,
+        Offset(x(i), y(values[i])),
+        3,
+        Paint()..color = AppColors.primary,
       );
     }
   }
 
   @override
-  bool shouldRepaint(_SparklinePainter old) => old.data != data;
+  bool shouldRepaint(_SparklinePainter old) => old.values != values;
 }
