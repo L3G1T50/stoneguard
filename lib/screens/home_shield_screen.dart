@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../widgets/banner_ad_widget.dart';
 import '../main.dart';
+import 'settings_screen.dart';
 
 
 class HomeShieldScreen extends StatefulWidget {
@@ -226,14 +227,14 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                       style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
                 ]),
               ]),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                    color: activeColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20)),
-                child: Text('${(waterProgress * 100).round()}%',
-                    style: TextStyle(color: activeColor,
-                        fontWeight: FontWeight.bold, fontSize: 15)),
+              // ── SETTINGS GEAR (top-right of home header) ──
+              IconButton(
+                icon: Icon(Icons.settings_outlined, color: Colors.grey.shade600),
+                tooltip: 'Settings',
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                ),
               ),
             ]),
 

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'history_screen.dart';
 import 'progress_screen.dart';
+import 'settings_screen.dart';
 
 // ─── MERGED HISTORY + PROGRESS SCREEN ────────────────────────────────────────
-// Shows History entries and Progress charts in a single tab with a
+// Shows Progress charts (default) and History entries in a single tab with a
 // chip-style switcher at the top.
 
 class HistoryProgressScreen extends StatefulWidget {
@@ -27,7 +28,8 @@ class _HistoryProgressScreenState extends State<HistoryProgressScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    // initialIndex: 0 = Charts (now first), 1 = Entries
+    _tabController = TabController(length: 2, vsync: this, initialIndex: 0);
   }
 
   @override
@@ -52,6 +54,16 @@ class _HistoryProgressScreenState extends State<HistoryProgressScreen>
             fontSize: 20,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined, color: textColor),
+            tooltip: 'Settings',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            ),
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
           child: Padding(
@@ -80,9 +92,10 @@ class _HistoryProgressScreenState extends State<HistoryProgressScreen>
                 ),
                 indicatorSize: TabBarIndicatorSize.tab,
                 dividerColor: Colors.transparent,
+                // Charts is now first
                 tabs: const [
-                  Tab(text: 'Entries'),
                   Tab(text: 'Charts'),
+                  Tab(text: 'Entries'),
                 ],
               ),
             ),
@@ -91,9 +104,10 @@ class _HistoryProgressScreenState extends State<HistoryProgressScreen>
       ),
       body: TabBarView(
         controller: _tabController,
+        // Charts is now first
         children: const [
-          _HistoryTab(),
           _ProgressTab(),
+          _HistoryTab(),
         ],
       ),
     );
@@ -107,8 +121,6 @@ class _HistoryTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // HistoryScreen is a full Scaffold — we pull just its body by
-    // embedding it inside a NestedScrollView-friendly wrapper.
     return const _EmbeddedHistory();
   }
 }
@@ -127,8 +139,6 @@ class _EmbeddedHistoryState extends State<_EmbeddedHistory>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    // Render HistoryScreen inside a Navigator so it can push detail routes
-    // without affecting the top-level shell.
     return Navigator(
       onGenerateRoute: (_) => MaterialPageRoute(
         builder: (_) => const _HistoryBody(),
@@ -141,8 +151,6 @@ class _HistoryBody extends StatelessWidget {
   const _HistoryBody();
   @override
   Widget build(BuildContext context) {
-    // Strip the AppBar from HistoryScreen by wrapping it and letting
-    // the merged screen supply the AppBar instead.
     return const HistoryScreen();
   }
 }
