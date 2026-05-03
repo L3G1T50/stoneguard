@@ -9,6 +9,7 @@ import '../screens/about_screen.dart';
 import '../main.dart';
 import 'paywall_screen.dart';
 import '../theme/app_theme.dart';
+import '../widgets/gradient_scaffold.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -314,275 +315,278 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: AppSpacing.pagePadding.add(
-              const EdgeInsets.only(bottom: 32)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+    final body = CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: AppSpacing.pagePadding.add(
+                const EdgeInsets.only(bottom: 32)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
 
-              // ── TITLE ──
-              const AppScreenTitle('Settings'),
-
-              // ── PROFILE ──
-              const SizedBox(height: 16),
-              AppCard(
-                onTap: _editName,
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: _pickAvatar,
-                      child: CircleAvatar(
-                        radius: 26,
-                        backgroundColor: AppColors.tealLight,
-                        backgroundImage: _avatarPath.isNotEmpty
-                            ? FileImage(File(_avatarPath))
-                            : null,
-                        child: _avatarPath.isEmpty
-                            ? const Icon(Icons.person,
-                                color: AppColors.teal, size: 28)
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _userName.isEmpty ? 'Add Your Name' : _userName,
-                            style: AppTextStyles.itemTitle,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            _userName.isEmpty
-                                ? 'Tap to personalise your experience'
-                                : 'Tap avatar to change photo',
-                            style: AppTextStyles.body,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.chevron_right,
-                        color: AppColors.textHint, size: 20),
-                  ],
-                ),
-              ),
-
-              // ── STONEGUARD PLUS ──
-              const AppSectionHeader('StoneGuard Plus'),
-              _plusCard(),
-
-              // ── NOTIFICATIONS ──
-              const AppSectionHeader('Notifications'),
-              AppCard(
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(children: [
-                          const AppIconBadge(
-                              icon: Icons.notifications_outlined,
-                              color: Colors.blue),
-                          const SizedBox(width: 14),
-                          Text('Water Reminders',
-                              style: AppTextStyles.itemTitle),
-                        ]),
-                        Switch(
-                          value: _notificationsEnabled,
-                          onChanged: (val) async {
-                            final p = await SharedPreferences.getInstance();
-                            await p.setBool('notifications_enabled', val);
-                            setState(() => _notificationsEnabled = val);
-                            if (val) {
-                              scheduleWaterReminders(_reminderInterval);
-                            } else {
-                              flutterLocalNotificationsPlugin.cancelAll();
-                            }
-                          },
+                // ── PROFILE ──
+                const SizedBox(height: 4),
+                AppCard(
+                  onTap: _editName,
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: _pickAvatar,
+                        child: CircleAvatar(
+                          radius: 26,
+                          backgroundColor: AppColors.tealLight,
+                          backgroundImage: _avatarPath.isNotEmpty
+                              ? FileImage(File(_avatarPath))
+                              : null,
+                          child: _avatarPath.isEmpty
+                              ? const Icon(Icons.person,
+                                  color: AppColors.teal, size: 28)
+                              : null,
                         ),
-                      ],
-                    ),
-                    if (_notificationsEnabled) ...[
-                      const Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Remind me every',
-                              style: AppTextStyles.body),
-                          DropdownButton<int>(
-                            value: _reminderInterval,
-                            underline: const SizedBox(),
-                            items: [1, 2, 3, 4, 6]
-                                .map((h) => DropdownMenuItem(
-                                      value: h,
-                                      child: Text('$h hour${h > 1 ? 's' : ''}',
-                                          style: AppTextStyles.itemTitle),
-                                    ))
-                                .toList(),
-                            onChanged: (val) async {
-                              if (val == null) return;
-                              final p = await SharedPreferences.getInstance();
-                              await p.setInt('reminder_interval', val);
-                              setState(() => _reminderInterval = val);
-                              scheduleWaterReminders(val);
-                            },
-                          ),
-                        ],
                       ),
-                    ],
-                  ],
-                ),
-              ),
-
-              // ── DAILY GOALS ──
-              const AppSectionHeader('Daily Goals'),
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Water
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(children: [
-                          const Icon(Icons.water_drop,
-                              color: AppColors.teal, size: 20),
-                          const SizedBox(width: 8),
-                          Text('Water Goal', style: AppTextStyles.itemTitle),
-                        ]),
-                        _valueBadge(
-                            '${_waterGoal.toInt()} oz', AppColors.teal),
-                      ],
-                    ),
-                    Slider(
-                      value: _waterGoal,
-                      min: 32,
-                      max: 160,
-                      divisions: 16,
-                      onChanged: (v) => _saveWaterGoal(v.roundToDouble()),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('32 oz', style: AppTextStyles.micro),
-                        Text('160 oz', style: AppTextStyles.micro),
-                      ],
-                    ),
-                    const Divider(height: 32),
-                    // Oxalate
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(children: [
-                          const Icon(Icons.science_outlined,
-                              color: AppColors.oxalate, size: 20),
-                          const SizedBox(width: 8),
-                          Text('Oxalate Limit',
-                              style: AppTextStyles.itemTitle),
-                        ]),
-                        _valueBadge(
-                            '${_oxalateGoal.toInt()} mg', AppColors.oxalate),
-                      ],
-                    ),
-                    SliderTheme(
-                      data: SliderThemeData(
-                        activeTrackColor: AppColors.oxalate,
-                        thumbColor: AppColors.oxalate,
-                        inactiveTrackColor:
-                            AppColors.oxalate.withValues(alpha: 0.18),
-                        overlayColor:
-                            AppColors.oxalate.withValues(alpha: 0.12),
-                        trackHeight: 3,
-                      ),
-                      child: Slider(
-                        value: _oxalateGoal,
-                        min: 50,
-                        max: 500,
-                        divisions: 18,
-                        onChanged: (v) =>
-                            _saveOxalateGoal(v.roundToDouble()),
-                      ),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('50 mg', style: AppTextStyles.micro),
-                        Text('500 mg', style: AppTextStyles.micro),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              // ── ABOUT ──
-              const AppSectionHeader('About'),
-              AppCard(
-                child: Column(
-                  children: [
-                    _row(
-                      Icons.info_outline,
-                      AppColors.teal,
-                      'About StoneGuard',
-                      'Version 1.0.0',
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const AboutScreen()),
-                      ),
-                    ),
-                    const Divider(height: 24),
-                    _row(
-                      Icons.medical_information_outlined,
-                      AppColors.warning,
-                      'Medical Disclaimer',
-                      'This app is not medical advice',
-                      onTap: () => showDialog(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Medical Disclaimer'),
-                          content: const Text(
-                            'StoneGuard is intended for informational purposes only and is not a substitute for professional medical advice, diagnosis, or treatment.\n\nAlways consult your physician or a qualified healthcare provider regarding your kidney stone condition and dietary needs.',
-                          ),
-                          actions: [
-                            ElevatedButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text('I Understand'),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _userName.isEmpty ? 'Add Your Name' : _userName,
+                              style: AppTextStyles.itemTitle,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _userName.isEmpty
+                                  ? 'Tap to personalise your experience'
+                                  : 'Tap avatar to change photo',
+                              style: AppTextStyles.body,
                             ),
                           ],
                         ),
                       ),
-                    ),
-                  ],
+                      const Icon(Icons.chevron_right,
+                          color: AppColors.textHint, size: 20),
+                    ],
+                  ),
                 ),
-              ),
 
-              // ── DANGER ZONE ──
-              const AppSectionHeader('Danger Zone'),
-              AppCard(
-                child: _row(
-                  Icons.delete_forever_outlined,
-                  AppColors.danger,
-                  'Clear All Data',
-                  'Permanently delete all logs and favourites',
-                  onTap: _clearAllData,
+                // ── STONEGUARD PLUS ──
+                const AppSectionHeader('StoneGuard Plus'),
+                _plusCard(),
+
+                // ── NOTIFICATIONS ──
+                const AppSectionHeader('Notifications'),
+                AppCard(
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(children: [
+                            const AppIconBadge(
+                                icon: Icons.notifications_outlined,
+                                color: Colors.blue),
+                            const SizedBox(width: 14),
+                            Text('Water Reminders',
+                                style: AppTextStyles.itemTitle),
+                          ]),
+                          Switch(
+                            value: _notificationsEnabled,
+                            onChanged: (val) async {
+                              final p = await SharedPreferences.getInstance();
+                              await p.setBool('notifications_enabled', val);
+                              setState(() => _notificationsEnabled = val);
+                              if (val) {
+                                scheduleWaterReminders(_reminderInterval);
+                              } else {
+                                flutterLocalNotificationsPlugin.cancelAll();
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                      if (_notificationsEnabled) ...[
+                        const Divider(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Remind me every',
+                                style: AppTextStyles.body),
+                            DropdownButton<int>(
+                              value: _reminderInterval,
+                              underline: const SizedBox(),
+                              items: [1, 2, 3, 4, 6]
+                                  .map((h) => DropdownMenuItem(
+                                        value: h,
+                                        child: Text('$h hour${h > 1 ? 's' : ''}',
+                                            style: AppTextStyles.itemTitle),
+                                      ))
+                                  .toList(),
+                              onChanged: (val) async {
+                                if (val == null) return;
+                                final p = await SharedPreferences.getInstance();
+                                await p.setInt('reminder_interval', val);
+                                setState(() => _reminderInterval = val);
+                                scheduleWaterReminders(val);
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 32),
-              Center(
-                child: Text('StoneGuard v1.0.0',
-                    style: AppTextStyles.micro),
-              ),
-              const SizedBox(height: 16),
-            ],
+                // ── DAILY GOALS ──
+                const AppSectionHeader('Daily Goals'),
+                AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Water
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(children: [
+                            const Icon(Icons.water_drop,
+                                color: AppColors.teal, size: 20),
+                            const SizedBox(width: 8),
+                            Text('Water Goal', style: AppTextStyles.itemTitle),
+                          ]),
+                          _valueBadge(
+                              '${_waterGoal.toInt()} oz', AppColors.teal),
+                        ],
+                      ),
+                      Slider(
+                        value: _waterGoal,
+                        min: 32,
+                        max: 160,
+                        divisions: 16,
+                        onChanged: (v) => _saveWaterGoal(v.roundToDouble()),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('32 oz', style: AppTextStyles.micro),
+                          Text('160 oz', style: AppTextStyles.micro),
+                        ],
+                      ),
+                      const Divider(height: 32),
+                      // Oxalate
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(children: [
+                            const Icon(Icons.science_outlined,
+                                color: AppColors.oxalate, size: 20),
+                            const SizedBox(width: 8),
+                            Text('Oxalate Limit',
+                                style: AppTextStyles.itemTitle),
+                          ]),
+                          _valueBadge(
+                              '${_oxalateGoal.toInt()} mg', AppColors.oxalate),
+                        ],
+                      ),
+                      SliderTheme(
+                        data: SliderThemeData(
+                          activeTrackColor: AppColors.oxalate,
+                          thumbColor: AppColors.oxalate,
+                          inactiveTrackColor:
+                              AppColors.oxalate.withValues(alpha: 0.18),
+                          overlayColor:
+                              AppColors.oxalate.withValues(alpha: 0.12),
+                          trackHeight: 3,
+                        ),
+                        child: Slider(
+                          value: _oxalateGoal,
+                          min: 50,
+                          max: 500,
+                          divisions: 18,
+                          onChanged: (v) =>
+                              _saveOxalateGoal(v.roundToDouble()),
+                        ),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('50 mg', style: AppTextStyles.micro),
+                          Text('500 mg', style: AppTextStyles.micro),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ── ABOUT ──
+                const AppSectionHeader('About'),
+                AppCard(
+                  child: Column(
+                    children: [
+                      _row(
+                        Icons.info_outline,
+                        AppColors.teal,
+                        'About StoneGuard',
+                        'Version 1.0.0',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const AboutScreen()),
+                        ),
+                      ),
+                      const Divider(height: 24),
+                      _row(
+                        Icons.medical_information_outlined,
+                        AppColors.warning,
+                        'Medical Disclaimer',
+                        'This app is not medical advice',
+                        onTap: () => showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Medical Disclaimer'),
+                            content: const Text(
+                              'StoneGuard is intended for informational purposes only and is not a substitute for professional medical advice, diagnosis, or treatment.\n\nAlways consult your physician or a qualified healthcare provider regarding your kidney stone condition and dietary needs.',
+                            ),
+                            actions: [
+                              ElevatedButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                child: const Text('I Understand'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ── DANGER ZONE ──
+                const AppSectionHeader('Danger Zone'),
+                AppCard(
+                  child: _row(
+                    Icons.delete_forever_outlined,
+                    AppColors.danger,
+                    'Clear All Data',
+                    'Permanently delete all logs and favourites',
+                    onTap: _clearAllData,
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+                Center(
+                  child: Text('StoneGuard v1.0.0',
+                      style: AppTextStyles.micro),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ),
-      ),
+      ],
+    );
+
+    return GradientScaffold(
+      title: 'Settings',
+      body: body,
     );
   }
 }
