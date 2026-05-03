@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../main.dart';
 import 'home_shield_screen.dart';
 
 class SetupScreen extends StatefulWidget {
