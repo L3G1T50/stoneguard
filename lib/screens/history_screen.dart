@@ -107,7 +107,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final stones = _entries.where((e) => (e['stonePassed'] as bool?) ?? false).length;
     final highest = pains.reduce(math.max);
 
-    // Count how many distinct days have entries (streak of tracked days)
     final days = _entries.map((e) {
       final d = DateTime.parse(e['date'] as String);
       return DateTime(d.year, d.month, d.day);
@@ -141,7 +140,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.divider),
+          border: Border.all(color: AppColors.border),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.03),
@@ -176,7 +175,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 10,
-                color: AppColors.textSecond,
+                color: AppColors.textMuted,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -200,20 +199,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: AppColors.textSecond,
+              color: AppColors.textMuted,
               letterSpacing: 1.1,
             ),
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              _buildStatCard('Entries', '${s['total']}', Icons.edit_note_rounded, AppColors.teal),
+              _buildStatCard('Entries', '${s['total']}', Icons.edit_note_rounded, AppColors.primary),
               const SizedBox(width: 8),
               _buildStatCard('Avg Pain', avg, Icons.show_chart_rounded, AppColors.warning),
               const SizedBox(width: 8),
               _buildStatCard('Stones\nPassed', '${s['stonesPassed']}', Icons.diamond_outlined, AppColors.success),
               const SizedBox(width: 8),
-              _buildStatCard('Days\nTracked', '${s['streak']}', Icons.calendar_today_outlined, AppColors.teal),
+              _buildStatCard('Days\nTracked', '${s['streak']}', Icons.calendar_today_outlined, AppColors.primary),
             ],
           ),
         ],
@@ -238,9 +237,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
               margin: const EdgeInsets.only(right: 10),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.teal.withValues(alpha: 0.10),
+                color: AppColors.primary.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.teal.withValues(alpha: 0.4)),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -248,7 +247,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   Icon(
                     _sortOrder == 'Newest' ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
                     size: 13,
-                    color: AppColors.teal,
+                    color: AppColors.primary,
                   ),
                   const SizedBox(width: 4),
                   Text(
@@ -256,7 +255,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.teal,
+                      color: AppColors.primary,
                     ),
                   ),
                 ],
@@ -272,7 +271,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               case 'Moderate': chipColor = AppColors.warning; break;
               case 'Severe':   chipColor = AppColors.danger; break;
               case 'Stone':    chipColor = AppColors.success; break;
-              default:         chipColor = AppColors.teal;
+              default:         chipColor = AppColors.primary;
             }
             return GestureDetector(
               onTap: () => setState(() => _filterSeverity = f),
@@ -284,7 +283,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   color: active ? chipColor.withValues(alpha: 0.12) : AppColors.background,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: active ? chipColor : AppColors.divider,
+                    color: active ? chipColor : AppColors.border,
                     width: 1.5,
                   ),
                 ),
@@ -300,7 +299,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: active ? chipColor : AppColors.textSecond,
+                        color: active ? chipColor : AppColors.textMuted,
                       ),
                     ),
                   ],
@@ -326,7 +325,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -346,7 +345,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Pain number badge
                 Container(
                   width: 48,
                   height: 48,
@@ -396,13 +394,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: AppColors.teal.withValues(alpha: 0.1),
+                                color: AppColors.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 side,
                                 style: const TextStyle(
-                                  color: AppColors.teal,
+                                  color: AppColors.primary,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -444,14 +442,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       Text(
                         dateStr,
                         style: const TextStyle(
-                          color: AppColors.textSecond,
+                          color: AppColors.textMuted,
                           fontSize: 11,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right, color: AppColors.textHint, size: 20),
+                const Icon(Icons.chevron_right, color: AppColors.textFaint, size: 20),
               ],
             ),
           ),
@@ -470,7 +468,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             style: const TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: AppColors.textSecond,
+              color: AppColors.textMuted,
               letterSpacing: 1.1,
             ),
           ),
@@ -478,13 +476,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
             decoration: BoxDecoration(
-              color: AppColors.teal.withValues(alpha: 0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               '$count',
               style: const TextStyle(
-                color: AppColors.teal,
+                color: AppColors.primary,
                 fontWeight: FontWeight.bold,
                 fontSize: 11,
               ),
@@ -505,7 +503,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppColors.divider),
+            border: Border.all(color: AppColors.border),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.04),
@@ -522,12 +520,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 width: 84,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.teal.withValues(alpha: 0.10),
+                  color: AppColors.primary.withValues(alpha: 0.10),
                 ),
                 child: const Icon(
                   Icons.history_rounded,
                   size: 42,
-                  color: AppColors.teal,
+                  color: AppColors.primary,
                 ),
               ),
               const SizedBox(height: 18),
@@ -549,7 +547,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 style: const TextStyle(
                   fontSize: 14,
                   height: 1.5,
-                  color: AppColors.textSecond,
+                  color: AppColors.textMuted,
                 ),
               ),
               if (isFiltered) ...[
@@ -562,7 +560,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     label: const Text('Clear filter',
                         style: TextStyle(fontWeight: FontWeight.w600)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.teal,
+                      backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -607,7 +605,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.divider,
+                  color: AppColors.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -657,7 +655,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       Text(
                         dateStr,
                         style: const TextStyle(
-                          color: AppColors.textSecond,
+                          color: AppColors.textMuted,
                           fontSize: 12,
                         ),
                       ),
@@ -677,7 +675,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 spacing: 8,
                 children: [
                   if (side != 'None')
-                    _infoBadge('$side Side', Icons.location_on_outlined, AppColors.teal),
+                    _infoBadge('$side Side', Icons.location_on_outlined, AppColors.primary),
                   if (stonePassed)
                     _infoBadge('Stone Passed', Icons.check_circle_outline, AppColors.success),
                 ],
@@ -688,7 +686,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               const Text(
                 'SYMPTOMS',
                 style: TextStyle(
-                  color: AppColors.textSecond,
+                  color: AppColors.textMuted,
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.8,
@@ -721,12 +719,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
               const SizedBox(height: 12),
             ],
-            const Divider(color: AppColors.divider, height: 1),
+            const Divider(color: AppColors.border, height: 1),
             const SizedBox(height: 14),
             const Text(
               'NOTE',
               style: TextStyle(
-                color: AppColors.textSecond,
+                color: AppColors.textMuted,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.8,
@@ -739,7 +737,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               decoration: BoxDecoration(
                 color: AppColors.background,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.divider),
+                border: Border.all(color: AppColors.border),
               ),
               child: Text(
                 note,
@@ -755,7 +753,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.teal,
+                  backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
@@ -808,7 +806,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.teal,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         centerTitle: true,
         title: const Text(
@@ -845,21 +843,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ),
       body: _loading
           ? const Center(
-              child: CircularProgressIndicator(color: AppColors.teal),
+              child: CircularProgressIndicator(color: AppColors.primary),
             )
           : _entries.isEmpty
               ? _buildEmptyState()
               : CustomScrollView(
                   slivers: [
-                    // Stats row
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
                         child: _buildStatsSection(),
                       ),
                     ),
-
-                    // Filter bar
                     SliverToBoxAdapter(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -871,7 +866,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.textSecond,
+                                color: AppColors.textMuted,
                                 letterSpacing: 1.1,
                               ),
                             ),
@@ -881,8 +876,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         ],
                       ),
                     ),
-
-                    // Entry count row
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
@@ -893,7 +886,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.textSecond,
+                                color: AppColors.textMuted,
                                 letterSpacing: 1.1,
                               ),
                             ),
@@ -901,13 +894,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                               decoration: BoxDecoration(
-                                color: AppColors.teal.withValues(alpha: 0.1),
+                                color: AppColors.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
                                 '${filtered.length}',
                                 style: const TextStyle(
-                                  color: AppColors.teal,
+                                  color: AppColors.primary,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 11,
                                 ),
@@ -917,22 +910,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         ),
                       ),
                     ),
-
-                    // Empty filtered state
                     if (filtered.isEmpty)
                       SliverFillRemaining(
                         hasScrollBody: false,
                         child: _buildEmptyState(),
                       )
                     else
-                      // Grouped by month
                       SliverPadding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
                               final keys = grouped.keys.toList();
-                              // Build a flat list of month headers + entry cards
                               final List<Widget> items = [];
                               for (final month in keys) {
                                 final monthEntries = grouped[month]!;

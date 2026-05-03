@@ -69,7 +69,7 @@ class _JournalScreenState extends State<JournalScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Journal entry saved!'),
-        backgroundColor: AppColors.teal,
+        backgroundColor: AppColors.primary,
       ),
     );
   }
@@ -130,7 +130,7 @@ class _JournalScreenState extends State<JournalScreen> {
                     child: Container(
                       width: 40, height: 4,
                       decoration: BoxDecoration(
-                        color: AppColors.divider,
+                        color: AppColors.border,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -146,7 +146,7 @@ class _JournalScreenState extends State<JournalScreen> {
                     const Text('Pain Level',
                         style: TextStyle(
                             fontSize: 13,
-                            color: AppColors.textSecond,
+                            color: AppColors.textMuted,
                             fontWeight: FontWeight.w600)),
                     const Spacer(),
                     Container(
@@ -174,7 +174,7 @@ class _JournalScreenState extends State<JournalScreen> {
                   const Text('Side',
                       style: TextStyle(
                           fontSize: 13,
-                          color: AppColors.textSecond,
+                          color: AppColors.textMuted,
                           fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
                   _buildSideSelector(editSide,
@@ -183,7 +183,7 @@ class _JournalScreenState extends State<JournalScreen> {
                   const Text('Symptoms',
                       style: TextStyle(
                           fontSize: 13,
-                          color: AppColors.textSecond,
+                          color: AppColors.textMuted,
                           fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
                   _buildSymptomChips(editSymptoms,
@@ -200,19 +200,19 @@ class _JournalScreenState extends State<JournalScreen> {
                     maxLines: 3,
                     decoration: InputDecoration(
                       hintText: 'Notes...',
-                      hintStyle: const TextStyle(color: AppColors.textSecond, fontSize: 13),
+                      hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
                       filled: true,
                       fillColor: AppColors.background,
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.divider)),
+                          borderSide: const BorderSide(color: AppColors.border)),
                       enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.divider)),
+                          borderSide: const BorderSide(color: AppColors.border)),
                       focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide:
-                          const BorderSide(color: AppColors.teal, width: 1.5)),
+                          const BorderSide(color: AppColors.primary, width: 1.5)),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -220,7 +220,7 @@ class _JournalScreenState extends State<JournalScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.teal,
+                        backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -278,7 +278,7 @@ class _JournalScreenState extends State<JournalScreen> {
               child: Container(
                 width: 40, height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.divider,
+                  color: AppColors.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -319,7 +319,7 @@ class _JournalScreenState extends State<JournalScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(dateStr,
-                        style: const TextStyle(color: AppColors.textSecond, fontSize: 12)),
+                        style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
                   ],
                 ),
               ),
@@ -333,7 +333,7 @@ class _JournalScreenState extends State<JournalScreen> {
             if (side != 'None' || stonePassed) ...[
               Wrap(spacing: 8, children: [
                 if (side != 'None')
-                  _infoBadge('$side Side', Icons.location_on_outlined, AppColors.teal),
+                  _infoBadge('$side Side', Icons.location_on_outlined, AppColors.primary),
                 if (stonePassed)
                   _infoBadge('Stone Passed', Icons.check_circle_outline, AppColors.success),
               ]),
@@ -342,7 +342,7 @@ class _JournalScreenState extends State<JournalScreen> {
             if (symptoms.isNotEmpty) ...[
               const Text('Symptoms',
                   style: TextStyle(
-                      color: AppColors.textSecond,
+                      color: AppColors.textMuted,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.8)),
@@ -366,11 +366,11 @@ class _JournalScreenState extends State<JournalScreen> {
               ),
               const SizedBox(height: 12),
             ],
-            const Divider(color: AppColors.divider, height: 1),
+            const Divider(color: AppColors.border, height: 1),
             const SizedBox(height: 14),
             const Text('NOTE',
                 style: TextStyle(
-                    color: AppColors.textSecond,
+                    color: AppColors.textMuted,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.8)),
@@ -381,7 +381,7 @@ class _JournalScreenState extends State<JournalScreen> {
               decoration: BoxDecoration(
                 color: AppColors.background,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.divider),
+                border: Border.all(color: AppColors.border),
               ),
               child: Text(note,
                   style: const TextStyle(
@@ -411,11 +411,11 @@ class _JournalScreenState extends State<JournalScreen> {
               Expanded(
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.edit_outlined,
-                      color: AppColors.teal, size: 18),
+                      color: AppColors.primary, size: 18),
                   label: const Text('Edit',
-                      style: TextStyle(color: AppColors.teal)),
+                      style: TextStyle(color: AppColors.primary)),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.teal),
+                    side: const BorderSide(color: AppColors.primary),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
@@ -430,7 +430,7 @@ class _JournalScreenState extends State<JournalScreen> {
               Expanded(
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.teal,
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
@@ -481,17 +481,17 @@ class _JournalScreenState extends State<JournalScreen> {
               margin: const EdgeInsets.only(right: 6),
               padding: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
-                color: selected ? AppColors.teal.withValues(alpha: 0.12) : AppColors.background,
+                color: selected ? AppColors.primary.withValues(alpha: 0.12) : AppColors.background,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                    color: selected ? AppColors.teal : AppColors.divider, width: 1.5),
+                    color: selected ? AppColors.primary : AppColors.border, width: 1.5),
               ),
               child: Center(
                 child: Text(s,
                     style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: selected ? AppColors.teal : AppColors.textSecond)),
+                        color: selected ? AppColors.primary : AppColors.textMuted)),
               ),
             ),
           ),
@@ -518,13 +518,13 @@ class _JournalScreenState extends State<JournalScreen> {
               border: Border.all(
                   color: active
                       ? AppColors.warning.withValues(alpha: 0.5)
-                      : AppColors.divider),
+                      : AppColors.border),
             ),
             child: Text(tag,
                 style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: active ? AppColors.warning : AppColors.textSecond)),
+                    color: active ? AppColors.warning : AppColors.textMuted)),
           ),
         );
       }).toList(),
@@ -541,7 +541,7 @@ class _JournalScreenState extends State<JournalScreen> {
         border: Border.all(
             color: value
                 ? AppColors.success.withValues(alpha: 0.4)
-                : AppColors.divider),
+                : AppColors.border),
       ),
       child: Row(children: [
         const Text('💎', style: TextStyle(fontSize: 16)),
@@ -576,7 +576,7 @@ class _JournalScreenState extends State<JournalScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,7 +585,7 @@ class _JournalScreenState extends State<JournalScreen> {
               style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textSecond)),
+                  color: AppColors.textMuted)),
           const SizedBox(height: 10),
           SizedBox(
             height: 48,
@@ -600,9 +600,9 @@ class _JournalScreenState extends State<JournalScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('${recent.length} entries ago',
-                  style: const TextStyle(fontSize: 10, color: AppColors.textSecond)),
+                  style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
               const Text('Latest',
-                  style: TextStyle(fontSize: 10, color: AppColors.textSecond)),
+                  style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
             ],
           ),
         ],
@@ -671,7 +671,7 @@ class _JournalScreenState extends State<JournalScreen> {
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppColors.divider),
+            border: Border.all(color: AppColors.border),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.04),
@@ -688,12 +688,12 @@ class _JournalScreenState extends State<JournalScreen> {
                 width: 84,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.teal.withValues(alpha: 0.10),
+                  color: AppColors.primary.withValues(alpha: 0.10),
                 ),
                 child: const Icon(
                   Icons.edit_note_rounded,
                   size: 42,
-                  color: AppColors.teal,
+                  color: AppColors.primary,
                 ),
               ),
               const SizedBox(height: 18),
@@ -715,7 +715,7 @@ class _JournalScreenState extends State<JournalScreen> {
                 style: const TextStyle(
                   fontSize: 14,
                   height: 1.5,
-                  color: AppColors.textSecond,
+                  color: AppColors.textMuted,
                 ),
               ),
               const SizedBox(height: 18),
@@ -729,7 +729,7 @@ class _JournalScreenState extends State<JournalScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Fill out the form above to create your first journal entry.'),
-                          backgroundColor: AppColors.teal,
+                          backgroundColor: AppColors.primary,
                         ),
                       );
                     }
@@ -742,7 +742,7 @@ class _JournalScreenState extends State<JournalScreen> {
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.teal,
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -786,7 +786,7 @@ class _JournalScreenState extends State<JournalScreen> {
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.divider),
+                border: Border.all(color: AppColors.border),
                 boxShadow: [
                   BoxShadow(
                       color: Colors.black.withValues(alpha: 0.05),
@@ -809,7 +809,7 @@ class _JournalScreenState extends State<JournalScreen> {
                     const Text('Pain Level',
                         style: TextStyle(
                             fontSize: 13,
-                            color: AppColors.textSecond,
+                            color: AppColors.textMuted,
                             fontWeight: FontWeight.w600)),
                     const Spacer(),
                     Container(
@@ -849,7 +849,7 @@ class _JournalScreenState extends State<JournalScreen> {
                   const Text('Pain Side',
                       style: TextStyle(
                           fontSize: 13,
-                          color: AppColors.textSecond,
+                          color: AppColors.textMuted,
                           fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   _buildSideSelector(_side, (s) => setState(() => _side = s)),
@@ -857,7 +857,7 @@ class _JournalScreenState extends State<JournalScreen> {
                   const Text('Symptoms',
                       style: TextStyle(
                           fontSize: 13,
-                          color: AppColors.textSecond,
+                          color: AppColors.textMuted,
                           fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   _buildSymptomChips(
@@ -874,19 +874,19 @@ class _JournalScreenState extends State<JournalScreen> {
                     maxLines: 3,
                     decoration: InputDecoration(
                       hintText: 'Notes — symptoms, water intake, diet, mood...',
-                      hintStyle: const TextStyle(color: AppColors.textSecond, fontSize: 13),
+                      hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
                       filled: true,
                       fillColor: AppColors.background,
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.divider)),
+                          borderSide: const BorderSide(color: AppColors.border)),
                       enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.divider)),
+                          borderSide: const BorderSide(color: AppColors.border)),
                       focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide:
-                          const BorderSide(color: AppColors.teal, width: 1.5)),
+                          const BorderSide(color: AppColors.primary, width: 1.5)),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -897,7 +897,7 @@ class _JournalScreenState extends State<JournalScreen> {
                       label: const Text('Save Entry',
                           style: TextStyle(fontWeight: FontWeight.w600)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.teal,
+                        backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -932,18 +932,18 @@ class _JournalScreenState extends State<JournalScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: AppColors.teal.withValues(alpha: 0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text('${filtered.length}',
                           style: const TextStyle(
-                              color: AppColors.teal,
+                              color: AppColors.primary,
                               fontWeight: FontWeight.bold,
                               fontSize: 12)),
                     ),
                     const Spacer(),
                     const Text('Tap to view',
-                        style: TextStyle(color: AppColors.textSecond, fontSize: 11)),
+                        style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
                   ]),
                   const SizedBox(height: 8),
                   SingleChildScrollView(
@@ -956,7 +956,7 @@ class _JournalScreenState extends State<JournalScreen> {
                           case 'Mild':     chipColor = AppColors.success; break;
                           case 'Moderate': chipColor = AppColors.warning; break;
                           case 'Severe':   chipColor = AppColors.danger; break;
-                          default:         chipColor = AppColors.teal;
+                          default:         chipColor = AppColors.primary;
                         }
                         return GestureDetector(
                           onTap: () => setState(() => _filterSeverity = f),
@@ -971,14 +971,14 @@ class _JournalScreenState extends State<JournalScreen> {
                                   : AppColors.background,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                  color: active ? chipColor : AppColors.divider,
+                                  color: active ? chipColor : AppColors.border,
                                   width: 1.5),
                             ),
                             child: Text(f,
                                 style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: active ? chipColor : AppColors.textSecond)),
+                                    color: active ? chipColor : AppColors.textMuted)),
                           ),
                         );
                       }).toList(),
@@ -1017,7 +1017,7 @@ class _JournalScreenState extends State<JournalScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.surface,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.divider),
+                        border: Border.all(color: AppColors.border),
                         boxShadow: [
                           BoxShadow(
                               color: Colors.black.withValues(alpha: 0.03),
@@ -1094,12 +1094,12 @@ class _JournalScreenState extends State<JournalScreen> {
                                 const SizedBox(height: 2),
                                 Text(dateStr,
                                     style: const TextStyle(
-                                        color: AppColors.textSecond, fontSize: 11)),
+                                        color: AppColors.textMuted, fontSize: 11)),
                               ],
                             ),
                           ),
                           const Icon(Icons.chevron_right,
-                              color: AppColors.textHint, size: 20),
+                              color: AppColors.textFaint, size: 20),
                         ],
                       ),
                     ),
@@ -1123,35 +1123,33 @@ class _SparklinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (values.length < 2) return;
-    final minVal = values.reduce(math.min);
-    final maxVal = values.reduce(math.max);
-    final range  = (maxVal - minVal).clamp(1.0, double.infinity);
+    final paint = Paint()
+      ..color = AppColors.primary
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
 
-    double x(int i) => size.width * i / (values.length - 1);
-    double y(double v) => size.height - (size.height * (v - minVal) / range);
+    final minV = values.reduce(math.min);
+    final maxV = values.reduce(math.max);
+    final range = (maxV - minV).clamp(1.0, double.infinity);
 
-    final path = Path()..moveTo(x(0), y(values[0]));
-    for (int i = 1; i < values.length; i++) {
-      final cp1x = (x(i - 1) + x(i)) / 2;
-      path.cubicTo(cp1x, y(values[i - 1]), cp1x, y(values[i]), x(i), y(values[i]));
+    final path = Path();
+    for (var i = 0; i < values.length; i++) {
+      final x = size.width * i / (values.length - 1);
+      final y = size.height - (values[i] - minV) / range * size.height;
+      i == 0 ? path.moveTo(x, y) : path.lineTo(x, y);
     }
+    canvas.drawPath(path, paint);
 
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = AppColors.teal
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-        ..strokeCap = StrokeCap.round,
+    // Draw dot at last point
+    final lastX = size.width.toDouble();
+    final lastY = size.height - (values.last - minV) / range * size.height;
+    canvas.drawCircle(
+      Offset(lastX, lastY),
+      4,
+      Paint()..color = AppColors.primary,
     );
-
-    for (int i = 0; i < values.length; i++) {
-      canvas.drawCircle(
-        Offset(x(i), y(values[i])),
-        3,
-        Paint()..color = AppColors.teal,
-      );
-    }
   }
 
   @override
