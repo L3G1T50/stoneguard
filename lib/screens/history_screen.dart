@@ -316,12 +316,17 @@ class _HistoryScreenState extends State<HistoryScreen>
                             if (idx < 0 || idx >= chartData.length) return const SizedBox();
 
                             int step;
-                            if      (_selectedDays <= 7) {
+                            if (_selectedDays <= 7) {
                               step = 1;
-                            } else if (_selectedDays <= 30)  step = 5;
-                            else if (_selectedDays <= 180) step = 4;
-                            else if (_selectedDays <= 365) step = 2;
-                            else                           step = 3;
+                            } else if (_selectedDays <= 30) {
+                              step = 5;
+                            } else if (_selectedDays <= 180) {
+                              step = 4;
+                            } else if (_selectedDays <= 365) {
+                              step = 2;
+                            } else {
+                              step = 3;
+                            }
 
                             if (idx % step != 0) return const SizedBox();
 
