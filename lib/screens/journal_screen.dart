@@ -30,7 +30,6 @@ class _JournalScreenState extends State<JournalScreen> {
 
   static const List<String> _sideOptions = ['None', 'Left', 'Both', 'Right'];
 
-  // ── Persistence ───────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
@@ -99,7 +98,6 @@ class _JournalScreenState extends State<JournalScreen> {
     _loadEntries();
   }
 
-  // ── Edit Sheet ────────────────────────────────────────────
   void _showEditSheet(Map<String, dynamic> entry, int index) {
     final editNote = TextEditingController(text: entry['note'] as String);
     int editPain = entry['pain'] as int;
@@ -114,8 +112,7 @@ class _JournalScreenState extends State<JournalScreen> {
       isScrollControlled: true,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheetState) => Padding(
-          padding: EdgeInsets.only(
-              bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
           child: Container(
             decoration: const BoxDecoration(
               color: AppColors.surface,
@@ -143,8 +140,7 @@ class _JournalScreenState extends State<JournalScreen> {
                     Text('Pain Level', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
                     const Spacer(),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: _painColor(editPain).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(20),
@@ -166,19 +162,15 @@ class _JournalScreenState extends State<JournalScreen> {
                   const SizedBox(height: 8),
                   Text('Side', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
-                  _buildSideSelector(editSide,
-                          (s) => setSheetState(() => editSide = s)),
+                  _buildSideSelector(editSide, (s) => setSheetState(() => editSide = s)),
                   const SizedBox(height: 12),
                   Text('Symptoms', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
-                  _buildSymptomChips(editSymptoms,
-                          (tag, val) => setSheetState(() {
-                        val ? editSymptoms.add(tag) : editSymptoms.remove(tag);
-                      })),
+                  _buildSymptomChips(editSymptoms, (tag, val) => setSheetState(() {
+                    val ? editSymptoms.add(tag) : editSymptoms.remove(tag);
+                  })),
                   const SizedBox(height: 12),
-                  _buildStonePassedToggle(
-                      editStonePassed,
-                          (v) => setSheetState(() => editStonePassed = v)),
+                  _buildStonePassedToggle(editStonePassed, (v) => setSheetState(() => editStonePassed = v)),
                   const SizedBox(height: 12),
                   TextField(
                     controller: editNote,
@@ -196,8 +188,7 @@ class _JournalScreenState extends State<JournalScreen> {
                           borderSide: const BorderSide(color: AppColors.border)),
                       focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide:
-                          const BorderSide(color: AppColors.primary, width: 1.5)),
+                          borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -208,8 +199,7 @@ class _JournalScreenState extends State<JournalScreen> {
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       onPressed: () async {
                         if (editNote.text.trim().isEmpty) return;
@@ -222,8 +212,7 @@ class _JournalScreenState extends State<JournalScreen> {
                         Navigator.pop(ctx);
                         await _updateEntry(index, updated);
                       },
-                      child: const Text('Save Changes',
-                          style: TextStyle(fontWeight: FontWeight.w600)),
+                      child: const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.w600)),
                     ),
                   ),
                 ],
@@ -235,15 +224,13 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  // ── Detail Sheet ───────────────────────────────────────────
   void _showEntryDetail(Map<String, dynamic> entry, int index) {
     final pain        = entry['pain'] as int;
     final note        = entry['note'] as String;
     final dateStr     = _formatDate(entry['date'] as String);
     final side        = (entry['side'] as String?) ?? 'None';
     final stonePassed = (entry['stonePassed'] as bool?) ?? false;
-    final symptoms    = List<String>.from(
-        (entry['symptoms'] as List<dynamic>?) ?? []);
+    final symptoms    = List<String>.from((entry['symptoms'] as List<dynamic>?) ?? []);
 
     showModalBottomSheet(
       context: context,
@@ -282,145 +269,131 @@ class _JournalScreenState extends State<JournalScreen> {
                           fontWeight: FontWeight.bold,
                           fontSize: 18)),
                 ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _painColor(pain).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _painColor(pain).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text('$pain / 10 — ${_painLabel(pain)}',
+                            style: TextStyle(
+                                color: _painColor(pain),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13)),
                       ),
-                      child: Text('$pain / 10 — ${_painLabel(pain)}',
-                          style: TextStyle(
-                              color: _painColor(pain),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13)),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(dateStr, style: AppTextStyles.micro),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(dateStr, style: AppTextStyles.micro),
+                    ],
+                  ),
                 ),
-              ),
-              if (stonePassed)
-                const Padding(
-                  padding: EdgeInsets.only(left: 8),
-                  child: Text('💎', style: TextStyle(fontSize: 22)),
-                ),
-            ]),
-            const SizedBox(height: 14),
-            if (side != 'None' || stonePassed) ...[
-              Wrap(spacing: 8, children: [
-                if (side != 'None')
-                  _infoBadge('$side Side', Icons.location_on_outlined, AppColors.primary),
                 if (stonePassed)
-                  _infoBadge('Stone Passed', Icons.check_circle_outline, AppColors.success),
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8),
+                    child: Text('💎', style: TextStyle(fontSize: 22)),
+                  ),
               ]),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
+              if (side != 'None' || stonePassed) ...[
+                Wrap(spacing: 8, children: [
+                  if (side != 'None')
+                    _infoBadge('$side Side', Icons.location_on_outlined, AppColors.primary),
+                  if (stonePassed)
+                    _infoBadge('Stone Passed', Icons.check_circle_outline, AppColors.success),
+                ]),
+                const SizedBox(height: 12),
+              ],
+              if (symptoms.isNotEmpty) ...[
+                Text('Symptoms', style: AppTextStyles.micro.copyWith(letterSpacing: 0.8)),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6, runSpacing: 6,
+                  children: symptoms.map((s) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(s, style: const TextStyle(
+                        color: AppColors.warning, fontSize: 12, fontWeight: FontWeight.w500)),
+                  )).toList(),
+                ),
+                const SizedBox(height: 12),
+              ],
+              const Divider(color: AppColors.border, height: 1),
+              const SizedBox(height: 14),
+              Text('NOTE', style: AppTextStyles.micro.copyWith(letterSpacing: 0.8)),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Text(note, style: AppTextStyles.body.copyWith(fontSize: 14, height: 1.6)),
+              ),
+              const SizedBox(height: 20),
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.delete_outline, color: AppColors.danger, size: 18),
+                    label: const Text('Delete', style: TextStyle(color: AppColors.danger)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.danger),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      await _deleteEntry(index);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.edit_outlined, color: AppColors.primary, size: 18),
+                    label: const Text('Edit', style: TextStyle(color: AppColors.primary)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.primary),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _showEditSheet(entry, index);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Close', style: TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ]),
             ],
-            if (symptoms.isNotEmpty) ...[
-              Text('Symptoms', style: AppTextStyles.micro.copyWith(letterSpacing: 0.8)),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: symptoms.map((s) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.warning.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
-                  ),
-                  child: Text(s,
-                      style: const TextStyle(
-                          color: AppColors.warning,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500)),
-                )).toList(),
-              ),
-              const SizedBox(height: 12),
-            ],
-            const Divider(color: AppColors.border, height: 1),
-            const SizedBox(height: 14),
-            Text('NOTE', style: AppTextStyles.micro.copyWith(letterSpacing: 0.8)),
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Text(note, style: AppTextStyles.body.copyWith(fontSize: 14, height: 1.6)),
-            ),
-            const SizedBox(height: 20),
-            Row(children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.delete_outline,
-                      color: AppColors.danger, size: 18),
-                  label: const Text('Delete',
-                      style: TextStyle(color: AppColors.danger)),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.danger),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () async {
-                    Navigator.pop(ctx);
-                    await _deleteEntry(index);
-                  },
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.edit_outlined,
-                      color: AppColors.primary, size: 18),
-                  label: const Text('Edit',
-                      style: TextStyle(color: AppColors.primary)),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.primary),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    _showEditSheet(entry, index);
-                  },
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Close',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
-                ),
-              ),
-            ]),
-          ],
+          ),
         ),
       ),
-    ),
     );
   }
 
-  // ── Reusable widgets ──────────────────────────────────────────
   Widget _infoBadge(String label, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -432,15 +405,12 @@ class _JournalScreenState extends State<JournalScreen> {
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(icon, size: 13, color: color),
         const SizedBox(width: 4),
-        Text(label,
-            style: TextStyle(
-                color: color, fontSize: 12, fontWeight: FontWeight.w500)),
+        Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500)),
       ]),
     );
   }
 
-  Widget _buildSideSelector(
-      String currentSide, void Function(String) onSelect) {
+  Widget _buildSideSelector(String currentSide, void Function(String) onSelect) {
     return Row(
       children: _sideOptions.map((s) {
         final selected = s == currentSide;
@@ -458,11 +428,10 @@ class _JournalScreenState extends State<JournalScreen> {
                     color: selected ? AppColors.primary : AppColors.border, width: 1.5),
               ),
               child: Center(
-                child: Text(s,
-                    style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: selected ? AppColors.primary : AppColors.textMuted)),
+                child: Text(s, style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: selected ? AppColors.primary : AppColors.textMuted)),
               ),
             ),
           ),
@@ -471,11 +440,9 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  Widget _buildSymptomChips(
-      Set<String> selected, void Function(String, bool) onToggle) {
+  Widget _buildSymptomChips(Set<String> selected, void Function(String, bool) onToggle) {
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: 8, runSpacing: 8,
       children: _symptomOptions.map((tag) {
         final active = selected.contains(tag);
         return GestureDetector(
@@ -487,32 +454,26 @@ class _JournalScreenState extends State<JournalScreen> {
               color: active ? AppColors.warning.withValues(alpha: 0.12) : AppColors.background,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                  color: active
-                      ? AppColors.warning.withValues(alpha: 0.5)
-                      : AppColors.border),
+                  color: active ? AppColors.warning.withValues(alpha: 0.5) : AppColors.border),
             ),
-            child: Text(tag,
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: active ? AppColors.warning : AppColors.textMuted)),
+            child: Text(tag, style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: active ? AppColors.warning : AppColors.textMuted)),
           ),
         );
       }).toList(),
     );
   }
 
-  Widget _buildStonePassedToggle(
-      bool value, void Function(bool) onChanged) {
+  Widget _buildStonePassedToggle(bool value, void Function(bool) onChanged) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: value ? AppColors.success.withValues(alpha: 0.08) : AppColors.background,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-            color: value
-                ? AppColors.success.withValues(alpha: 0.4)
-                : AppColors.border),
+            color: value ? AppColors.success.withValues(alpha: 0.4) : AppColors.border),
       ),
       child: Row(children: [
         const Text('💎', style: TextStyle(fontSize: 16)),
@@ -532,7 +493,6 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  // ── Helpers ───────────────────────────────────────────────────
   Color _painColor(int p) {
     if (p <= 3) return AppColors.success;
     if (p <= 6) return AppColors.warning;
@@ -550,10 +510,7 @@ class _JournalScreenState extends State<JournalScreen> {
   String _formatDate(String iso) {
     try {
       final dt = DateTime.parse(iso).toLocal();
-      const months = [
-        'Jan','Feb','Mar','Apr','May','Jun',
-        'Jul','Aug','Sep','Oct','Nov','Dec'
-      ];
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       return '${months[dt.month - 1]} ${dt.day}, ${dt.year}  ${dt.hour % 12 == 0 ? 12 : dt.hour % 12}:${dt.minute.toString().padLeft(2,'0')} ${dt.hour < 12 ? 'AM' : 'PM'}';
     } catch (_) {
       return iso;
@@ -576,26 +533,31 @@ class _JournalScreenState extends State<JournalScreen> {
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredEntries;
-    // Use MediaQuery for bottom inset — SafeArea is top-only so we own the bottom.
+    // The parent MainShell Scaffold owns the NavigationBar.
+    // MediaQuery.of(context).padding.bottom here reflects the nav bar +
+    // device home indicator already — no SafeArea needed, no double-counting.
     final bottomPad = MediaQuery.of(context).padding.bottom + 16;
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        // Only protect the top; the scroll view handles bottom via SliverToBoxAdapter spacer.
-        bottom: false,
-        child: CustomScrollView(
-          slivers: [
 
-            // ── Screen title ──
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: AppSpacing.pagePadding,
-                child: const AppScreenTitle('Pain Journal'),
-              ),
+    return ColoredBox(
+      color: AppColors.background,
+      child: CustomScrollView(
+        slivers: [
+
+          // Top safe-area gap (status bar)
+          SliverToBoxAdapter(
+            child: SizedBox(height: MediaQuery.of(context).padding.top),
+          ),
+
+          // Screen title
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: AppSpacing.pagePadding,
+              child: const AppScreenTitle('Pain Journal'),
             ),
+          ),
 
-            // ── 1. Entry form ──────────────────────────────────────────
-            SliverToBoxAdapter(
+          // 1. Entry form
+          SliverToBoxAdapter(
             child: Container(
               margin: const EdgeInsets.all(16),
               padding: const EdgeInsets.all(16),
@@ -613,17 +575,13 @@ class _JournalScreenState extends State<JournalScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'How are you feeling today?',
-                    style: AppTextStyles.itemTitle,
-                  ),
+                  Text('How are you feeling today?', style: AppTextStyles.itemTitle),
                   const SizedBox(height: 14),
                   Row(children: [
                     Text('Pain Level', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
                     const Spacer(),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
                         color: _painColor(_painLevel).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(20),
@@ -655,8 +613,7 @@ class _JournalScreenState extends State<JournalScreen> {
                     });
                   }),
                   const SizedBox(height: 12),
-                  _buildStonePassedToggle(
-                      _stonePassed, (v) => setState(() => _stonePassed = v)),
+                  _buildStonePassedToggle(_stonePassed, (v) => setState(() => _stonePassed = v)),
                   const SizedBox(height: 12),
                   TextField(
                     controller: _noteController,
@@ -674,8 +631,7 @@ class _JournalScreenState extends State<JournalScreen> {
                           borderSide: const BorderSide(color: AppColors.border)),
                       focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                              color: AppColors.primary, width: 1.5)),
+                          borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -689,8 +645,7 @@ class _JournalScreenState extends State<JournalScreen> {
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         textStyle: AppTextStyles.button,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
                       ),
                       onPressed: _saveEntry,
@@ -701,7 +656,7 @@ class _JournalScreenState extends State<JournalScreen> {
             ),
           ),
 
-          // ── 2. Filter row ──────────────────────────────────────────
+          // 2. Filter row
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -714,23 +669,20 @@ class _JournalScreenState extends State<JournalScreen> {
                     underline: const SizedBox(),
                     style: AppTextStyles.body,
                     items: ['All', 'Mild', 'Moderate', 'Severe']
-                        .map((s) => DropdownMenuItem(
-                            value: s, child: Text(s)))
+                        .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                         .toList(),
-                    onChanged: (v) =>
-                        setState(() => _filterSeverity = v ?? 'All'),
+                    onChanged: (v) => setState(() => _filterSeverity = v ?? 'All'),
                   ),
                 ],
               ),
             ),
           ),
 
-          // ── 3. Trend sparkline ─────────────────────────────────────
+          // 3. Trend sparkline
           if (_entries.length >= 3)
             SliverToBoxAdapter(
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 child: Container(
                   height: 56,
                   decoration: BoxDecoration(
@@ -739,21 +691,17 @@ class _JournalScreenState extends State<JournalScreen> {
                     border: Border.all(color: AppColors.border),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     child: Row(
                       children: [
-                        Text('Pain trend',
-                            style: AppTextStyles.micro
-                                .copyWith(letterSpacing: 0.8)),
+                        Text('Pain trend', style: AppTextStyles.micro.copyWith(letterSpacing: 0.8)),
                         const SizedBox(width: 12),
                         Expanded(
                           child: CustomPaint(
                             painter: _SparklinePainter(
                               values: _entries
                                   .take(20)
-                                  .map((e) =>
-                                      (e['pain'] as int).toDouble())
+                                  .map((e) => (e['pain'] as int).toDouble())
                                   .toList()
                                   .reversed
                                   .toList(),
@@ -768,22 +716,19 @@ class _JournalScreenState extends State<JournalScreen> {
               ),
             ),
 
-          // ── 4. Entry list ──────────────────────────────────────────
+          // 4. Entry list
           if (filtered.isEmpty)
             SliverFillRemaining(
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.book_outlined,
-                        size: 48, color: AppColors.textHint),
+                    Icon(Icons.book_outlined, size: 48, color: AppColors.textHint),
                     const SizedBox(height: 12),
                     Text('No entries yet',
-                        style: AppTextStyles.itemTitle
-                            .copyWith(color: AppColors.textHint)),
+                        style: AppTextStyles.itemTitle.copyWith(color: AppColors.textHint)),
                     const SizedBox(height: 4),
-                    Text('Log how you are feeling above',
-                        style: AppTextStyles.body),
+                    Text('Log how you are feeling above', style: AppTextStyles.body),
                   ],
                 ),
               ),
@@ -795,16 +740,12 @@ class _JournalScreenState extends State<JournalScreen> {
                   final entry = filtered[index];
                   final pain = entry['pain'] as int;
                   final note = entry['note'] as String;
-                  final dateStr =
-                      _formatDate(entry['date'] as String);
-                  final stonePassed =
-                      (entry['stonePassed'] as bool?) ?? false;
-                  final symptoms = List<String>.from(
-                      (entry['symptoms'] as List<dynamic>?) ?? []);
+                  final dateStr = _formatDate(entry['date'] as String);
+                  final stonePassed = (entry['stonePassed'] as bool?) ?? false;
+                  final symptoms = List<String>.from((entry['symptoms'] as List<dynamic>?) ?? []);
 
                   return Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 5),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
                     child: GestureDetector(
                       onTap: () => _showEntryDetail(entry, index),
                       child: Container(
@@ -814,8 +755,7 @@ class _JournalScreenState extends State<JournalScreen> {
                           border: Border.all(color: AppColors.border),
                           boxShadow: [
                             BoxShadow(
-                                color: Colors.black
-                                    .withValues(alpha: 0.04),
+                                color: Colors.black.withValues(alpha: 0.04),
                                 blurRadius: 6,
                                 offset: const Offset(0, 2)),
                           ],
@@ -827,8 +767,7 @@ class _JournalScreenState extends State<JournalScreen> {
                             Row(children: [
                               CircleAvatar(
                                 radius: 18,
-                                backgroundColor: _painColor(pain)
-                                    .withValues(alpha: 0.12),
+                                backgroundColor: _painColor(pain).withValues(alpha: 0.12),
                                 child: Text('$pain',
                                     style: TextStyle(
                                         color: _painColor(pain),
@@ -838,53 +777,35 @@ class _JournalScreenState extends State<JournalScreen> {
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      '$pain/10 — ${_painLabel(pain)}',
-                                      style: AppTextStyles.itemTitle
-                                          .copyWith(
-                                              color: _painColor(pain),
-                                              fontSize: 13),
-                                    ),
-                                    Text(dateStr,
-                                        style: AppTextStyles.micro),
+                                    Text('$pain/10 — ${_painLabel(pain)}',
+                                        style: AppTextStyles.itemTitle.copyWith(
+                                            color: _painColor(pain), fontSize: 13)),
+                                    Text(dateStr, style: AppTextStyles.micro),
                                   ],
                                 ),
                               ),
                               if (stonePassed)
-                                const Text('💎',
-                                    style: TextStyle(fontSize: 18)),
+                                const Text('💎', style: TextStyle(fontSize: 18)),
                               const SizedBox(width: 4),
-                              Icon(Icons.chevron_right,
-                                  color: AppColors.textHint, size: 18),
+                              Icon(Icons.chevron_right, color: AppColors.textHint, size: 18),
                             ]),
                             if (symptoms.isNotEmpty) ...[
                               const SizedBox(height: 8),
                               Wrap(
                                 spacing: 6,
-                                children: symptoms
-                                    .take(3)
-                                    .map((s) => Container(
-                                          padding:
-                                              const EdgeInsets.symmetric(
-                                                  horizontal: 8,
-                                                  vertical: 3),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.warning
-                                                .withValues(alpha: 0.1),
-                                            borderRadius:
-                                                BorderRadius.circular(20),
-                                          ),
-                                          child: Text(s,
-                                              style: const TextStyle(
-                                                  color: AppColors.warning,
-                                                  fontSize: 11,
-                                                  fontWeight:
-                                                      FontWeight.w500)),
-                                        ))
-                                    .toList(),
+                                children: symptoms.take(3).map((s) => Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.warning.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(s, style: const TextStyle(
+                                      color: AppColors.warning,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500)),
+                                )).toList(),
                               ),
                             ],
                             const SizedBox(height: 8),
@@ -892,8 +813,7 @@ class _JournalScreenState extends State<JournalScreen> {
                               note,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: AppTextStyles.body
-                                  .copyWith(fontSize: 13),
+                              style: AppTextStyles.body.copyWith(fontSize: 13),
                             ),
                           ],
                         ),
@@ -905,16 +825,15 @@ class _JournalScreenState extends State<JournalScreen> {
               ),
             ),
 
-          // ── Bottom spacer: clears nav bar + device home indicator ──
+          // Bottom spacer — clears NavigationBar + home indicator
           SliverToBoxAdapter(child: SizedBox(height: bottomPad)),
         ],
-        ),
       ),
     );
   }
 }
 
-// ── Sparkline painter ─────────────────────────────────────────────
+// Sparkline painter
 class _SparklinePainter extends CustomPainter {
   final List<double> values;
   final Color color;
@@ -968,7 +887,6 @@ class _SparklinePainter extends CustomPainter {
     canvas.drawPath(fillPath, fillPaint);
     canvas.drawPath(path, paint);
 
-    // Dot at latest value
     canvas.drawCircle(
       Offset(size.width, yFor(values.last)),
       3,
