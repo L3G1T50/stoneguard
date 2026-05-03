@@ -1,4 +1,6 @@
+// ─── MAIN ENTRY POINT ────────────────────────────────────────────────────────
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:permission_handler/permission_handler.dart';
@@ -9,23 +11,32 @@ import 'screens/journal_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/progress_screen.dart';
 import 'screens/settings_screen.dart';
+import 'theme/app_theme.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Transparent status bar so app content goes edge-to-edge
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+    systemNavigationBarColor: AppColors.navBg,
+    systemNavigationBarIconBrightness: Brightness.dark,
+  ));
+
   MobileAds.instance.initialize();
   tz.initializeTimeZones();
 
   const AndroidInitializationSettings androidSettings =
       AndroidInitializationSettings('@mipmap/ic_launcher');
-
   const InitializationSettings initSettings =
       InitializationSettings(android: androidSettings);
-
   await flutterLocalNotificationsPlugin.initialize(initSettings);
   await requestExactAlarmPermission();
+
   runApp(const MyApp());
 }
 
@@ -43,16 +54,13 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'StoneGuard',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-        useMaterial3: true,
-      ),
+      theme: buildAppTheme(),   // ← single theme from app_theme.dart
       home: const SplashScreen(),
     );
   }
 }
 
-// ─── MAIN SHELL (bottom nav tabs) ─────────────────────────────────────────────
+// ─── MAIN SHELL ───────────────────────────────────────────────────────────────
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -80,36 +88,31 @@ class _MainShellState extends State<MainShell> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (index) {
-          setState(() => _currentIndex = index);
-        },
-        backgroundColor: Colors.white,
-        indicatorColor: Colors.teal.withValues(alpha: 0.15),
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        onDestinationSelected: (i) => setState(() => _currentIndex = i),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.shield_outlined),
-            selectedIcon: Icon(Icons.shield, color: Colors.teal),
+            selectedIcon: Icon(Icons.shield),
             label: 'Shield',
           ),
           NavigationDestination(
             icon: Icon(Icons.book_outlined),
-            selectedIcon: Icon(Icons.book, color: Colors.teal),
+            selectedIcon: Icon(Icons.book),
             label: 'Journal',
           ),
           NavigationDestination(
             icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart, color: Colors.teal),
+            selectedIcon: Icon(Icons.bar_chart),
             label: 'History',
           ),
           NavigationDestination(
             icon: Icon(Icons.trending_up_outlined),
-            selectedIcon: Icon(Icons.trending_up, color: Colors.teal),
+            selectedIcon: Icon(Icons.trending_up),
             label: 'Progress',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings, color: Colors.teal),
+            selectedIcon: Icon(Icons.settings),
             label: 'Settings',
           ),
         ],
