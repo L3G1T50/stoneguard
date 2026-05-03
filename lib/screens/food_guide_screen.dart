@@ -6,7 +6,13 @@ import '../widgets/banner_ad_widget.dart';
 
 class FoodGuideScreen extends StatefulWidget {
   final void Function(double mg, String name) onLogFood;
-  const FoodGuideScreen({super.key, required this.onLogFood});
+  // onLogFood is optional — defaults to a no-op so the screen works
+  // both as a standalone nav tab and when called from the Journal.
+  const FoodGuideScreen({super.key, void Function(double mg, String name)? onLogFood})
+      : onLogFood = onLogFood ?? _noOp;
+
+  static void _noOp(double mg, String name) {}
+
   @override
   State<FoodGuideScreen> createState() => _FoodGuideScreenState();
 }
@@ -99,7 +105,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
           expand: false,
           builder: (_, scrollController) => Column(
             children: [
-              // Handle bar
               Padding(
                 padding: const EdgeInsets.only(top: 12, bottom: 8),
                 child: Container(width: 40, height: 4,
@@ -108,8 +113,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                       borderRadius: BorderRadius.circular(2),
                     )),
               ),
-
-              // Header
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Row(
@@ -130,10 +133,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                   ],
                 ),
               ),
-
               const Divider(height: 1),
-
-              // Log list
               Expanded(
                 child: log.isEmpty
                     ? Center(
@@ -158,7 +158,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 8),
                   itemCount: log.length,
-                  separatorBuilder: (_, _) =>
+                  separatorBuilder: (_, __) =>
                   const Divider(height: 1),
                   itemBuilder: (_, index) {
                     final parts = log[index].split('|');
@@ -226,6 +226,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
       ),
     );
   }
+
   void _showFoodDetail(FoodItem food) {
     final color = levelColor[food.level]!;
     showModalBottomSheet(
@@ -240,18 +241,14 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Handle bar
             Center(child: Container(width: 40, height: 4,
                 decoration: BoxDecoration(color: Colors.grey.shade300,
                     borderRadius: BorderRadius.circular(2)))),
             const SizedBox(height: 20),
-
-            // Food name + level badge
             Row(
               children: [
                 Expanded(child: Text(food.name,
                     style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold))),
-                // Heart favorite button
                 GestureDetector(
                   onTap: () {
                     _toggleFavorite(food.name);
@@ -300,8 +297,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
               ],
             ),
             const SizedBox(height: 20),
-
-            // Stats row
             Row(children: [
               _statCard('Oxalates', '${food.oxalateMg.toStringAsFixed(0)} mg', Icons.science_outlined, color),
               const SizedBox(width: 12),
@@ -310,8 +305,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
               _statCard('Category', food.category, Icons.category_outlined, Colors.blueGrey),
             ]),
             const SizedBox(height: 20),
-
-            // Tip
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -331,8 +324,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Log This Food button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -405,13 +396,11 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
 
     return Column(
       children: [
-        // ── SEARCH + FILTER HEADER ──
         Container(
           color: Colors.white,
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Column(
             children: [
-              // Search bar
               Row(
                 children: [
                   Expanded(
@@ -454,8 +443,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                   ),
                 ],
               ),
-
-              // Filter chips
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -500,7 +487,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
         const BannerAdWidget(),
         const SizedBox(height: 4),
 
-        // ── FOOD LIST ──
         Expanded(
           child: foods.isEmpty
               ? Center(child: Text('No foods found.',
@@ -526,12 +512,9 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                   ),
                   child: Row(
                     children: [
-                      // Level dot
                       Container(width: 12, height: 12,
                           decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
                       const SizedBox(width: 14),
-
-                      // Food name + category
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -544,8 +527,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                           ],
                         ),
                       ),
-
-                      // Oxalate mg badge
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
