@@ -1,9 +1,9 @@
 // ─── SPLASH SCREEN ───────────────────────────────────────────────
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../main.dart';
 import 'setup_screen.dart';
 import 'onboarding_screen.dart';
-import 'home_shield_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -50,10 +50,8 @@ class _SplashScreenState extends State<SplashScreen>
 
     final prefs = await SharedPreferences.getInstance();
 
-    final hasSeenOnboarding =
-        prefs.getBool('has_seen_onboarding') ?? false;
-    final hasCompletedSetup =
-        prefs.getBool('has_completed_setup') ?? false;
+    final hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
+    final hasCompletedSetup = prefs.getBool('has_completed_setup') ?? false;
 
     if (!mounted) return;
 
@@ -64,7 +62,7 @@ class _SplashScreenState extends State<SplashScreen>
     } else if (!hasCompletedSetup) {
       nextScreen = const SetupScreen();
     } else {
-      nextScreen = const HomeShieldScreen();
+      nextScreen = const MainShell();
     }
 
     Navigator.of(context).pushReplacement(
