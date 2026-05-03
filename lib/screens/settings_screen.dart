@@ -389,7 +389,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               icon: Icons.notifications_outlined,
                               color: Colors.blue),
                           const SizedBox(width: 14),
-                          const Text('Water Reminders',
+                          Text('Water Reminders',
                               style: AppTextStyles.itemTitle),
                         ]),
                         Switch(
@@ -412,7 +412,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Remind me every',
+                          Text('Remind me every',
                               style: AppTextStyles.body),
                           DropdownButton<int>(
                             value: _reminderInterval,
@@ -449,10 +449,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Row(children: [
-                          Icon(Icons.water_drop,
+                        Row(children: [
+                          const Icon(Icons.water_drop,
                               color: AppColors.teal, size: 20),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           Text('Water Goal', style: AppTextStyles.itemTitle),
                         ]),
                         _valueBadge(
@@ -478,10 +478,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Row(children: [
-                          Icon(Icons.science_outlined,
+                        Row(children: [
+                          const Icon(Icons.science_outlined,
                               color: AppColors.oxalate, size: 20),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           Text('Oxalate Limit',
                               style: AppTextStyles.itemTitle),
                         ]),
