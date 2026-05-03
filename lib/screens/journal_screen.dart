@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'database_helper.dart';
+import '../database_helper.dart';
 import 'dart:math' as math;
 
 class JournalScreen extends StatefulWidget {

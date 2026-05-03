@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
 import 'setup_screen.dart';
 import 'onboarding_screen.dart';
+import 'home_shield_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -64,7 +65,7 @@ class _SplashScreenState extends State<SplashScreen>
     } else if (!hasCompletedSetup) {
       nextScreen = const SetupScreen();
     } else {
-      nextScreen = const MyHomePage();
+      nextScreen = const HomeShieldScreen();
     }
 
     Navigator.of(context).pushReplacement(

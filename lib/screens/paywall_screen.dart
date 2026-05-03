@@ -11,11 +11,11 @@ import 'package:printing/printing.dart';
 
 import 'paywall_screen.dart';
 
-class DoctorViewScreen extends StatefulWidget {
+class PaywallScreen extends StatefulWidget {
   const DoctorViewScreen({super.key});
 
   @override
-  State<DoctorViewScreen> createState() => _DoctorViewScreenState();
+  State<DoctorViewScreen> createState() => _PaywallScreenState();
 }
 
 class _DoctorViewScreenState extends State<DoctorViewScreen> {

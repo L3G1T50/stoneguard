@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
+import 'home_shield_screen.dart';
 
 class SetupScreen extends StatefulWidget {
   const SetupScreen({super.key});
@@ -48,7 +49,7 @@ class _SetupScreenState extends State<SetupScreen> {
     if (!mounted) return;
 
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const MyHomePage()),
+      MaterialPageRoute(builder: (_) => const HomeShieldScreen()),
     );
   }
 
