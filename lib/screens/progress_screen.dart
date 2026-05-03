@@ -20,7 +20,6 @@ class _ProgressScreenState extends State<ProgressScreen> {
   bool _isLoading = true;
   int _totalDaysLogged = 0;
 
-  static const Color bgColor = Color(0xFFF8F8F8);
   static const Color cardColor = Color(0xFFFFFFFF);
   static const Color borderColor = Color(0xFFD0D0D8);
   static const Color textColor = Color(0xFF2C2C2C);

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import '../database_helper.dart';
-import 'dart:math' as math;
 import '../theme/app_theme.dart';
 import '../widgets/gradient_scaffold.dart';
-import 'settings_screen.dart';
 
 class JournalScreen extends StatefulWidget {
   const JournalScreen({super.key});
@@ -543,7 +541,6 @@ class _JournalScreenState extends State<JournalScreen> {
         padding: EdgeInsets.only(bottom: bottomPad),
         children: [
 
-          // ── Card 1: New entry form ────────────────────────────────────────
           Container(
             margin: const EdgeInsets.fromLTRB(16, 4, 16, 12),
             padding: const EdgeInsets.all(16),
@@ -641,7 +638,6 @@ class _JournalScreenState extends State<JournalScreen> {
             ),
           ),
 
-          // ── Card 2: Past Entries ──────────────────────────────────────────
           Container(
             margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             decoration: BoxDecoration(
@@ -658,7 +654,6 @@ class _JournalScreenState extends State<JournalScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Header row (title + filter) ──
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 14, 8, 0),
                   child: Row(
@@ -678,7 +673,6 @@ class _JournalScreenState extends State<JournalScreen> {
                   ),
                 ),
 
-                // ── Sparkline trend (only with 3+ entries) ──
                 if (_entries.length >= 3)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
@@ -716,7 +710,6 @@ class _JournalScreenState extends State<JournalScreen> {
 
                 const Divider(color: AppColors.border, height: 1),
 
-                // ── Empty state ──
                 if (filtered.isEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 36),
@@ -734,14 +727,13 @@ class _JournalScreenState extends State<JournalScreen> {
                       ),
                     ),
                   )
-                // ── Entry rows ──
                 else
                   ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     padding: const EdgeInsets.only(top: 4, bottom: 8),
                     itemCount: filtered.length,
-                    separatorBuilder: (_, __) =>
+                    separatorBuilder: (_, i) =>
                         const Divider(color: AppColors.border, height: 1, indent: 16, endIndent: 16),
                     itemBuilder: (context, index) {
                       final entry      = filtered[index];
@@ -825,7 +817,6 @@ class _JournalScreenState extends State<JournalScreen> {
   }
 }
 
-// Sparkline painter
 class _SparklinePainter extends CustomPainter {
   final List<double> values;
   final Color color;

@@ -173,7 +173,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
 
   late AnimationController _fillController;
   late Animation<double> _fillAnimation;
-  double _previousOz = 0;
 
   late AnimationController _waveController;
 
@@ -228,7 +227,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     super.dispose();
   }
 
-  // Reload whenever the app comes back to the foreground
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) loadData();
@@ -260,7 +258,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     await prefs.setStringList('daily_history', updated);
   }
 
-  // Public so MainShell can call it when switching back to the Shield tab
   Future<void> loadData() async {
     final prefs = await SharedPreferences.getInstance();
     final savedWater = prefs.getDouble('water_$_todayKey') ?? 0;
@@ -273,7 +270,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
       oxalateMg = savedOxalate;
       goalOz = savedGoalOz;
       goalMg = savedGoalMg;
-      _previousOz = savedWater;
       _userName = prefs.getString('user_name') ?? '';
       _avatarPath = prefs.getString('avatar_path') ?? '';
       _fillAnimation =
@@ -296,7 +292,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     _fillController.forward(from: 0);
 
     setState(() {
-      _previousOz = currentAnimProg * goalOz;
       waterOz = newOz;
     });
     await prefs.setDouble('water_$_todayKey', newOz);
@@ -315,7 +310,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
             parent: _fillController, curve: Curves.easeInOutCubic));
     _fillController.forward(from: 0);
     setState(() {
-      _previousOz = 0;
       waterOz = 0;
       oxalateMg = 0;
     });
