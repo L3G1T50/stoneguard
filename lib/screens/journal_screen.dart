@@ -1,7 +1,9 @@
+// ─── JOURNAL SCREEN ───────────────────────────────────────────────────────────────────────────
 import 'package:flutter/material.dart';
 import '../database_helper.dart';
 import 'dart:math' as math;
 import '../app_theme.dart';
+import '../widgets/gradient_scaffold.dart';
 
 class JournalScreen extends StatefulWidget {
   const JournalScreen({super.key});
@@ -98,7 +100,7 @@ class _JournalScreenState extends State<JournalScreen> {
     _loadEntries();
   }
 
-  // ── Edit Sheet ────────────────────────────────────────────
+  // ── Edit Sheet ──────────────────────────────────────────
   void _showEditSheet(Map<String, dynamic> entry, int index) {
     final editNote = TextEditingController(text: entry['note'] as String);
     int editPain = entry['pain'] as int;
@@ -250,7 +252,7 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  // ── Detail Sheet ───────────────────────────────────────────
+  // ── Detail Sheet ─────────────────────────────────────────
   void _showEntryDetail(Map<String, dynamic> entry, int index) {
     final pain        = entry['pain'] as int;
     final note        = entry['note'] as String;
@@ -449,7 +451,7 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  // ── Reusable widgets ──────────────────────────────────────────
+  // ── Reusable widgets ────────────────────────────────────────────
   Widget _infoBadge(String label, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -566,7 +568,7 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  // ── Pain trend sparkline ──────────────────────────────────────────
+  // ── Pain trend sparkline ──────────────────────────────────────────────────
   Widget _buildPainTrend() {
     if (_entries.length < 2) return const SizedBox.shrink();
     final recent = _entries.take(7).toList().reversed.toList();
@@ -610,7 +612,7 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  // ── Helpers ─────────────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────────
   Color _painColor(int level) {
     if (level <= 3) return AppColors.success;
     if (level <= 6) return AppColors.warning;
@@ -759,363 +761,358 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  // ── Build ─────────────────────────────────────────────────────────
+  // ── Build ─────────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredEntries;
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.warning,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          'Pain Journal',
-          style: TextStyle(
-              color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 20),
-        ),
-      ),
-      body: CustomScrollView(
-        slivers: [
 
-          // ── 1. Entry form ──────────────────────────────────────────
-          SliverToBoxAdapter(
-            child: Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2)),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'How are you feeling today?',
-                    style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary),
-                  ),
-                  const SizedBox(height: 14),
-                  Row(children: [
-                    const Text('Pain Level',
-                        style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textMuted,
-                            fontWeight: FontWeight.w600)),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _painColor(_painLevel).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text('$_painLevel - ${_painLabel(_painLevel)}',
-                          style: TextStyle(
-                              color: _painColor(_painLevel),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13)),
-                    ),
-                  ]),
-                  Slider(
-                    value: _painLevel.toDouble(),
-                    min: 1, max: 10, divisions: 9,
-                    label: '$_painLevel',
-                    activeColor: _painColor(_painLevel),
-                    inactiveColor: _painColor(_painLevel).withValues(alpha: 0.15),
-                    onChanged: (v) => setState(() => _painLevel = v.round()),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('1 - No pain',
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.grey.shade400)),
-                      Text('10 - Extreme',
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.grey.shade400)),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  const Text('Pain Side',
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textMuted,
-                          fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  _buildSideSelector(_side, (s) => setState(() => _side = s)),
-                  const SizedBox(height: 14),
-                  const Text('Symptoms',
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textMuted,
-                          fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  _buildSymptomChips(
-                      _selectedSymptoms,
-                          (tag, val) => setState(() =>
-                      val ? _selectedSymptoms.add(tag)
-                          : _selectedSymptoms.remove(tag))),
-                  const SizedBox(height: 14),
-                  _buildStonePassedToggle(
-                      _stonePassed, (v) => setState(() => _stonePassed = v)),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: _noteController,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      hintText: 'Notes — symptoms, water intake, diet, mood...',
-                      hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
-                      filled: true,
-                      fillColor: AppColors.background,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.border)),
-                      enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.border)),
-                      focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide:
-                          const BorderSide(color: AppColors.primary, width: 1.5)),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.save_outlined),
-                      label: const Text('Save Entry',
-                          style: TextStyle(fontWeight: FontWeight.w600)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: _saveEntry,
-                    ),
-                  ),
-                ],
-              ),
+    // The body contains all the journal content (form + list).
+    // GradientScaffold supplies the teal-to-white header and background.
+    final body = CustomScrollView(
+      slivers: [
+
+        // ── 1. Entry form ──────────────────────────────────────────
+        SliverToBoxAdapter(
+          child: Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2)),
+              ],
             ),
-          ),
-
-          // ── 2. Pain trend sparkline ───────────────────────────────────
-          SliverToBoxAdapter(child: _buildPainTrend()),
-
-          // ── 3. Past entries header + filter ───────────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [
-                    const Text('Past Entries',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'How are you feeling today?',
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary),
+                ),
+                const SizedBox(height: 14),
+                Row(children: [
+                  const Text('Pain Level',
+                      style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textMuted,
+                          fontWeight: FontWeight.w600)),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _painColor(_painLevel).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text('$_painLevel - ${_painLabel(_painLevel)}',
                         style: TextStyle(
+                            color: _painColor(_painLevel),
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: AppColors.textPrimary)),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text('${filtered.length}',
-                          style: const TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12)),
-                    ),
-                    const Spacer(),
-                    const Text('Tap to view',
-                        style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
-                  ]),
-                  const SizedBox(height: 8),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: ['All', 'Mild', 'Moderate', 'Severe'].map((f) {
-                        final active = _filterSeverity == f;
-                        Color chipColor;
-                        switch (f) {
-                          case 'Mild':     chipColor = AppColors.success; break;
-                          case 'Moderate': chipColor = AppColors.warning; break;
-                          case 'Severe':   chipColor = AppColors.danger; break;
-                          default:         chipColor = AppColors.primary;
-                        }
-                        return GestureDetector(
-                          onTap: () => setState(() => _filterSeverity = f),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 160),
-                            margin: const EdgeInsets.only(right: 8),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: active
-                                  ? chipColor.withValues(alpha: 0.12)
-                                  : AppColors.background,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                  color: active ? chipColor : AppColors.border,
-                                  width: 1.5),
-                            ),
-                            child: Text(f,
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: active ? chipColor : AppColors.textMuted)),
-                          ),
-                        );
-                      }).toList(),
-                    ),
+                            fontSize: 13)),
                   ),
-                ],
-              ),
+                ]),
+                Slider(
+                  value: _painLevel.toDouble(),
+                  min: 1, max: 10, divisions: 9,
+                  label: '$_painLevel',
+                  activeColor: _painColor(_painLevel),
+                  inactiveColor: _painColor(_painLevel).withValues(alpha: 0.15),
+                  onChanged: (v) => setState(() => _painLevel = v.round()),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('1 - No pain',
+                        style: TextStyle(
+                            fontSize: 11, color: Colors.grey.shade400)),
+                    Text('10 - Extreme',
+                        style: TextStyle(
+                            fontSize: 11, color: Colors.grey.shade400)),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                const Text('Pain Side',
+                    style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textMuted,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                _buildSideSelector(_side, (s) => setState(() => _side = s)),
+                const SizedBox(height: 14),
+                const Text('Symptoms',
+                    style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textMuted,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                _buildSymptomChips(
+                    _selectedSymptoms,
+                        (tag, val) => setState(() =>
+                    val ? _selectedSymptoms.add(tag)
+                        : _selectedSymptoms.remove(tag))),
+                const SizedBox(height: 14),
+                _buildStonePassedToggle(
+                    _stonePassed, (v) => setState(() => _stonePassed = v)),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _noteController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Notes — symptoms, water intake, diet, mood...',
+                    hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                    filled: true,
+                    fillColor: AppColors.background,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.border)),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.border)),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                        const BorderSide(color: AppColors.primary, width: 1.5)),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.save_outlined),
+                    label: const Text('Save Entry',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: _saveEntry,
+                  ),
+                ),
+              ],
             ),
           ),
+        ),
 
-          // ── 4. Entry list or empty state ─────────────────────────────
-          filtered.isEmpty
-              ? SliverFillRemaining(
-            hasScrollBody: false,
-            child: _buildJournalEmptyState(),
-          )
-              : SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                    (context, i) {
-                  final e           = filtered[i];
-                  final pain        = e['pain'] as int;
-                  final note        = e['note'] as String;
-                  final dateStr     = _formatDate(e['date'] as String);
-                  final stonePassed = (e['stonePassed'] as bool?) ?? false;
-                  final symptoms    = List<String>.from(
-                      (e['symptoms'] as List<dynamic>?) ?? []);
-                  final masterIndex = _entries.indexOf(e);
+        // ── 2. Pain trend sparkline ─────────────────────────────────────
+        SliverToBoxAdapter(child: _buildPainTrend()),
 
-                  return GestureDetector(
-                    onTap: () => _showEntryDetail(e, masterIndex),
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.border),
-                        boxShadow: [
-                          BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.03),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2)),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 48, height: 48,
-                            decoration: BoxDecoration(
-                              color: _painColor(pain).withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Center(
-                              child: Text('$pain',
-                                  style: TextStyle(
-                                      color: _painColor(pain),
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18)),
-                            ),
+        // ── 3. Past entries header + filter ──────────────────────────────
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  const Text('Past Entries',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: AppColors.textPrimary)),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text('${filtered.length}',
+                        style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12)),
+                  ),
+                  const Spacer(),
+                  const Text('Tap to view',
+                      style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                ]),
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: ['All', 'Mild', 'Moderate', 'Severe'].map((f) {
+                      final active = _filterSeverity == f;
+                      Color chipColor;
+                      switch (f) {
+                        case 'Mild':     chipColor = AppColors.success; break;
+                        case 'Moderate': chipColor = AppColors.warning; break;
+                        case 'Severe':   chipColor = AppColors.danger; break;
+                        default:         chipColor = AppColors.primary;
+                      }
+                      return GestureDetector(
+                        onTap: () => setState(() => _filterSeverity = f),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 160),
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: active
+                                ? chipColor.withValues(alpha: 0.12)
+                                : AppColors.background,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color: active ? chipColor : AppColors.border,
+                                width: 1.5),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(children: [
+                          child: Text(f,
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: active ? chipColor : AppColors.textMuted)),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // ── 4. Entry list or empty state ─────────────────────────────────
+        filtered.isEmpty
+            ? SliverFillRemaining(
+          hasScrollBody: false,
+          child: _buildJournalEmptyState(),
+        )
+            : SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+                  (context, i) {
+                final e           = filtered[i];
+                final pain        = e['pain'] as int;
+                final note        = e['note'] as String;
+                final dateStr     = _formatDate(e['date'] as String);
+                final stonePassed = (e['stonePassed'] as bool?) ?? false;
+                final symptoms    = List<String>.from(
+                    (e['symptoms'] as List<dynamic>?) ?? []);
+                final masterIndex = _entries.indexOf(e);
+
+                return GestureDetector(
+                  onTap: () => _showEntryDetail(e, masterIndex),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.border),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2)),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 48, height: 48,
+                          decoration: BoxDecoration(
+                            color: _painColor(pain).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: Text('$pain',
+                                style: TextStyle(
+                                    color: _painColor(pain),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: _painColor(pain).withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(_painLabel(pain),
+                                      style: TextStyle(
+                                          color: _painColor(pain),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold)),
+                                ),
+                                if (stonePassed) ...[
+                                  const SizedBox(width: 6),
+                                  const Text('💎',
+                                      style: TextStyle(fontSize: 13)),
+                                ],
+                                if (symptoms.isNotEmpty) ...[
+                                  const SizedBox(width: 6),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 2),
+                                        horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: _painColor(pain).withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(10),
+                                      color: AppColors.warning.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: Text(_painLabel(pain),
-                                        style: TextStyle(
-                                            color: _painColor(pain),
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold)),
+                                    child: Text(
+                                      '+${symptoms.length} symptom${symptoms.length > 1 ? 's' : ''}',
+                                      style: const TextStyle(
+                                          color: AppColors.warning,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600),
+                                    ),
                                   ),
-                                  if (stonePassed) ...[
-                                    const SizedBox(width: 6),
-                                    const Text('💎',
-                                        style: TextStyle(fontSize: 13)),
-                                  ],
-                                  if (symptoms.isNotEmpty) ...[
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.warning.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        '+${symptoms.length} symptom${symptoms.length > 1 ? 's' : ''}',
-                                        style: const TextStyle(
-                                            color: AppColors.warning,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600),
-                                      ),
-                                    ),
-                                  ],
-                                ]),
-                                const SizedBox(height: 4),
-                                Text(note,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                        color: AppColors.textPrimary,
-                                        fontSize: 13)),
-                                const SizedBox(height: 2),
-                                Text(dateStr,
-                                    style: const TextStyle(
-                                        color: AppColors.textMuted, fontSize: 11)),
-                              ],
-                            ),
+                                ],
+                              ]),
+                              const SizedBox(height: 4),
+                              Text(note,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 13)),
+                              const SizedBox(height: 2),
+                              Text(dateStr,
+                                  style: const TextStyle(
+                                      color: AppColors.textMuted, fontSize: 11)),
+                            ],
                           ),
-                          const Icon(Icons.chevron_right,
-                              color: AppColors.textFaint, size: 20),
-                        ],
-                      ),
+                        ),
+                        const Icon(Icons.chevron_right,
+                            color: AppColors.textFaint, size: 20),
+                      ],
                     ),
-                  );
-                },
-                childCount: filtered.length,
-              ),
+                  ),
+                );
+              },
+              childCount: filtered.length,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
+    );
+
+    return GradientScaffold(
+      title: 'Pain Journal',
+      body: body,
     );
   }
 }
 
-// ── Sparkline painter ──────────────────────────────────────────────────────
+// ── Sparkline painter ────────────────────────────────────────────────────────────────────────
 class _SparklinePainter extends CustomPainter {
   final List<double> values;
   _SparklinePainter(this.values);
