@@ -379,7 +379,7 @@ class _HistoryScreenState extends State<HistoryScreen>
                             backDrawRodData: BackgroundBarChartRodData(
                               show: true,
                               toY: _waterGoal.toDouble(),
-                              color: AppColors.cardBackground,
+                              color: AppColors.primaryLight,
                             ),
                           ),
                         ],
