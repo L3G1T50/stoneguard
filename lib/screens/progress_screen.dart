@@ -20,7 +20,6 @@ class _ProgressScreenState extends State<ProgressScreen> {
   bool _isLoading = true;
   int _totalDaysLogged = 0;
 
-  // Silver Fade Theme Colors
   static const Color bgColor = Color(0xFFF8F8F8);
   static const Color cardColor = Color(0xFFFFFFFF);
   static const Color borderColor = Color(0xFFD0D0D8);
@@ -29,11 +28,10 @@ class _ProgressScreenState extends State<ProgressScreen> {
   static const Color accentTeal = Color(0xFF1A8A9A);
   static const Color accentGold = Color(0xFFD4A020);
   static const Color accentGreen = Color(0xFF2A9A5A);
-  static const Color barOk = Color(0xFF4AACCC);      // Option C bar color
+  static const Color barOk = Color(0xFF4AACCC);
   static const Color barOver = Color(0xFFE07070);
   static const Color barEmpty = Color(0xFFDDDDDD);
   static const Color goalLine = Color(0xFF1A8A9A);
-  static const Color appBarColor = Color(0xFFE8E8EC);
 
   @override
   void initState() {
@@ -50,62 +48,54 @@ class _ProgressScreenState extends State<ProgressScreen> {
     final prefs = await SharedPreferences.getInstance();
 
     _oxalateGoal = prefs.getDouble('goal_oxalate') ?? 200.0;
-    _waterGoal   = prefs.getDouble('goal_water')   ?? 80.0;
+    _waterGoal = prefs.getDouble('goal_water') ?? 80.0;
 
-    // ── Read daily_history for past days ──
     final dailyHistoryRaw = prefs.getStringList('daily_history') ?? [];
     final Map<String, double> dailyOxalate = {};
-    final Map<String, double> dailyWater   = {};
+    final Map<String, double> dailyWater = {};
 
     for (final entry in dailyHistoryRaw) {
       try {
-        final map  = jsonDecode(entry) as Map<String, dynamic>;
+        final map = jsonDecode(entry) as Map<String, dynamic>;
         final date = map['date'] as String?;
         if (date == null) continue;
         dailyOxalate[date] = (map['oxalate_mg'] as num?)?.toDouble() ?? 0.0;
-        dailyWater[date]   = (map['water_oz']   as num?)?.toDouble() ?? 0.0;
+        dailyWater[date] = (map['water_oz'] as num?)?.toDouble() ?? 0.0;
       } catch (_) {}
     }
 
-    // ── Inject TODAY's live data directly from its own keys ──
-    final now     = DateTime.now();
+    final now = DateTime.now();
     final todayKey = '${now.year}_${now.month}_${now.day}';
     final todayStr =
         '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
 
-    final todayOx    = prefs.getDouble('oxalate_$todayKey') ?? 0.0;
-    final todayWater = prefs.getDouble('water_$todayKey')   ?? 0.0;
-
-    // Override whatever history says with today's live values
-    dailyOxalate[todayStr] = todayOx;
-    dailyWater[todayStr]   = todayWater;
+    dailyOxalate[todayStr] = prefs.getDouble('oxalate_$todayKey') ?? 0.0;
+    dailyWater[todayStr] = prefs.getDouble('water_$todayKey') ?? 0.0;
 
     _totalDaysLogged = dailyOxalate.values.where((v) => v > 0).length;
 
-    // ── Build last 7 days ──
-    final List<String> dayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    final List<String> dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     final List<Map<String, dynamic>> weeklyData = [];
 
     for (int i = 6; i >= 0; i--) {
-      final day    = now.subtract(Duration(days: i));
+      final day = now.subtract(Duration(days: i));
       final dateKey =
-          '${day.year}-${day.month.toString().padLeft(2,'0')}-${day.day.toString().padLeft(2,'0')}';
-      final ox  = dailyOxalate[dateKey] ?? 0.0;
-      final wat = dailyWater[dateKey]   ?? 0.0;
+          '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+      final ox = dailyOxalate[dateKey] ?? 0.0;
+      final wat = dailyWater[dateKey] ?? 0.0;
 
       weeklyData.add({
-        'label'        : dayLabels[day.weekday % 7],
-        'date'         : dateKey,
-        'oxalate'      : ox,
-        'water'        : wat,
+        'label': dayLabels[day.weekday % 7],
+        'date': dateKey,
+        'oxalate': ox,
+        'water': wat,
         'oxalateGoalMet': ox > 0 && ox <= _oxalateGoal,
-        'waterGoalMet' : wat >= _waterGoal,
+        'waterGoalMet': wat >= _waterGoal,
       });
     }
 
-    // ── Streak ──
     int streak = 0;
-    int best   = prefs.getInt('best_streak') ?? 0;
+    int best = prefs.getInt('best_streak') ?? 0;
     for (int i = weeklyData.length - 1; i >= 0; i--) {
       if (weeklyData[i]['oxalateGoalMet'] && weeklyData[i]['waterGoalMet']) {
         streak++;
@@ -118,7 +108,6 @@ class _ProgressScreenState extends State<ProgressScreen> {
       await prefs.setInt('best_streak', best);
     }
 
-    // ── Averages ──
     final daysWithOx = weeklyData.where((d) => (d['oxalate'] as double) > 0).toList();
     final avgOx = daysWithOx.isEmpty
         ? 0.0
@@ -130,93 +119,73 @@ class _ProgressScreenState extends State<ProgressScreen> {
         : daysWithWater.fold(0.0, (s, d) => s + (d['water'] as double)) / daysWithWater.length;
 
     setState(() {
-      _weeklyData      = weeklyData;
-      _currentStreak   = streak;
-      _bestStreak      = best;
+      _weeklyData = weeklyData;
+      _currentStreak = streak;
+      _bestStreak = best;
       _avgDailyOxalate = avgOx;
-      _avgDailyWater   = avgWater;
-      _isLoading       = false;
+      _avgDailyWater = avgWater;
+      _isLoading = false;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: bgColor,
-        body: Center(child: CircularProgressIndicator(color: accentTeal)),
-      );
+      return const Center(child: CircularProgressIndicator(color: accentTeal));
     }
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: appBarColor,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          'Progress',
-          style: TextStyle(
-            color: textColor,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
-        ),
-      ),
-      body: RefreshIndicator(
-        color: accentTeal,
-        onRefresh: _loadProgressData,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(child: _buildStreakCard('🔥 Current Streak', '$_currentStreak days', Colors.deepOrange)),
-                  const SizedBox(width: 12),
-                  Expanded(child: _buildStreakCard('🏆 Best Streak', '$_bestStreak days', accentGold)),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      '⚗️ Avg Oxalate',
-                      '${_avgDailyOxalate.toStringAsFixed(0)} mg/day',
-                      _avgDailyOxalate <= _oxalateGoal ? accentGreen : Colors.redAccent,
-                    ),
+    return RefreshIndicator(
+      color: accentTeal,
+      onRefresh: _loadProgressData,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(child: _buildStreakCard('🔥 Current Streak', '$_currentStreak days', Colors.deepOrange)),
+                const SizedBox(width: 12),
+                Expanded(child: _buildStreakCard('🏆 Best Streak', '$_bestStreak days', accentGold)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    '⚗️ Avg Oxalate',
+                    '${_avgDailyOxalate.toStringAsFixed(0)} mg/day',
+                    _avgDailyOxalate <= _oxalateGoal ? accentGreen : Colors.redAccent,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatCard(
-                      '💧 Avg Water',
-                      '${_avgDailyWater.toStringAsFixed(0)} oz/day',
-                      _avgDailyWater >= _waterGoal ? accentTeal : Colors.orange,
-                    ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatCard(
+                    '💧 Avg Water',
+                    '${_avgDailyWater.toStringAsFixed(0)} oz/day',
+                    _avgDailyWater >= _waterGoal ? accentTeal : Colors.orange,
                   ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              const Text('7-Day Oxalate Intake',
-                  style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              _buildBarChart(),
-              const SizedBox(height: 20),
-              const Text('Daily Breakdown',
-                  style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              ..._weeklyData.map((day) => _buildDayRow(day)),
-              const SizedBox(height: 20),
-              const Text('Achievements',
-                  style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              _buildAchievements(),
-              const SizedBox(height: 30),
-            ],
-          ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            const Text('7-Day Oxalate Intake',
+                style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            _buildBarChart(),
+            const SizedBox(height: 20),
+            const Text('Daily Breakdown',
+                style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            ..._weeklyData.map((day) => _buildDayRow(day)),
+            const SizedBox(height: 20),
+            const Text('Achievements',
+                style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            _buildAchievements(),
+          ],
         ),
       ),
     );
@@ -302,11 +271,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 final oxalate = day['oxalate'] as double;
                 final barHeight = chartMax > 0 ? (oxalate / chartMax) * 100 : 0.0;
                 final isOverGoal = oxalate > _oxalateGoal;
-                final Color barColor = oxalate == 0
-                    ? barEmpty
-                    : isOverGoal
-                    ? barOver
-                    : barOk;
+                final Color barColor = oxalate == 0 ? barEmpty : isOverGoal ? barOver : barOk;
 
                 return Expanded(
                   child: Column(
@@ -344,8 +309,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Text(day['label'],
-                          style: const TextStyle(color: mutedColor, fontSize: 10)),
+                      Text(day['label'], style: const TextStyle(color: mutedColor, fontSize: 10)),
                     ],
                   ),
                 );
@@ -356,6 +320,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
       ),
     );
   }
+
   Widget _buildDayRow(Map<String, dynamic> day) {
     final oxalate = day['oxalate'] as double;
     final water = day['water'] as double;
@@ -373,21 +338,17 @@ class _ProgressScreenState extends State<ProgressScreen> {
           color: bothMet
               ? accentGreen.withValues(alpha: 0.35)
               : noData
-              ? borderColor.withValues(alpha: 0.5)
-              : borderColor,
+                  ? borderColor.withValues(alpha: 0.5)
+                  : borderColor,
         ),
         boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
-            // Day label column
             Container(
               width: 48,
               height: 48,
@@ -395,8 +356,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 color: bothMet
                     ? accentGreen.withValues(alpha: 0.1)
                     : noData
-                    ? borderColor.withValues(alpha: 0.3)
-                    : accentTeal.withValues(alpha: 0.08),
+                        ? borderColor.withValues(alpha: 0.3)
+                        : accentTeal.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Column(
@@ -405,11 +366,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   Text(
                     day['label'].toString().substring(0, 3),
                     style: TextStyle(
-                      color: bothMet
-                          ? accentGreen
-                          : noData
-                          ? mutedColor
-                          : accentTeal,
+                      color: bothMet ? accentGreen : noData ? mutedColor : accentTeal,
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
                     ),
@@ -417,125 +374,89 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 ],
               ),
             ),
-
             const SizedBox(width: 14),
-
-            // Data columns
             Expanded(
               child: noData
                   ? Row(
-                children: [
-                  Icon(Icons.remove_circle_outline,
-                      color: mutedColor.withValues(alpha: 0.5), size: 16),
-                  const SizedBox(width: 6),
-                  const Text('No data logged',
-                      style: TextStyle(
-                          color: mutedColor,
-                          fontSize: 13,
-                          fontStyle: FontStyle.italic)),
-                ],
-              )
+                      children: [
+                        Icon(Icons.remove_circle_outline, color: mutedColor.withValues(alpha: 0.5), size: 16),
+                        const SizedBox(width: 6),
+                        const Text('No data logged',
+                            style: TextStyle(color: mutedColor, fontSize: 13, fontStyle: FontStyle.italic)),
+                      ],
+                    )
                   : Row(
-                children: [
-                  // Oxalate column
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('OXALATE',
-                            style: TextStyle(
-                                color: mutedColor,
-                                fontSize: 9,
-                                letterSpacing: 1.2,
-                                fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 3),
-                        Text(
-                          '${oxalate.toStringAsFixed(0)} mg',
-                          style: TextStyle(
-                            color: oxGoalMet
-                                ? accentGreen
-                                : Colors.redAccent,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('OXALATE',
+                                  style: TextStyle(
+                                      color: mutedColor, fontSize: 9, letterSpacing: 1.2, fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 3),
+                              Text(
+                                '${oxalate.toStringAsFixed(0)} mg',
+                                style: TextStyle(
+                                    color: oxGoalMet ? accentGreen : Colors.redAccent,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 4),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: LinearProgressIndicator(
+                                  value: (oxalate / _oxalateGoal).clamp(0.0, 1.0),
+                                  minHeight: 4,
+                                  backgroundColor: borderColor,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      oxGoalMet ? accentGreen : Colors.redAccent),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        // Oxalate mini progress bar
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: (oxalate / _oxalateGoal).clamp(0.0, 1.0),
-                            minHeight: 4,
-                            backgroundColor: borderColor,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              oxGoalMet ? accentGreen : Colors.redAccent,
-                            ),
+                        Container(
+                            width: 1, height: 40, margin: const EdgeInsets.symmetric(horizontal: 12), color: borderColor),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('WATER',
+                                  style: TextStyle(
+                                      color: mutedColor, fontSize: 9, letterSpacing: 1.2, fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 3),
+                              Text(
+                                '${water.toStringAsFixed(0)} oz',
+                                style: TextStyle(
+                                    color: waterGoalMet ? accentTeal : Colors.orange,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 4),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: LinearProgressIndicator(
+                                  value: (water / _waterGoal).clamp(0.0, 1.0),
+                                  minHeight: 4,
+                                  backgroundColor: borderColor,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      waterGoalMet ? accentTeal : Colors.orange),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                  ),
-
-                  // Divider
-                  Container(
-                    width: 1,
-                    height: 40,
-                    margin: const EdgeInsets.symmetric(horizontal: 12),
-                    color: borderColor,
-                  ),
-
-                  // Water column
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('WATER',
-                            style: TextStyle(
-                                color: mutedColor,
-                                fontSize: 9,
-                                letterSpacing: 1.2,
-                                fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 3),
-                        Text(
-                          '${water.toStringAsFixed(0)} oz',
-                          style: TextStyle(
-                            color: waterGoalMet
-                                ? accentTeal
-                                : Colors.orange,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        // Water mini progress bar
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: (water / _waterGoal).clamp(0.0, 1.0),
-                            minHeight: 4,
-                            backgroundColor: borderColor,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              waterGoalMet ? accentTeal : Colors.orange,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
             ),
-
-            // Status icon
             if (!noData) ...[
               const SizedBox(width: 10),
               Container(
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: bothMet
-                      ? accentGreen.withValues(alpha: 0.1)
-                      : Colors.orange.withValues(alpha: 0.1),
+                  color: bothMet ? accentGreen.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -551,80 +472,21 @@ class _ProgressScreenState extends State<ProgressScreen> {
     );
   }
 
-  Widget _buildAchievements() {final achievements = [
-    {
-      'icon': '🥇',
-      'title': 'First Log',
-      'desc': 'Logged your first food',
-      'unlocked': _weeklyData.any((d) => d['oxalate'] > 0),
-    },
-    {
-      'icon': '🔥',
-      'title': '3-Day Streak',
-      'desc': 'Met both goals 3 days in a row',
-      'unlocked': _currentStreak >= 3,
-    },
-    {
-      'icon': '💧',
-      'title': 'Hydration Hero',
-      'desc': 'Met water goal 5 of 7 days',
-      'unlocked': _weeklyData.where((d) => d['waterGoalMet']).length >= 5,
-    },
-    {
-      'icon': '🛡️',
-      'title': 'Stone Guardian',
-      'desc': 'Stayed under oxalate limit all week',
-      'unlocked': _weeklyData.where((d) => d['oxalate'] > 0).every((d) => d['oxalateGoalMet']),
-    },
-    {
-      'icon': '🏆',
-      'title': '7-Day Champion',
-      'desc': 'Perfect week — all goals met!',
-      'unlocked': _currentStreak >= 7,
-    },
-    {
-      'icon': '📅',
-      'title': '14-Day Logger',
-      'desc': 'Logged food for 14 days',
-      'unlocked': _totalDaysLogged >= 14,
-    },
-    {
-      'icon': '🌟',
-      'title': '21-Day Habit',
-      'desc': 'Logged food for 21 days — it\'s a habit!',
-      'unlocked': _totalDaysLogged >= 21,
-    },
-    {
-      'icon': '🥈',
-      'title': '30-Day Warrior',
-      'desc': 'Logged food for 30 days straight',
-      'unlocked': _totalDaysLogged >= 30,
-    },
-    {
-      'icon': '🎖️',
-      'title': '3-Month Guardian',
-      'desc': 'Logged food for 90 days',
-      'unlocked': _totalDaysLogged >= 90,
-    },
-    {
-      'icon': '🥉',
-      'title': '6-Month Defender',
-      'desc': 'Logged food for 180 days',
-      'unlocked': _totalDaysLogged >= 180,
-    },
-    {
-      'icon': '👑',
-      'title': '1-Year Legend',
-      'desc': 'Logged food for a full year!',
-      'unlocked': _totalDaysLogged >= 365,
-    },
-    {
-      'icon': '💎',
-      'title': '2-Year Diamond',
-      'desc': 'Logged food for 2 years — you\'re unstoppable!',
-      'unlocked': _totalDaysLogged >= 730,
-    },
-  ];
+  Widget _buildAchievements() {
+    final achievements = [
+      {'icon': '🥇', 'title': 'First Log', 'desc': 'Logged your first food', 'unlocked': _weeklyData.any((d) => d['oxalate'] > 0)},
+      {'icon': '🔥', 'title': '3-Day Streak', 'desc': 'Met both goals 3 days in a row', 'unlocked': _currentStreak >= 3},
+      {'icon': '💧', 'title': 'Hydration Hero', 'desc': 'Met water goal 5 of 7 days', 'unlocked': _weeklyData.where((d) => d['waterGoalMet']).length >= 5},
+      {'icon': '🛡️', 'title': 'Stone Guardian', 'desc': 'Stayed under oxalate limit all week', 'unlocked': _weeklyData.where((d) => d['oxalate'] > 0).every((d) => d['oxalateGoalMet'])},
+      {'icon': '🏆', 'title': '7-Day Champion', 'desc': 'Perfect week — all goals met!', 'unlocked': _currentStreak >= 7},
+      {'icon': '📅', 'title': '14-Day Logger', 'desc': 'Logged food for 14 days', 'unlocked': _totalDaysLogged >= 14},
+      {'icon': '🌟', 'title': '21-Day Habit', 'desc': "Logged food for 21 days — it's a habit!", 'unlocked': _totalDaysLogged >= 21},
+      {'icon': '🥈', 'title': '30-Day Warrior', 'desc': 'Logged food for 30 days straight', 'unlocked': _totalDaysLogged >= 30},
+      {'icon': '🎖️', 'title': '3-Month Guardian', 'desc': 'Logged food for 90 days', 'unlocked': _totalDaysLogged >= 90},
+      {'icon': '🥉', 'title': '6-Month Defender', 'desc': 'Logged food for 180 days', 'unlocked': _totalDaysLogged >= 180},
+      {'icon': '👑', 'title': '1-Year Legend', 'desc': 'Logged food for a full year!', 'unlocked': _totalDaysLogged >= 365},
+      {'icon': '💎', 'title': '2-Year Diamond', 'desc': "Logged food for 2 years — you're unstoppable!", 'unlocked': _totalDaysLogged >= 730},
+    ];
 
     return Column(
       children: achievements.map((a) {
@@ -635,9 +497,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
           decoration: BoxDecoration(
             color: unlocked ? const Color(0xFFF0FAF4) : cardColor,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: unlocked ? accentGreen.withValues(alpha: 0.35) : borderColor,
-            ),
+            border: Border.all(color: unlocked ? accentGreen.withValues(alpha: 0.35) : borderColor),
             boxShadow: [
               BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 1)),
             ],
@@ -645,9 +505,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
           child: Row(
             children: [
               Text(a['icon'] as String,
-                  style: TextStyle(
-                      fontSize: 28,
-                      color: unlocked ? null : Colors.grey.withValues(alpha: 0.4))),
+                  style: TextStyle(fontSize: 28, color: unlocked ? null : Colors.grey.withValues(alpha: 0.4))),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -658,8 +516,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                             color: unlocked ? textColor : mutedColor,
                             fontWeight: FontWeight.bold,
                             fontSize: 14)),
-                    Text(a['desc'] as String,
-                        style: const TextStyle(color: mutedColor, fontSize: 12)),
+                    Text(a['desc'] as String, style: const TextStyle(color: mutedColor, fontSize: 12)),
                   ],
                 ),
               ),
