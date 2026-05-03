@@ -169,7 +169,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 8),
                   itemCount: log.length,
-                  separatorBuilder: (_, __) =>
+                  separatorBuilder: (_, i) =>
                   const Divider(height: 1),
                   itemBuilder: (_, index) {
                     final parts = log[index].split('|');
