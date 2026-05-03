@@ -13,6 +13,7 @@ import 'screens/history_progress_screen.dart';
 import 'screens/education_screen.dart';
 import 'screens/settings_screen.dart';
 import 'theme/app_theme.dart';
+import 'widgets/gradient_scaffold.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -20,10 +21,9 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Transparent status bar so app content goes edge-to-edge
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.dark,
+    statusBarIconBrightness: Brightness.light, // white icons on teal
     systemNavigationBarColor: AppColors.navBg,
     systemNavigationBarIconBrightness: Brightness.dark,
   ));
@@ -74,30 +74,33 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    // Build Food screen scaffold with AppBar + gear icon here since
-    // FoodGuideScreen returns a plain Column (no Scaffold of its own).
     final List<Widget> screens = [
+      // ── 0: Shield (has its own gradient background) ──
       const HomeShieldScreen(),
-      Scaffold(
-        appBar: AppBar(
-          title: const Text('Food Guide'),
-          centerTitle: true,
-          elevation: 0,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.settings_outlined),
-              tooltip: 'Settings',
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              ),
+
+      // ── 1: Food Guide ──
+      GradientScaffold(
+        title: 'Food Guide',
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined, color: Colors.white),
+            tooltip: 'Settings',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
             ),
-          ],
-        ),
+          ),
+        ],
         body: const FoodGuideScreen(),
       ),
+
+      // ── 2: Journal ──
       const JournalScreen(),
+
+      // ── 3: History ──
       const HistoryProgressScreen(),
+
+      // ── 4: Education ──
       const EducationScreen(),
     ];
 
@@ -108,31 +111,34 @@ class _MainShellState extends State<MainShell> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
+        backgroundColor: Colors.white,
+        indicatorColor: const Color(0xFF01696F).withValues(alpha: 0.12),
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.shield_outlined),
-            selectedIcon: Icon(Icons.shield),
+            selectedIcon: Icon(Icons.shield, color: Color(0xFF01696F)),
             label: 'Shield',
           ),
           NavigationDestination(
             icon: Icon(Icons.restaurant_menu_outlined),
-            selectedIcon: Icon(Icons.restaurant_menu),
+            selectedIcon:
+                Icon(Icons.restaurant_menu, color: Color(0xFF01696F)),
             label: 'Food',
           ),
           NavigationDestination(
             icon: Icon(Icons.book_outlined),
-            selectedIcon: Icon(Icons.book),
+            selectedIcon: Icon(Icons.book, color: Color(0xFF01696F)),
             label: 'Journal',
           ),
           NavigationDestination(
             icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart),
+            selectedIcon: Icon(Icons.bar_chart, color: Color(0xFF01696F)),
             label: 'History',
           ),
           NavigationDestination(
             icon: Icon(Icons.school_outlined),
-            selectedIcon: Icon(Icons.school),
+            selectedIcon: Icon(Icons.school, color: Color(0xFF01696F)),
             label: 'Learn',
           ),
         ],
