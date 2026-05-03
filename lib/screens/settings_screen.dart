@@ -1,4 +1,4 @@
-// ─── SETTINGS SCREEN ─────────────────────────────────────────────────────────
+// ─── SETTINGS SCREEN ────────────────────────────────────────────────
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -152,7 +152,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (intervalHours == 0) return;
     final msgs = [
       '💧 Time to hydrate! Your kidneys will thank you.',
-      '🫙 Drink some water! Stay ahead of kidney stones.',
+      '🧙 Drink some water! Stay ahead of kidney stones.',
       '💦 Hydration check! Have you hit your water goal today?',
       '🌊 Your kidneys need water — take a sip now!',
       '⏰ Water reminder! Small sips add up to big protection.',
@@ -183,7 +183,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ─── PLUS CARD ───────────────────────────────────────────────────────────────
+  // ─── PLUS CARD ──────────────────────────────────────────────────────────────────────────
   Widget _plusCard() {
     return AppCard(
       onTap: _isPremium ? null : _openPaywall,
@@ -267,7 +267,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ─── ROW ITEM ─────────────────────────────────────────────────────────────
+  // ─── ROW ITEM ──────────────────────────────────────────────────────────────────────
   Widget _row(IconData icon, Color color, String title, String sub,
       {VoidCallback? onTap}) {
     return GestureDetector(
@@ -298,7 +298,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ─── VALUE BADGE ────────────────────────────────────────────────────────────
+  // ─── VALUE BADGE ───────────────────────────────────────────────────────────────────────
   Widget _valueBadge(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -389,7 +389,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               icon: Icons.notifications_outlined,
                               color: Colors.blue),
                           const SizedBox(width: 14),
-                          const Text('Water Reminders',
+                          // FIXED: removed const — AppTextStyles.itemTitle is not a compile-time constant
+                          Text('Water Reminders',
                               style: AppTextStyles.itemTitle),
                         ]),
                         Switch(
@@ -412,7 +413,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Remind me every',
+                          // FIXED: removed const
+                          Text('Remind me every',
                               style: AppTextStyles.body),
                           DropdownButton<int>(
                             value: _reminderInterval,
@@ -449,10 +451,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Row(children: [
-                          Icon(Icons.water_drop,
+                        // FIXED: removed const from Row — child Text uses AppTextStyles
+                        Row(children: [
+                          const Icon(Icons.water_drop,
                               color: AppColors.teal, size: 20),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           Text('Water Goal', style: AppTextStyles.itemTitle),
                         ]),
                         _valueBadge(
@@ -478,10 +481,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Row(children: [
-                          Icon(Icons.science_outlined,
+                        // FIXED: removed const from Row
+                        Row(children: [
+                          const Icon(Icons.science_outlined,
                               color: AppColors.oxalate, size: 20),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           Text('Oxalate Limit',
                               style: AppTextStyles.itemTitle),
                         ]),
