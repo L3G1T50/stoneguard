@@ -13,6 +13,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 // ─── COLOR PALETTE ────────────────────────────────────────────────────────────
 abstract class AppColors {
@@ -49,7 +50,6 @@ abstract class AppColors {
   static const Color navIndicator= Color(0xFFB2DFDB);  // teal 100
 
   // ── Aliases kept for backward compat with older screen imports ──
-  // (screens that still import the old lib/app_theme.dart use these)
   static const Color primary      = teal;
   static const Color primaryLight = tealLight;
   static const Color primaryMuted = tealDark;
@@ -59,26 +59,29 @@ abstract class AppColors {
 }
 
 // ─── TEXT STYLES ──────────────────────────────────────────────────────────────
+// NOTE: These are base styles. GoogleFonts.interTextTheme() applied in
+// buildAppTheme() means ALL Text widgets automatically use Inter.
+// These constants are used where an explicit TextStyle is needed.
 abstract class AppTextStyles {
   // Screen / tab title  (e.g. "Settings", "Shield")
-  static const TextStyle screenTitle = TextStyle(
+  static TextStyle get screenTitle => GoogleFonts.inter(
     fontSize: 26,
     fontWeight: FontWeight.w700,
     color: AppColors.textPrimary,
-    letterSpacing: -0.3,
+    letterSpacing: -0.5,
     height: 1.2,
   );
 
   // AppBar title – used in appBarTheme titleTextStyle
-  static const TextStyle appBarTitle = TextStyle(
+  static TextStyle get appBarTitle => GoogleFonts.inter(
     fontSize: 18,
     fontWeight: FontWeight.w700,
     color: AppColors.textPrimary,
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
   );
 
   // Section header label  (e.g. "DAILY GOALS", "NOTIFICATIONS")
-  static const TextStyle sectionLabel = TextStyle(
+  static TextStyle get sectionLabel => GoogleFonts.inter(
     fontSize: 11,
     fontWeight: FontWeight.w700,
     color: AppColors.textHint,
@@ -86,7 +89,7 @@ abstract class AppTextStyles {
   );
 
   // Card / list item title
-  static const TextStyle itemTitle = TextStyle(
+  static TextStyle get itemTitle => GoogleFonts.inter(
     fontSize: 15,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
@@ -94,7 +97,7 @@ abstract class AppTextStyles {
   );
 
   // Body copy and subtitles inside cards
-  static const TextStyle body = TextStyle(
+  static TextStyle get body => GoogleFonts.inter(
     fontSize: 13,
     fontWeight: FontWeight.w400,
     color: AppColors.textSecond,
@@ -102,7 +105,7 @@ abstract class AppTextStyles {
   );
 
   // Small metadata / badges
-  static const TextStyle micro = TextStyle(
+  static TextStyle get micro => GoogleFonts.inter(
     fontSize: 11,
     fontWeight: FontWeight.w500,
     color: AppColors.textHint,
@@ -110,7 +113,7 @@ abstract class AppTextStyles {
   );
 
   // Primary button label
-  static const TextStyle button = TextStyle(
+  static TextStyle get button => GoogleFonts.inter(
     fontSize: 14,
     fontWeight: FontWeight.w600,
     color: Colors.white,
@@ -118,14 +121,14 @@ abstract class AppTextStyles {
   );
 
   // ── Aliases kept for backward compat ──
-  static const TextStyle sectionHeader = sectionLabel;
-  static const TextStyle cardTitle     = itemTitle;
-  static const TextStyle label         = TextStyle(
+  static TextStyle get sectionHeader => sectionLabel;
+  static TextStyle get cardTitle     => itemTitle;
+  static TextStyle get label         => GoogleFonts.inter(
     color: AppColors.textSecond,
     fontWeight: FontWeight.w600,
     fontSize: 13,
   );
-  static const TextStyle meta          = micro;
+  static TextStyle get meta          => micro;
 }
 
 // ─── SPACING ──────────────────────────────────────────────────────────────────
@@ -357,6 +360,7 @@ class AppIconBadge extends StatelessWidget {
 
 // ─── STANDARD APP BAR ─────────────────────────────────────────────────────────
 /// Use this instead of a raw AppBar in every screen for consistency.
+/// White background, dark title, subtle bottom divider – matches Settings style.
 /// Usage:  StoneGuardAppBar(title: 'Pain Journal')
 class StoneGuardAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -403,6 +407,10 @@ class StoneGuardAppBar extends StatelessWidget implements PreferredSizeWidget {
 ThemeData buildAppTheme() {
   const seed = AppColors.teal;
 
+  // Inter applied as the base text theme for the entire app.
+  // Every Text widget will use Inter automatically – no per-widget font needed.
+  final interTextTheme = GoogleFonts.interTextTheme();
+
   return ThemeData(
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(
@@ -414,10 +422,15 @@ ThemeData buildAppTheme() {
       brightness: Brightness.light,
     ),
 
+    // Inter as the app-wide font
+    textTheme: interTextTheme,
+    primaryTextTheme: interTextTheme,
+
     // Scaffold background
     scaffoldBackgroundColor: AppColors.background,
 
     // AppBar – flat white, dark title, subtle bottom divider
+    // All screens should use StoneGuardAppBar for full consistency.
     appBarTheme: AppBarTheme(
       backgroundColor: AppColors.surface,
       foregroundColor: AppColors.textPrimary,
@@ -439,13 +452,13 @@ ThemeData buildAppTheme() {
       indicatorColor: AppColors.navIndicator,
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
-          return const TextStyle(
+          return GoogleFonts.inter(
             fontSize: 11,
             fontWeight: FontWeight.w700,
             color: AppColors.tealDark,
           );
         }
-        return const TextStyle(
+        return GoogleFonts.inter(
           fontSize: 11,
           fontWeight: FontWeight.w500,
           color: AppColors.textHint,
@@ -478,7 +491,7 @@ ThemeData buildAppTheme() {
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.teal,
         side: const BorderSide(color: AppColors.teal),
-        textStyle: const TextStyle(
+        textStyle: GoogleFonts.inter(
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
@@ -493,7 +506,7 @@ ThemeData buildAppTheme() {
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: AppColors.teal,
-        textStyle: const TextStyle(
+        textStyle: GoogleFonts.inter(
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
@@ -504,7 +517,7 @@ ThemeData buildAppTheme() {
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: AppColors.background,
-      hintStyle: const TextStyle(color: AppColors.textHint, fontSize: 14),
+      hintStyle: GoogleFonts.inter(color: AppColors.textHint, fontSize: 14),
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
@@ -553,12 +566,12 @@ ThemeData buildAppTheme() {
     dialogTheme: DialogThemeData(
       backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      titleTextStyle: const TextStyle(
+      titleTextStyle: GoogleFonts.inter(
         fontSize: 17,
         fontWeight: FontWeight.w700,
         color: AppColors.textPrimary,
       ),
-      contentTextStyle: const TextStyle(
+      contentTextStyle: GoogleFonts.inter(
         fontSize: 14,
         color: AppColors.textSecond,
         height: 1.5,
@@ -569,7 +582,7 @@ ThemeData buildAppTheme() {
     snackBarTheme: SnackBarThemeData(
       backgroundColor: AppColors.textPrimary,
       contentTextStyle:
-          const TextStyle(color: Colors.white, fontSize: 13),
+          GoogleFonts.inter(color: Colors.white, fontSize: 13),
       behavior: SnackBarBehavior.floating,
       shape:
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -579,7 +592,7 @@ ThemeData buildAppTheme() {
     chipTheme: ChipThemeData(
       backgroundColor: AppColors.background,
       labelStyle:
-          const TextStyle(fontSize: 12, color: AppColors.textSecond),
+          GoogleFonts.inter(fontSize: 12, color: AppColors.textSecond),
       side: const BorderSide(color: AppColors.border),
       shape:
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
