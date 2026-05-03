@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
+import 'database_helper.dart';
 import 'dart:math' as math;
 
 class JournalScreen extends StatefulWidget {
@@ -45,15 +44,8 @@ class _JournalScreenState extends State<JournalScreen> {
   }
 
   Future<void> _loadEntries() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList('journal_entries') ?? [];
-    setState(() {
-      _entries = raw
-          .map((e) => Map<String, dynamic>.from(jsonDecode(e)))
-          .toList()
-          .reversed
-          .toList();
-    });
+    final entries = await DatabaseHelper.instance.getAllEntries();
+    setState(() => _entries = entries);
   }
 
   Future<void> _saveEntry() async {
@@ -63,18 +55,14 @@ class _JournalScreenState extends State<JournalScreen> {
       );
       return;
     }
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList('journal_entries') ?? [];
-    final entry = {
+    await DatabaseHelper.instance.insertEntry({
       'date': DateTime.now().toIso8601String(),
       'pain': _painLevel,
       'note': _noteController.text.trim(),
       'side': _side,
       'stonePassed': _stonePassed,
       'symptoms': _selectedSymptoms.toList(),
-    };
-    raw.add(jsonEncode(entry));
-    await prefs.setStringList('journal_entries', raw);
+    });
     if (!mounted) return;
     _noteController.clear();
     setState(() {
@@ -93,39 +81,27 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  Future<void> _deleteEntry(int reversedIndex) async {
+  Future<void> _deleteEntry(int index) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Entry'),
         content: const Text('Are you sure you want to delete this entry?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
         ],
       ),
     );
     if (confirmed != true) return;
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList('journal_entries') ?? [];
-    final actualIndex = raw.length - 1 - reversedIndex;
-    raw.removeAt(actualIndex);
-    await prefs.setStringList('journal_entries', raw);
+    final id = _entries[index]['id'] as int;
+    await DatabaseHelper.instance.deleteEntry(id);
     _loadEntries();
   }
 
-  Future<void> _updateEntry(int reversedIndex, Map<String, dynamic> updated) async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList('journal_entries') ?? [];
-    final actualIndex = raw.length - 1 - reversedIndex;
-    raw[actualIndex] = jsonEncode(updated);
-    await prefs.setStringList('journal_entries', raw);
+  Future<void> _updateEntry(int index, Map<String, dynamic> updated) async {
+    final id = _entries[index]['id'] as int;
+    await DatabaseHelper.instance.updateEntry(id, updated);
     _loadEntries();
   }
 
