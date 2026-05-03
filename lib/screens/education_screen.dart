@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:stoneguard/widgets/banner_ad_widget.dart';
 import '../theme/app_theme.dart';
 import 'emergency_care_screen.dart';
-import 'settings_screen.dart';
 
 class EducationScreen extends StatefulWidget {
   const EducationScreen({super.key});
@@ -24,23 +23,12 @@ class _EducationScreenState extends State<EducationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: StoneGuardAppBar(
-        title: 'Learn',
-        centerTitle: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined, color: AppColors.textPrimary),
-            tooltip: 'Settings',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            ),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
+      body: SafeArea(
+        child: ListView(
+          padding: AppSpacing.pagePadding.add(const EdgeInsets.only(bottom: 32)),
+          children: [
+            const AppScreenTitle('Learn'),
+            const SizedBox(height: 16),
 
           // ── EMERGENCY CARE BANNER ──
           GestureDetector(
@@ -179,74 +167,39 @@ class _EducationScreenState extends State<EducationScreen> {
                 'Even half a lemon squeezed into water each morning can make a meaningful difference over time.',
           ),
           _expandableCard(
-            icon: Icons.quiz_outlined,
-            color: const Color(0xFF3949AB),
-            title: 'FAQ — Common Questions',
+            icon: Icons.science,
+            color: AppColors.teal,
+            title: 'Magnesium & B6',
             body:
-            'Q: Why do I keep getting kidney stones?\n'
-                'A: Recurring stones are usually due to a combination of genetics, diet, and not drinking enough fluids. '
-                'A 24-hour urine test from your urologist can pinpoint your exact risk factors.\n\n'
-                'Q: Is oxalate the only thing I need to worry about?\n'
-                'A: No. Sodium, animal protein, hydration, and low citrate levels all play a role. '
-                'StoneGuard tracks the most important daily factors.\n\n'
-                'Q: Can I ever eat high-oxalate foods again?\n'
-                'A: Yes — moderation and pairing them with calcium-rich foods (like cheese or milk) '
-                'significantly reduces how much oxalate your body absorbs.\n\n'
-                'Q: Does drinking more water really work?\n'
-                'A: Yes — it\'s the single most proven prevention method. '
-                'More fluid = more diluted urine = less chance of crystals forming.\n\n'
-                'Q: What\'s the fastest sign I\'m improving?\n'
-                'A: Pale yellow urine throughout the day means you\'re well hydrated. '
-                'That\'s your daily goal.',
+            'Magnesium helps prevent oxalate absorption in the intestines. '
+                'Vitamin B6 reduces the production of oxalate in the body. '
+                'Good sources: pumpkin seeds, sunflower seeds, bananas, and avocados. '
+                'Talk to your doctor before starting supplements.',
           ),
           _expandableCard(
-            icon: Icons.favorite_outline,
-            color: Colors.pinkAccent,
-            title: 'Mental Support — You\'re Not Alone',
+            icon: Icons.nightlight_round,
+            color: const Color(0xFF3949AB),
+            title: 'Sleep & Stress',
             body:
-            'Kidney stones are one of the most painful experiences a person can go through — '
-                'and dealing with them repeatedly takes a real mental toll.\n\n'
-                'It\'s okay to feel frustrated. It\'s okay to have hard days. '
-                'What matters is that you keep showing up for yourself.\n\n'
-                '💧 Every glass of water is an act of self-care.\n'
-                '🥗 Every smart food choice is a win — even small ones.\n'
-                '📓 Tracking your patterns gives you power over your condition.\n'
-                '🏥 Your data can help your doctor help you better.\n\n'
-                'Prevention isn\'t perfect — but consistency over time makes a real difference. '
-                'StoneGuard is here to help you stay consistent, one day at a time.\n\n'
-                'You\'ve survived every stone so far. Keep going. 💪',
+            'Chronic stress raises cortisol, which can increase urinary calcium. '
+                'Poor sleep is linked to higher inflammation. '
+                'Prioritize 7–9 hours of sleep and stress-reduction habits like walking, '
+                'meditation, or journaling.',
           ),
-
-          const SizedBox(height: 12),
-
-          // ── DISCLAIMER ──
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.warningBg,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.info_outline, color: AppColors.warning, size: 18),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'This app is for tracking and educational purposes only. '
-                        'It is not a medical device and does not offer medical advice. '
-                        'Always consult a doctor.',
-                    style: AppTextStyles.body.copyWith(color: AppColors.warning),
-                  ),
-                ),
-              ],
-            ),
+          _expandableCard(
+            icon: Icons.directions_walk,
+            color: AppColors.success,
+            title: 'Exercise & Weight',
+            body:
+            'Obesity is a significant risk factor for kidney stones. '
+                'Regular moderate exercise — even 30 minutes of walking daily — '
+                'can meaningfully reduce your risk over time. '
+                'Avoid extreme low-carb diets, which can raise urinary oxalate.',
           ),
-          const SizedBox(height: 16),
           const BannerAdWidget(),
-          const SizedBox(height: 8),
-        ],
+          const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }
@@ -258,70 +211,64 @@ class _EducationScreenState extends State<EducationScreen> {
     required String body,
   }) {
     final isOpen = _expanded[title] ?? false;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x08000000),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
+    return GestureDetector(
+      onTap: () => _toggle(title),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeInOut,
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(14),
-          splashColor: color.withValues(alpha: 0.06),
-          highlightColor: color.withValues(alpha: 0.04),
-          onTap: () => _toggle(title),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(icon, color: color, size: 20),
+          border: Border.all(
+              color: isOpen
+                  ? color.withValues(alpha: 0.4)
+                  : AppColors.border),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2)),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 14, vertical: 14),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: AppTextStyles.itemTitle,
-                      ),
-                    ),
-                    Icon(
-                      isOpen ? Icons.expand_less : Icons.expand_more,
-                      color: AppColors.textHint,
-                      size: 22,
-                    ),
-                  ],
-                ),
-                if (isOpen) ...[
-                  const SizedBox(height: 12),
-                  const Divider(height: 1, color: AppColors.divider),
-                  const SizedBox(height: 12),
-                  Text(
-                    body,
-                    style: AppTextStyles.body.copyWith(height: 1.6),
+                    child: Icon(icon, color: color, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(title,
+                        style: AppTextStyles.itemTitle),
+                  ),
+                  AnimatedRotation(
+                    turns: isOpen ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 220),
+                    child: Icon(Icons.keyboard_arrow_down_rounded,
+                        color: AppColors.textHint, size: 22),
                   ),
                 ],
-              ],
+              ),
             ),
-          ),
+            if (isOpen)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+                child: Text(body,
+                    style: AppTextStyles.body.copyWith(
+                        height: 1.6, fontSize: 13.5)),
+              ),
+          ],
         ),
       ),
     );
