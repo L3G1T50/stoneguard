@@ -5,20 +5,13 @@ import '../models/food_item.dart';
 import '../widgets/banner_ad_widget.dart';
 
 class FoodGuideScreen extends StatefulWidget {
-  final void Function(double mg, String name) onLogFood;
-  // onLogFood is optional — defaults to a no-op so the screen works
-  // both as a standalone nav tab and when called from the Journal.
-  const FoodGuideScreen({super.key, void Function(double mg, String name)? onLogFood})
-      : onLogFood = onLogFood ?? _noOp;
-
-  static void _noOp(double mg, String name) {}
+  const FoodGuideScreen({super.key});
 
   @override
   State<FoodGuideScreen> createState() => _FoodGuideScreenState();
 }
 
 class _FoodGuideScreenState extends State<FoodGuideScreen> {
-  void _logFood(double mg, String name) => widget.onLogFood(mg, name);
   String _searchQuery = '';
   OxalateLevel? _filterLevel;
   bool _showFavoritesOnly = false;
@@ -46,6 +39,24 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
       }
     });
     await prefs.setStringList('favorites', _favorites.toList());
+  }
+
+  // ── Writes the food entry to SharedPreferences directly ──────────────────
+  Future<void> _logFood(double mg, String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final dayKey = '${now.year}_${now.month}_${now.day}';
+    final logKey = 'oxalate_log_$dayKey';
+    final oxKey  = 'oxalate_$dayKey';
+
+    // Append food entry to the log list
+    final log = List<String>.from(prefs.getStringList(logKey) ?? []);
+    log.add('$name|${mg.toStringAsFixed(2)}');
+    await prefs.setStringList(logKey, log);
+
+    // Update running oxalate total
+    final current = prefs.getDouble(oxKey) ?? 0.0;
+    await prefs.setDouble(oxKey, current + mg);
   }
 
   static const Map<OxalateLevel, Color> levelColor = {
@@ -327,8 +338,9 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  _logFood(food.oxalateMg, food.name);
+                onPressed: () async {
+                  await _logFood(food.oxalateMg, food.name);
+                  if (!context.mounted) return;
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(

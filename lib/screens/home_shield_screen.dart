@@ -165,7 +165,7 @@ class HomeShieldScreen extends StatefulWidget {
 }
 
 class HomeShieldScreenState extends State<HomeShieldScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   double waterOz = 0;
   double oxalateMg = 0;
   double goalOz = 80;
@@ -198,21 +198,19 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _requestNotificationPermission();
 
-    // ── SLOWER fill: 1800ms with gentle ease-in-out ──
     _fillController = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 1800));
     _fillAnimation = Tween<double>(begin: 0, end: 0).animate(
         CurvedAnimation(
             parent: _fillController, curve: Curves.easeInOutCubic));
 
-    // continuous wave
     _waveController =
         AnimationController(vsync: this, duration: const Duration(seconds: 2))
           ..repeat();
 
-    // goal pulse
     _pulseController = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 600));
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.06).animate(
@@ -223,10 +221,17 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _fillController.dispose();
     _waveController.dispose();
     _pulseController.dispose();
     super.dispose();
+  }
+
+  // Reload whenever the app comes back to the foreground
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _loadData();
   }
 
   @override
@@ -261,6 +266,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     final savedOxalate = prefs.getDouble('oxalate_$_todayKey') ?? 0;
     final savedGoalOz = prefs.getDouble('goal_water') ?? 80;
     final savedGoalMg = prefs.getDouble('goal_oxalate') ?? 200;
+    if (!mounted) return;
     setState(() {
       waterOz = savedWater;
       oxalateMg = savedOxalate;
@@ -280,7 +286,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     final prefs = await SharedPreferences.getInstance();
     final newOz = (waterOz + oz).clamp(0.0, goalOz);
 
-    // capture mid-flight progress if tapped again before animation finishes
     final currentAnimProg = _fillAnimation.value;
 
     _fillAnimation =
