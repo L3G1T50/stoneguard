@@ -11,8 +11,8 @@ import 'settings_screen.dart';
 
 // ─── WAVE PAINTER ────────────────────────────────────────────────────
 class _WavePainter extends CustomPainter {
-  final double fillLevel;   // 0.0 – 1.0
-  final double wavePhase;   // driven by wave animation
+  final double fillLevel;
+  final double wavePhase;
   final Color waterColor;
 
   _WavePainter({
@@ -25,57 +25,52 @@ class _WavePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final radius = size.width / 2;
     final center = Offset(radius, radius);
-
-    // clip to circle
-    canvas.clipPath(Path()..addOval(Rect.fromCircle(center: center, radius: radius - 1)));
+    canvas.clipPath(
+        Path()..addOval(Rect.fromCircle(center: center, radius: radius - 1)));
 
     final waterTop = size.height * (1 - fillLevel);
     final amplitude = size.height * 0.028;
 
-    final wavePath = Path();
-    wavePath.moveTo(0, waterTop);
-
+    final wavePath = Path()..moveTo(0, waterTop);
     for (double x = 0; x <= size.width; x++) {
       final y = waterTop +
           sin((x / size.width * 2 * pi) + wavePhase) * amplitude +
           sin((x / size.width * 3 * pi) + wavePhase * 1.3) * (amplitude * 0.5);
       wavePath.lineTo(x, y);
     }
+    wavePath
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
 
-    wavePath.lineTo(size.width, size.height);
-    wavePath.lineTo(0, size.height);
-    wavePath.close();
-
-    // back wave (lighter, offset)
-    final backWavePath = Path();
-    backWavePath.moveTo(0, waterTop + amplitude);
+    final backWavePath = Path()..moveTo(0, waterTop + amplitude);
     for (double x = 0; x <= size.width; x++) {
       final y = waterTop +
           amplitude +
           sin((x / size.width * 2 * pi) + wavePhase + pi * 0.6) * amplitude;
       backWavePath.lineTo(x, y);
     }
-    backWavePath.lineTo(size.width, size.height);
-    backWavePath.lineTo(0, size.height);
-    backWavePath.close();
+    backWavePath
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
 
-    // draw back wave
     canvas.drawPath(
-      backWavePath,
-      Paint()..color = waterColor.withValues(alpha: 0.25),
-    );
+        backWavePath, Paint()..color = waterColor.withValues(alpha: 0.25));
 
-    // draw front wave with gradient
-    final gradientPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          waterColor.withValues(alpha: 0.55),
-          waterColor.withValues(alpha: 0.85),
-        ],
-      ).createShader(Rect.fromLTWH(0, waterTop, size.width, size.height - waterTop));
-    canvas.drawPath(wavePath, gradientPaint);
+    canvas.drawPath(
+      wavePath,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            waterColor.withValues(alpha: 0.55),
+            waterColor.withValues(alpha: 0.85),
+          ],
+        ).createShader(
+            Rect.fromLTWH(0, waterTop, size.width, size.height - waterTop)),
+    );
   }
 
   @override
@@ -104,7 +99,6 @@ class _GlowRingPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width - strokeWidth) / 2;
 
-    // track
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
       -pi / 2,
@@ -119,7 +113,6 @@ class _GlowRingPainter extends CustomPainter {
 
     if (progress <= 0) return;
 
-    // glow blur layer
     if (isGlow) {
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius),
@@ -135,7 +128,6 @@ class _GlowRingPainter extends CustomPainter {
       );
     }
 
-    // main arc
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
       -pi / 2,
@@ -148,7 +140,6 @@ class _GlowRingPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round,
     );
 
-    // bright tip dot
     if (progress > 0.01) {
       final angle = -pi / 2 + 2 * pi * progress;
       final tipX = center.dx + radius * cos(angle);
@@ -180,15 +171,12 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   double goalOz = 80;
   double goalMg = 200;
 
-  // fill + number animation
   late AnimationController _fillController;
   late Animation<double> _fillAnimation;
   double _previousOz = 0;
 
-  // continuous wave animation
   late AnimationController _waveController;
 
-  // goal-reached pulse
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
@@ -212,16 +200,17 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     super.initState();
     _requestNotificationPermission();
 
-    // fill controller (per tap)
+    // ── SLOWER fill: 1800ms with gentle ease-in-out ──
     _fillController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 900));
+        vsync: this, duration: const Duration(milliseconds: 1800));
     _fillAnimation = Tween<double>(begin: 0, end: 0).animate(
-        CurvedAnimation(parent: _fillController, curve: Curves.easeOutCubic));
+        CurvedAnimation(
+            parent: _fillController, curve: Curves.easeInOutCubic));
 
     // continuous wave
-    _waveController = AnimationController(
-        vsync: this, duration: const Duration(seconds: 2))
-      ..repeat();
+    _waveController =
+        AnimationController(vsync: this, duration: const Duration(seconds: 2))
+          ..repeat();
 
     // goal pulse
     _pulseController = AnimationController(
@@ -282,26 +271,31 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
       _avatarPath = prefs.getString('avatar_path') ?? '';
       _fillAnimation =
           Tween<double>(begin: savedWater / goalOz, end: savedWater / goalOz)
-              .animate(_fillController);
+              .animate(CurvedAnimation(
+                  parent: _fillController, curve: Curves.easeInOutCubic));
     });
   }
 
   Future<void> _addWater(double oz) async {
     final prefs = await SharedPreferences.getInstance();
     final newOz = (waterOz + oz).clamp(0.0, goalOz);
+
+    // capture mid-flight progress if tapped again before animation finishes
+    final currentAnimProg = _fillAnimation.value;
+
     _fillAnimation =
-        Tween<double>(begin: _previousOz / goalOz, end: newOz / goalOz)
-            .animate(CurvedAnimation(
-                parent: _fillController, curve: Curves.easeOutCubic));
+        Tween<double>(begin: currentAnimProg, end: newOz / goalOz).animate(
+            CurvedAnimation(
+                parent: _fillController, curve: Curves.easeInOutCubic));
     _fillController.forward(from: 0);
+
     setState(() {
-      _previousOz = waterOz;
+      _previousOz = currentAnimProg * goalOz;
       waterOz = newOz;
     });
     await prefs.setDouble('water_$_todayKey', newOz);
     await _saveTodayToHistory();
 
-    // trigger goal pulse
     if (newOz >= goalOz) {
       _pulseController.forward(from: 0).then((_) => _pulseController.reverse());
     }
@@ -309,10 +303,10 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
 
   Future<void> _resetAll() async {
     final prefs = await SharedPreferences.getInstance();
+    final currentAnimProg = _fillAnimation.value;
     _fillAnimation =
-        Tween<double>(begin: waterOz / goalOz, end: 0).animate(
-            CurvedAnimation(
-                parent: _fillController, curve: Curves.easeInCubic));
+        Tween<double>(begin: currentAnimProg, end: 0).animate(CurvedAnimation(
+            parent: _fillController, curve: Curves.easeInOutCubic));
     _fillController.forward(from: 0);
     setState(() {
       _previousOz = 0;
@@ -325,7 +319,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     await _saveTodayToHistory();
   }
 
-  // ── smooth lerp color through gradient stops ──────────────────────
   Color _lerpShieldColor(double p) {
     const stops = [
       (t: 0.00, c: Color(0xFF78909C)),
@@ -380,19 +373,16 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     );
   }
 
-  // ── main water meter widget ───────────────────────────────────────
   Widget _buildWaterMeter() {
     return AnimatedBuilder(
-      animation: Listenable.merge([_fillAnimation, _waveController, _pulseAnimation]),
+      animation:
+          Listenable.merge([_fillAnimation, _waveController, _pulseAnimation]),
       builder: (context, _) {
         final fillProg = _fillAnimation.value.clamp(0.0, 1.0);
         final ringColor = _lerpShieldColor(fillProg);
         final wavePhase = _waveController.value * 2 * pi;
-
-        // counting oz display
-        final displayOz = (_previousOz +
-                (_fillAnimation.value * goalOz - _previousOz))
-            .clamp(0.0, goalOz);
+        final displayOz =
+            (_fillAnimation.value * goalOz).clamp(0.0, goalOz);
 
         return ScaleTransition(
           scale: _pulseAnimation,
@@ -400,8 +390,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
             height: 230,
             width: 230,
             child: Stack(alignment: Alignment.center, children: [
-
-              // ── glow ring (blurred back layer) ──
               SizedBox(
                 height: 230,
                 width: 230,
@@ -414,8 +402,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                   ),
                 ),
               ),
-
-              // ── sharp ring (front) ──
               SizedBox(
                 height: 230,
                 width: 230,
@@ -427,8 +413,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                   ),
                 ),
               ),
-
-              // ── inner circle with wave fill ──
               ClipOval(
                 child: Container(
                   height: 170,
@@ -455,7 +439,10 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                         children: [
                           ShaderMask(
                             shaderCallback: (b) => LinearGradient(
-                              colors: [ringColor, ringColor.withValues(alpha: 0.7)],
+                              colors: [
+                                ringColor,
+                                ringColor.withValues(alpha: 0.7)
+                              ],
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                             ).createShader(b),
@@ -463,7 +450,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                                 size: 28, color: Colors.white),
                           ),
                           const SizedBox(height: 2),
-                          // counting number
                           Text(
                             displayOz.toStringAsFixed(0),
                             style: TextStyle(
@@ -473,7 +459,11 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                                   ? Colors.white
                                   : const Color(0xFF2E3A45),
                               shadows: fillProg > 0.45
-                                  ? [Shadow(color: Colors.black26, blurRadius: 4)]
+                                  ? [
+                                      const Shadow(
+                                          color: Colors.black26,
+                                          blurRadius: 4)
+                                    ]
                                   : null,
                             ),
                           ),
@@ -503,7 +493,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   @override
   Widget build(BuildContext context) {
     final double waterProgress = (waterOz / goalOz).clamp(0.0, 1.0);
-    final Color activeColor = _lerpShieldColor(waterProgress);
     final double remaining = (goalOz - waterOz).clamp(0.0, goalOz);
     final Color oxColor = _oxalateColor(oxalateMg);
     final double oxProgress = (oxalateMg / goalMg).clamp(0.0, 1.0);
@@ -525,7 +514,8 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                       ? FileImage(File(_avatarPath))
                       : null,
                   child: _avatarPath.isEmpty
-                      ? const Icon(Icons.person, color: Colors.white, size: 22)
+                      ? const Icon(Icons.person,
+                          color: Colors.white, size: 22)
                       : null,
                 ),
                 const SizedBox(width: 10),
@@ -533,7 +523,9 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _userName.isEmpty ? 'Today\'s Shield' : 'Hey, $_userName! 👋',
+                      _userName.isEmpty
+                          ? 'Today\'s Shield'
+                          : 'Hey, $_userName! 👋',
                       style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -552,7 +544,8 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                 tooltip: 'Settings',
                 onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  MaterialPageRoute(
+                      builder: (_) => const SettingsScreen()),
                 ),
               ),
             ],
@@ -573,13 +566,15 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
           if (waterOz < goalOz) ...[
             const SizedBox(height: 6),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
               decoration: BoxDecoration(
                   color: Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(20)),
               child: Text(
                 '${remaining.toStringAsFixed(0)} oz remaining',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                style:
+                    TextStyle(fontSize: 12, color: Colors.grey.shade600),
               ),
             ),
           ],
