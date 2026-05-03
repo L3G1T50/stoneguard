@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../database_helper.dart';
 import 'dart:math' as math;
 import '../app_theme.dart';
+import 'settings_screen.dart';
 
 class JournalScreen extends StatefulWidget {
   const JournalScreen({super.key});
@@ -774,6 +775,16 @@ class _JournalScreenState extends State<JournalScreen> {
           style: TextStyle(
               color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 20),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined, color: AppColors.textPrimary),
+            tooltip: 'Settings',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            ),
+          ),
+        ],
       ),
       body: CustomScrollView(
         slivers: [

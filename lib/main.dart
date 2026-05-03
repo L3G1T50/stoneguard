@@ -72,20 +72,39 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    HomeShieldScreen(),
-    FoodGuideScreen(),
-    JournalScreen(),
-    HistoryProgressScreen(),
-    EducationScreen(),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    // Build Food screen scaffold with AppBar + gear icon here since
+    // FoodGuideScreen returns a plain Column (no Scaffold of its own).
+    final List<Widget> screens = [
+      const HomeShieldScreen(),
+      Scaffold(
+        appBar: AppBar(
+          title: const Text('Food Guide'),
+          centerTitle: true,
+          elevation: 0,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.settings_outlined),
+              tooltip: 'Settings',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              ),
+            ),
+          ],
+        ),
+        body: const FoodGuideScreen(),
+      ),
+      const JournalScreen(),
+      const HistoryProgressScreen(),
+      const EducationScreen(),
+    ];
+
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: screens,
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,

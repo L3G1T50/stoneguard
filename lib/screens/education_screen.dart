@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:stoneguard/widgets/banner_ad_widget.dart';
 import 'emergency_care_screen.dart';
+import 'settings_screen.dart';
 
 class EducationScreen extends StatefulWidget {
   const EducationScreen({super.key});
@@ -21,6 +22,21 @@ class _EducationScreenState extends State<EducationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Learn'),
+        centerTitle: true,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            ),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
