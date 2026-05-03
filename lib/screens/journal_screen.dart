@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../database_helper.dart';
 import 'dart:math' as math;
 import '../app_theme.dart';
+import '../theme/app_theme.dart';
 import 'settings_screen.dart';
 
 class JournalScreen extends StatefulWidget {
@@ -137,18 +138,10 @@ class _JournalScreenState extends State<JournalScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text('Edit Entry',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                          color: AppColors.textPrimary)),
+                  Text('Edit Entry', style: AppTextStyles.itemTitle.copyWith(fontSize: 18)),
                   const SizedBox(height: 16),
                   Row(children: [
-                    const Text('Pain Level',
-                        style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textMuted,
-                            fontWeight: FontWeight.w600)),
+                    Text('Pain Level', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -172,20 +165,12 @@ class _JournalScreenState extends State<JournalScreen> {
                     onChanged: (v) => setSheetState(() => editPain = v.round()),
                   ),
                   const SizedBox(height: 8),
-                  const Text('Side',
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textMuted,
-                          fontWeight: FontWeight.w600)),
+                  Text('Side', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
                   _buildSideSelector(editSide,
                           (s) => setSheetState(() => editSide = s)),
                   const SizedBox(height: 12),
-                  const Text('Symptoms',
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textMuted,
-                          fontWeight: FontWeight.w600)),
+                  Text('Symptoms', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
                   _buildSymptomChips(editSymptoms,
                           (tag, val) => setSheetState(() {
@@ -201,7 +186,7 @@ class _JournalScreenState extends State<JournalScreen> {
                     maxLines: 3,
                     decoration: InputDecoration(
                       hintText: 'Notes...',
-                      hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                      hintStyle: AppTextStyles.body,
                       filled: true,
                       fillColor: AppColors.background,
                       border: OutlineInputBorder(
@@ -319,8 +304,7 @@ class _JournalScreenState extends State<JournalScreen> {
                               fontSize: 13)),
                     ),
                     const SizedBox(height: 4),
-                    Text(dateStr,
-                        style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                    Text(dateStr, style: AppTextStyles.micro),
                   ],
                 ),
               ),
@@ -341,12 +325,7 @@ class _JournalScreenState extends State<JournalScreen> {
               const SizedBox(height: 12),
             ],
             if (symptoms.isNotEmpty) ...[
-              const Text('Symptoms',
-                  style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.8)),
+              Text('Symptoms', style: AppTextStyles.micro.copyWith(letterSpacing: 0.8)),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 6,
@@ -369,12 +348,7 @@ class _JournalScreenState extends State<JournalScreen> {
             ],
             const Divider(color: AppColors.border, height: 1),
             const SizedBox(height: 14),
-            const Text('NOTE',
-                style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.8)),
+            Text('NOTE', style: AppTextStyles.micro.copyWith(letterSpacing: 0.8)),
             const SizedBox(height: 8),
             Container(
               width: double.infinity,
@@ -384,9 +358,7 @@ class _JournalScreenState extends State<JournalScreen> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.border),
               ),
-              child: Text(note,
-                  style: const TextStyle(
-                      color: AppColors.textPrimary, fontSize: 14, height: 1.6)),
+              child: Text(note, style: AppTextStyles.body.copyWith(fontSize: 14, height: 1.6)),
             ),
             const SizedBox(height: 20),
             Row(children: [
@@ -548,13 +520,8 @@ class _JournalScreenState extends State<JournalScreen> {
         const Text('💎', style: TextStyle(fontSize: 16)),
         const SizedBox(width: 10),
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Stone Passed',
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary)),
-          Text('Mark if you passed a stone today',
-              style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+          Text('Stone Passed', style: AppTextStyles.itemTitle),
+          Text('Mark if you passed a stone today', style: AppTextStyles.micro),
         ]),
         const Spacer(),
         Switch(
@@ -582,11 +549,7 @@ class _JournalScreenState extends State<JournalScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('7-Entry Pain Trend',
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textMuted)),
+          Text('7-Entry Pain Trend', style: AppTextStyles.micro),
           const SizedBox(height: 10),
           SizedBox(
             height: 48,
@@ -600,10 +563,8 @@ class _JournalScreenState extends State<JournalScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('${recent.length} entries ago',
-                  style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
-              const Text('Latest',
-                  style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+              Text('${recent.length} entries ago', style: AppTextStyles.micro),
+              Text('Latest', style: AppTextStyles.micro),
             ],
           ),
         ],
@@ -701,11 +662,7 @@ class _JournalScreenState extends State<JournalScreen> {
               Text(
                 isFiltered ? 'No matching entries' : 'No journal entries yet',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
+                style: AppTextStyles.itemTitle.copyWith(fontSize: 18),
               ),
               const SizedBox(height: 10),
               Text(
@@ -713,11 +670,7 @@ class _JournalScreenState extends State<JournalScreen> {
                     ? 'Try a different filter to see more entries.'
                     : 'Use Journal to track pain, symptoms, stone events, and notes for your doctor.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 14,
-                  height: 1.5,
-                  color: AppColors.textMuted,
-                ),
+                style: AppTextStyles.body,
               ),
               const SizedBox(height: 18),
               SizedBox(
@@ -766,15 +719,9 @@ class _JournalScreenState extends State<JournalScreen> {
     final filtered = _filteredEntries;
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.warning,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          'Pain Journal',
-          style: TextStyle(
-              color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 20),
-        ),
+      appBar: StoneGuardAppBar(
+        title: 'Pain Journal',
+        centerTitle: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined, color: AppColors.textPrimary),
@@ -808,20 +755,13 @@ class _JournalScreenState extends State<JournalScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'How are you feeling today?',
-                    style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary),
+                    style: AppTextStyles.itemTitle,
                   ),
                   const SizedBox(height: 14),
                   Row(children: [
-                    const Text('Pain Level',
-                        style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textMuted,
-                            fontWeight: FontWeight.w600)),
+                    Text('Pain Level', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -848,28 +788,16 @@ class _JournalScreenState extends State<JournalScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('1 - No pain',
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.grey.shade400)),
-                      Text('10 - Extreme',
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.grey.shade400)),
+                      Text('1 - No pain', style: AppTextStyles.micro),
+                      Text('10 - Extreme', style: AppTextStyles.micro),
                     ],
                   ),
                   const SizedBox(height: 14),
-                  const Text('Pain Side',
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textMuted,
-                          fontWeight: FontWeight.w600)),
+                  Text('Pain Side', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   _buildSideSelector(_side, (s) => setState(() => _side = s)),
                   const SizedBox(height: 14),
-                  const Text('Symptoms',
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textMuted,
-                          fontWeight: FontWeight.w600)),
+                  Text('Symptoms', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   _buildSymptomChips(
                       _selectedSymptoms,
@@ -885,7 +813,7 @@ class _JournalScreenState extends State<JournalScreen> {
                     maxLines: 3,
                     decoration: InputDecoration(
                       hintText: 'Notes — symptoms, water intake, diet, mood...',
-                      hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                      hintStyle: AppTextStyles.body,
                       filled: true,
                       fillColor: AppColors.background,
                       border: OutlineInputBorder(
@@ -933,11 +861,7 @@ class _JournalScreenState extends State<JournalScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(children: [
-                    const Text('Past Entries',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: AppColors.textPrimary)),
+                    Text('Past Entries', style: AppTextStyles.itemTitle),
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -953,8 +877,7 @@ class _JournalScreenState extends State<JournalScreen> {
                               fontSize: 12)),
                     ),
                     const Spacer(),
-                    const Text('Tap to view',
-                        style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                    Text('Tap to view', style: AppTextStyles.micro),
                   ]),
                   const SizedBox(height: 8),
                   SingleChildScrollView(
@@ -1099,13 +1022,9 @@ class _JournalScreenState extends State<JournalScreen> {
                                 Text(note,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                        color: AppColors.textPrimary,
-                                        fontSize: 13)),
+                                    style: AppTextStyles.body.copyWith(fontSize: 13)),
                                 const SizedBox(height: 2),
-                                Text(dateStr,
-                                    style: const TextStyle(
-                                        color: AppColors.textMuted, fontSize: 11)),
+                                Text(dateStr, style: AppTextStyles.micro),
                               ],
                             ),
                           ),

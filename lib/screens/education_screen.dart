@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:stoneguard/widgets/banner_ad_widget.dart';
+import '../theme/app_theme.dart';
 import 'emergency_care_screen.dart';
 import 'settings_screen.dart';
 
@@ -22,13 +23,13 @@ class _EducationScreenState extends State<EducationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Learn'),
-        centerTitle: true,
-        elevation: 0,
+      backgroundColor: AppColors.background,
+      appBar: StoneGuardAppBar(
+        title: 'Learn',
+        centerTitle: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_outlined),
+            icon: const Icon(Icons.settings_outlined, color: AppColors.textPrimary),
             tooltip: 'Settings',
             onPressed: () => Navigator.push(
               context,
@@ -60,7 +61,7 @@ class _EducationScreenState extends State<EducationScreen> {
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                      color: const Color(0xFFE53935).withValues(alpha: 0.3),
+                      color: Color(0xFFE53935).withValues(alpha: 0.3),
                       blurRadius: 10,
                       offset: const Offset(0, 4)),
                 ],
@@ -100,10 +101,10 @@ class _EducationScreenState extends State<EducationScreen> {
             ),
           ),
 
-          // ── EXISTING CARDS ──
+          // ── EXPANDABLE CARDS ──
           _expandableCard(
             icon: Icons.info_outline,
-            color: Colors.teal,
+            color: AppColors.teal,
             title: 'What Are Calcium Oxalate Stones?',
             body:
             'Calcium oxalate stones are the most common type of kidney stone. '
@@ -121,7 +122,7 @@ class _EducationScreenState extends State<EducationScreen> {
           ),
           _expandableCard(
             icon: Icons.no_meals,
-            color: Colors.orange,
+            color: AppColors.warning,
             title: 'High-Oxalate Foods to Limit',
             body:
             'Spinach, almonds, rhubarb, beets, Swiss chard, and dark chocolate are very high in oxalate. '
@@ -130,7 +131,7 @@ class _EducationScreenState extends State<EducationScreen> {
           ),
           _expandableCard(
             icon: Icons.check_circle_outline,
-            color: Colors.green,
+            color: AppColors.success,
             title: 'Safe Foods to Enjoy',
             body:
             'Rice, pasta, white bread, eggs, meat, fish, most fruits (apples, bananas, grapes), '
@@ -139,7 +140,7 @@ class _EducationScreenState extends State<EducationScreen> {
           ),
           _expandableCard(
             icon: Icons.science_outlined,
-            color: Colors.purple,
+            color: AppColors.oxalate,
             title: 'What About Calcium?',
             body:
             'Counterintuitively, eating MORE dietary calcium can help prevent stones — '
@@ -149,7 +150,7 @@ class _EducationScreenState extends State<EducationScreen> {
           ),
           _expandableCard(
             icon: Icons.local_cafe,
-            color: Colors.brown,
+            color: const Color(0xFF6D4C41),
             title: 'Sodium & Protein',
             body:
             'High sodium increases calcium in the urine, raising stone risk. '
@@ -158,18 +159,16 @@ class _EducationScreenState extends State<EducationScreen> {
           ),
           _expandableCard(
             icon: Icons.medical_services_outlined,
-            color: Colors.red,
+            color: AppColors.danger,
             title: 'When to See a Doctor',
             body:
             'See a doctor immediately if you have severe flank pain, blood in urine, '
                 'fever with stone symptoms, or repeated stones. '
                 'A urologist can order a 24-hour urine test to find your personal risk factors.',
           ),
-
-          // ── NEW CARDS ──
           _expandableCard(
             icon: Icons.emoji_nature,
-            color: Colors.yellow.shade700,
+            color: const Color(0xFFF9A825),
             title: 'The Power of Citrate',
             body:
             'Citrate is one of the most powerful natural defenses against kidney stones. '
@@ -181,7 +180,7 @@ class _EducationScreenState extends State<EducationScreen> {
           ),
           _expandableCard(
             icon: Icons.quiz_outlined,
-            color: Colors.indigo,
+            color: const Color(0xFF3949AB),
             title: 'FAQ — Common Questions',
             body:
             'Q: Why do I keep getting kidney stones?\n'
@@ -202,7 +201,7 @@ class _EducationScreenState extends State<EducationScreen> {
           ),
           _expandableCard(
             icon: Icons.favorite_outline,
-            color: Colors.pink,
+            color: Colors.pinkAccent,
             title: 'Mental Support — You\'re Not Alone',
             body:
             'Kidney stones are one of the most painful experiences a person can go through — '
@@ -219,18 +218,29 @@ class _EducationScreenState extends State<EducationScreen> {
           ),
 
           const SizedBox(height: 12),
+
+          // ── DISCLAIMER ──
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(8),
+              color: AppColors.warningBg,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
             ),
-            child: const Text(
-              '⚠️ This app is for tracking and educational purposes only. '
-                  'It is not a medical device and does not offer medical advice. '
-                  'Always consult a doctor.',
-              style: TextStyle(fontSize: 12, color: Colors.black54),
-              textAlign: TextAlign.center,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.info_outline, color: AppColors.warning, size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'This app is for tracking and educational purposes only. '
+                        'It is not a medical device and does not offer medical advice. '
+                        'Always consult a doctor.',
+                    style: AppTextStyles.body.copyWith(color: AppColors.warning),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
@@ -248,47 +258,69 @@ class _EducationScreenState extends State<EducationScreen> {
     required String body,
   }) {
     final isOpen = _expanded[title] ?? false;
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 2,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => _toggle(title),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(icon, color: color, size: 24),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          splashColor: color.withValues(alpha: 0.06),
+          highlightColor: color.withValues(alpha: 0.04),
+          onTap: () => _toggle(title),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(icon, color: color, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: AppTextStyles.itemTitle,
                       ),
                     ),
-                  ),
-                  Icon(
-                    isOpen ? Icons.expand_less : Icons.expand_more,
-                    color: Colors.grey,
+                    Icon(
+                      isOpen ? Icons.expand_less : Icons.expand_more,
+                      color: AppColors.textHint,
+                      size: 22,
+                    ),
+                  ],
+                ),
+                if (isOpen) ...[
+                  const SizedBox(height: 12),
+                  const Divider(height: 1, color: AppColors.divider),
+                  const SizedBox(height: 12),
+                  Text(
+                    body,
+                    style: AppTextStyles.body.copyWith(height: 1.6),
                   ),
                 ],
-              ),
-              if (isOpen) ...[
-                const SizedBox(height: 10),
-                const Divider(height: 1),
-                const SizedBox(height: 10),
-                Text(
-                  body,
-                  style: const TextStyle(fontSize: 14, height: 1.6),
-                ),
               ],
-            ],
+            ),
           ),
         ),
       ),
