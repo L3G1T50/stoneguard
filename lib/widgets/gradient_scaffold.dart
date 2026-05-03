@@ -1,4 +1,4 @@
-// ─── SHARED GRADIENT SCAFFOLD ────────────────────────────────────────────────
+// ─── SHARED GRADIENT SCAFFOLD ────────────────────────────────────────────────────────
 // All tabs use this widget so the teal-to-white gradient stays consistent
 // across the whole app. To update the theme, change it here once.
 import 'package:flutter/material.dart';
@@ -76,7 +76,7 @@ class GradientScaffold extends StatelessWidget {
   }
 }
 
-// ── Slim custom header — white title + icons on teal ──────────────────────────
+// ── Slim custom header — white title centered, icons on edges ─────────────────
 class _GradientAppBar extends StatelessWidget {
   const _GradientAppBar({required this.title, this.actions});
   final String title;
@@ -84,22 +84,23 @@ class _GradientAppBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: Row(
+    final bool canPop = Navigator.of(context).canPop();
+
+    // Use a Stack so the title is always pixel-perfect centered,
+    // regardless of how many icons sit on the left or right.
+    return SizedBox(
+      height: 52,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          // Back button if there is a route to pop
-          if (Navigator.of(context).canPop())
-            IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new,
-                  color: Colors.white, size: 20),
-              onPressed: () => Navigator.of(context).pop(),
-            )
-          else
-            const SizedBox(width: 8),
-          Expanded(
+          // ── Centered title ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 56),
             child: Text(
               title,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -107,7 +108,25 @@ class _GradientAppBar extends StatelessWidget {
               ),
             ),
           ),
-          if (actions != null) ...actions!,
+
+          // ── Left: back button or spacer ──
+          Positioned(
+            left: 0,
+            child: canPop
+                ? IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new,
+                        color: Colors.white, size: 20),
+                    onPressed: () => Navigator.of(context).pop(),
+                  )
+                : const SizedBox(width: 48),
+          ),
+
+          // ── Right: action icons ──
+          if (actions != null)
+            Positioned(
+              right: 0,
+              child: Row(mainAxisSize: MainAxisSize.min, children: actions!),
+            ),
         ],
       ),
     );
