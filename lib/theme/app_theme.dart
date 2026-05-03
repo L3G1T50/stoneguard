@@ -21,12 +21,12 @@ abstract class AppColors {
   static const Color tealLight   = Color(0xFFE0F2F1);
   static const Color tealDark    = Color(0xFF00695C);
 
-  // Semantic roles
-  static const Color warning     = Color(0xFFF57C00);  // amber – "pay attention"
+  // Semantic roles  (each color used ONLY for its stated role)
+  static const Color warning     = Color(0xFFF57C00);  // amber  – "pay attention"
   static const Color warningBg   = Color(0xFFFFF3E0);
-  static const Color danger      = Color(0xFFD32F2F);  // red – destructive only
+  static const Color danger      = Color(0xFFD32F2F);  // red    – destructive only
   static const Color dangerBg    = Color(0xFFFFEBEE);
-  static const Color success     = Color(0xFF2E7D32);  // green – "all good"
+  static const Color success     = Color(0xFF2E7D32);  // green  – "all good"
   static const Color successBg   = Color(0xFFE8F5E9);
 
   // Oxalate context – used ONLY on oxalate-related widgets
@@ -34,9 +34,10 @@ abstract class AppColors {
   static const Color oxalateBg   = Color(0xFFF3E5F5);
 
   // Surfaces & backgrounds
-  static const Color background  = Color(0xFFF4F6F8);  // app scaffold bg
+  static const Color background  = Color(0xFFF4F6F8);  // scaffold bg
   static const Color surface     = Color(0xFFFFFFFF);  // card / sheet bg
   static const Color divider     = Color(0xFFECEFF1);
+  static const Color border      = Color(0xFFDDE3E7);  // subtle card border
 
   // Text
   static const Color textPrimary = Color(0xFF1A2530);  // near-black, warmer
@@ -46,6 +47,15 @@ abstract class AppColors {
   // Nav bar
   static const Color navBg       = Color(0xFFFFFFFF);
   static const Color navIndicator= Color(0xFFB2DFDB);  // teal 100
+
+  // ── Aliases kept for backward compat with older screen imports ──
+  // (screens that still import the old lib/app_theme.dart use these)
+  static const Color primary      = teal;
+  static const Color primaryLight = tealLight;
+  static const Color primaryMuted = tealDark;
+  static const Color textMuted    = textSecond;
+  static const Color textFaint    = textHint;
+  static const Color appBar       = surface;
 }
 
 // ─── TEXT STYLES ──────────────────────────────────────────────────────────────
@@ -57,6 +67,14 @@ abstract class AppTextStyles {
     color: AppColors.textPrimary,
     letterSpacing: -0.3,
     height: 1.2,
+  );
+
+  // AppBar title – used in appBarTheme titleTextStyle
+  static const TextStyle appBarTitle = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w700,
+    color: AppColors.textPrimary,
+    letterSpacing: -0.2,
   );
 
   // Section header label  (e.g. "DAILY GOALS", "NOTIFICATIONS")
@@ -98,6 +116,16 @@ abstract class AppTextStyles {
     color: Colors.white,
     letterSpacing: 0.2,
   );
+
+  // ── Aliases kept for backward compat ──
+  static const TextStyle sectionHeader = sectionLabel;
+  static const TextStyle cardTitle     = itemTitle;
+  static const TextStyle label         = TextStyle(
+    color: AppColors.textSecond,
+    fontWeight: FontWeight.w600,
+    fontSize: 13,
+  );
+  static const TextStyle meta          = micro;
 }
 
 // ─── SPACING ──────────────────────────────────────────────────────────────────
@@ -128,12 +156,13 @@ BoxDecoration appCardDecoration({
   return BoxDecoration(
     color: color,
     borderRadius: BorderRadius.circular(radius),
+    border: Border.all(color: AppColors.border),
     boxShadow: const [
       BoxShadow(
-        color: Color(0x0A000000),  // 4 % black – barely visible, just depth
-        blurRadius: 10,
+        color: Color(0x08000000),  // 3% black – barely visible, just depth
+        blurRadius: 12,
         spreadRadius: 0,
-        offset: Offset(0, 3),
+        offset: Offset(0, 4),
       ),
     ],
   );
@@ -177,11 +206,12 @@ class AppCard extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(radius),
+              border: Border.all(color: AppColors.border),
               boxShadow: const [
                 BoxShadow(
-                  color: Color(0x0A000000),
-                  blurRadius: 10,
-                  offset: Offset(0, 3),
+                  color: Color(0x08000000),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
                 ),
               ],
             ),
@@ -298,7 +328,7 @@ class AppButton extends StatelessWidget {
 }
 
 // ─── ICON BADGE ───────────────────────────────────────────────────────────────
-/// Circular icon with a tinted background. Used in list rows & cards.
+/// Rounded square icon with a tinted background. Used in list rows & cards.
 /// Usage:  AppIconBadge(icon: Icons.water_drop, color: AppColors.teal)
 class AppIconBadge extends StatelessWidget {
   final IconData icon;
@@ -325,6 +355,49 @@ class AppIconBadge extends StatelessWidget {
   }
 }
 
+// ─── STANDARD APP BAR ─────────────────────────────────────────────────────────
+/// Use this instead of a raw AppBar in every screen for consistency.
+/// Usage:  StoneGuardAppBar(title: 'Pain Journal')
+class StoneGuardAppBar extends StatelessWidget implements PreferredSizeWidget {
+  final String title;
+  final List<Widget>? actions;
+  final Widget? leading;
+  final bool centerTitle;
+
+  const StoneGuardAppBar({
+    super.key,
+    required this.title,
+    this.actions,
+    this.leading,
+    this.centerTitle = false,
+  });
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBar(
+      backgroundColor: AppColors.surface,
+      foregroundColor: AppColors.textPrimary,
+      elevation: 0,
+      scrolledUnderElevation: 1,
+      centerTitle: centerTitle,
+      leading: leading,
+      actions: actions,
+      title: Text(title, style: AppTextStyles.appBarTitle),
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Divider(
+          height: 1,
+          thickness: 1,
+          color: AppColors.divider,
+        ),
+      ),
+    );
+  }
+}
+
 // ─── ROOT THEME DATA ─────────────────────────────────────────────────────────
 /// Pass this to MaterialApp's `theme:` parameter in main.dart.
 ThemeData buildAppTheme() {
@@ -344,20 +417,15 @@ ThemeData buildAppTheme() {
     // Scaffold background
     scaffoldBackgroundColor: AppColors.background,
 
-    // AppBar – flat, white, dark title text
-    appBarTheme: const AppBarTheme(
+    // AppBar – flat white, dark title, subtle bottom divider
+    appBarTheme: AppBarTheme(
       backgroundColor: AppColors.surface,
       foregroundColor: AppColors.textPrimary,
       elevation: 0,
       scrolledUnderElevation: 1,
       centerTitle: false,
-      titleTextStyle: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w700,
-        color: AppColors.textPrimary,
-        letterSpacing: -0.2,
-      ),
-      systemOverlayStyle: SystemUiOverlayStyle(
+      titleTextStyle: AppTextStyles.appBarTitle,
+      systemOverlayStyle: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.dark,
         systemNavigationBarColor: AppColors.navBg,
@@ -398,6 +466,22 @@ ThemeData buildAppTheme() {
         foregroundColor: Colors.white,
         elevation: 0,
         textStyle: AppTextStyles.button,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        minimumSize: const Size(double.infinity, 48),
+      ),
+    ),
+
+    // OutlinedButton defaults
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.teal,
+        side: const BorderSide(color: AppColors.teal),
+        textStyle: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
@@ -496,9 +580,20 @@ ThemeData buildAppTheme() {
       backgroundColor: AppColors.background,
       labelStyle:
           const TextStyle(fontSize: 12, color: AppColors.textSecond),
-      side: BorderSide.none,
+      side: const BorderSide(color: AppColors.border),
       shape:
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    ),
+
+    // Card
+    cardTheme: CardThemeData(
+      color: AppColors.surface,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      margin: EdgeInsets.zero,
     ),
   );
 }

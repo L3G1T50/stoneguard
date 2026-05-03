@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../database_helper.dart';
 import 'dart:math' as math;
-import '../theme/app_theme.dart';
+import '../app_theme.dart';
 
 class JournalScreen extends StatefulWidget {
   const JournalScreen({super.key});
@@ -67,9 +67,9 @@ class _JournalScreenState extends State<JournalScreen> {
     _loadEntries();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      const SnackBar(
         content: Text('Journal entry saved!'),
-        backgroundColor: AppColors.teal,
+        backgroundColor: AppColors.primary,
       ),
     );
   }
@@ -98,7 +98,7 @@ class _JournalScreenState extends State<JournalScreen> {
     _loadEntries();
   }
 
-  // ── Edit Sheet ────────────────────────────────────────────────
+  // ── Edit Sheet ────────────────────────────────────────────
   void _showEditSheet(Map<String, dynamic> entry, int index) {
     final editNote = TextEditingController(text: entry['note'] as String);
     int editPain = entry['pain'] as int;
@@ -250,7 +250,7 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  // ── Detail Sheet ──────────────────────────────────────────────
+  // ── Detail Sheet ───────────────────────────────────────────
   void _showEntryDetail(Map<String, dynamic> entry, int index) {
     final pain        = entry['pain'] as int;
     final note        = entry['note'] as String;
@@ -566,7 +566,7 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  // ── Pain trend sparkline ──────────────────────────────────────
+  // ── Pain trend sparkline ──────────────────────────────────────────
   Widget _buildPainTrend() {
     if (_entries.length < 2) return const SizedBox.shrink();
     final recent = _entries.take(7).toList().reversed.toList();
@@ -610,7 +610,7 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  // ── Helpers ───────────────────────────────────────────────────
+  // ── Helpers ─────────────────────────────────────────────────────
   Color _painColor(int level) {
     if (level <= 3) return AppColors.success;
     if (level <= 6) return AppColors.warning;
@@ -759,7 +759,7 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  // ── Build ─────────────────────────────────────────────────────
+  // ── Build ─────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredEntries;
@@ -775,11 +775,10 @@ class _JournalScreenState extends State<JournalScreen> {
               color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 20),
         ),
       ),
-      // ── CustomScrollView: everything is a Sliver ─────────────
       body: CustomScrollView(
         slivers: [
 
-          // ── 1. Entry form ────────────────────────────────────
+          // ── 1. Entry form ──────────────────────────────────────────
           SliverToBoxAdapter(
             child: Container(
               margin: const EdgeInsets.all(16),
@@ -806,7 +805,6 @@ class _JournalScreenState extends State<JournalScreen> {
                         color: AppColors.textPrimary),
                   ),
                   const SizedBox(height: 14),
-                  // Pain level
                   Row(children: [
                     const Text('Pain Level',
                         style: TextStyle(
@@ -848,7 +846,6 @@ class _JournalScreenState extends State<JournalScreen> {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  // Side selector
                   const Text('Pain Side',
                       style: TextStyle(
                           fontSize: 13,
@@ -857,7 +854,6 @@ class _JournalScreenState extends State<JournalScreen> {
                   const SizedBox(height: 8),
                   _buildSideSelector(_side, (s) => setState(() => _side = s)),
                   const SizedBox(height: 14),
-                  // Symptoms
                   const Text('Symptoms',
                       style: TextStyle(
                           fontSize: 13,
@@ -870,11 +866,9 @@ class _JournalScreenState extends State<JournalScreen> {
                       val ? _selectedSymptoms.add(tag)
                           : _selectedSymptoms.remove(tag))),
                   const SizedBox(height: 14),
-                  // Stone passed
                   _buildStonePassedToggle(
                       _stonePassed, (v) => setState(() => _stonePassed = v)),
                   const SizedBox(height: 14),
-                  // Notes
                   TextField(
                     controller: _noteController,
                     maxLines: 3,
@@ -917,10 +911,10 @@ class _JournalScreenState extends State<JournalScreen> {
             ),
           ),
 
-          // ── 2. Pain trend sparkline ──────────────────────────
+          // ── 2. Pain trend sparkline ───────────────────────────────────
           SliverToBoxAdapter(child: _buildPainTrend()),
 
-          // ── 3. Past entries header + filter ─────────────────
+          // ── 3. Past entries header + filter ───────────────────────────
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -952,7 +946,6 @@ class _JournalScreenState extends State<JournalScreen> {
                         style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
                   ]),
                   const SizedBox(height: 8),
-                  // Filter chips
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
@@ -996,7 +989,7 @@ class _JournalScreenState extends State<JournalScreen> {
             ),
           ),
 
-          // ── 4. Entry list or empty state ─────────────────────
+          // ── 4. Entry list or empty state ─────────────────────────────
           filtered.isEmpty
               ? SliverFillRemaining(
             hasScrollBody: false,
@@ -1024,23 +1017,21 @@ class _JournalScreenState extends State<JournalScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.surface,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.divider),
+                        border: Border.all(color: AppColors.border),
                         boxShadow: [
                           BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
+                              color: Colors.black.withValues(alpha: 0.03),
                               blurRadius: 6,
-                              offset: const Offset(0, 1)),
+                              offset: const Offset(0, 2)),
                         ],
                       ),
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Pain badge
                           Container(
-                            width: 44, height: 44,
+                            width: 48, height: 48,
                             decoration: BoxDecoration(
                               color: _painColor(pain).withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Center(
                               child: Text('$pain',
@@ -1055,55 +1046,60 @@ class _JournalScreenState extends State<JournalScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(note,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                        color: AppColors.textPrimary, fontSize: 14)),
-                                const SizedBox(height: 4),
-                                if (symptoms.isNotEmpty) ...[
-                                  Wrap(
-                                    spacing: 4,
-                                    children: symptoms.take(3).map((s) =>
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 7, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.warning.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                          child: Text(s,
-                                              style: const TextStyle(
-                                                  fontSize: 10,
-                                                  color: AppColors.warning)),
-                                        )).toList(),
-                                  ),
-                                  const SizedBox(height: 4),
-                                ],
                                 Row(children: [
-                                  Text(dateStr,
-                                      style: const TextStyle(
-                                          color: AppColors.textMuted, fontSize: 11)),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: _painColor(pain).withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(_painLabel(pain),
+                                        style: TextStyle(
+                                            color: _painColor(pain),
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold)),
+                                  ),
                                   if (stonePassed) ...[
                                     const SizedBox(width: 6),
                                     const Text('💎',
-                                        style: TextStyle(fontSize: 11)),
+                                        style: TextStyle(fontSize: 13)),
+                                  ],
+                                  if (symptoms.isNotEmpty) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.warning.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        '+${symptoms.length} symptom${symptoms.length > 1 ? 's' : ''}',
+                                        style: const TextStyle(
+                                            color: AppColors.warning,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
                                   ],
                                 ]),
+                                const SizedBox(height: 4),
+                                Text(note,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 13)),
+                                const SizedBox(height: 2),
+                                Text(dateStr,
+                                    style: const TextStyle(
+                                        color: AppColors.textMuted, fontSize: 11)),
                               ],
                             ),
                           ),
-                          // Chevron + delete
-                          Column(children: [
-                            const Icon(Icons.chevron_right_rounded,
-                                color: AppColors.textMuted, size: 20),
-                            const SizedBox(height: 4),
-                            GestureDetector(
-                              onTap: () => _deleteEntry(masterIndex),
-                              child: const Icon(Icons.delete_outline,
-                                  color: AppColors.danger, size: 20),
-                            ),
-                          ]),
+                          const Icon(Icons.chevron_right,
+                              color: AppColors.textFaint, size: 20),
                         ],
                       ),
                     ),
@@ -1119,73 +1115,43 @@ class _JournalScreenState extends State<JournalScreen> {
   }
 }
 
-// ── Sparkline painter ─────────────────────────────────────────
+// ── Sparkline painter ──────────────────────────────────────────────────────
 class _SparklinePainter extends CustomPainter {
-  final List<double> data;
-  _SparklinePainter(this.data);
+  final List<double> values;
+  _SparklinePainter(this.values);
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (data.length < 2) return;
+    if (values.length < 2) return;
+    final paint = Paint()
+      ..color = AppColors.primary
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
 
-    final minV  = data.reduce(math.min);
-    final maxV  = data.reduce(math.max);
-    final range = (maxV - minV) == 0 ? 1.0 : (maxV - minV);
+    final minV = values.reduce(math.min);
+    final maxV = values.reduce(math.max);
+    final range = (maxV - minV).clamp(1.0, double.infinity);
 
-    double x(int i) => i * size.width / (data.length - 1);
-    double y(double v) => size.height - ((v - minV) / range) * size.height;
-
-    // Fill
-    final fillPath = Path();
-    fillPath.moveTo(x(0), size.height);
-    for (int i = 0; i < data.length; i++) {
-      fillPath.lineTo(x(i), y(data[i]));
+    final path = Path();
+    for (var i = 0; i < values.length; i++) {
+      final x = size.width * i / (values.length - 1);
+      final y = size.height - (values[i] - minV) / range * size.height;
+      i == 0 ? path.moveTo(x, y) : path.lineTo(x, y);
     }
-    fillPath.lineTo(x(data.length - 1), size.height);
-    fillPath.close();
-    canvas.drawPath(
-      fillPath,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            const Color(0xFF1A8A9A).withValues(alpha: 0.2),
-            const Color(0xFF1A8A9A).withValues(alpha: 0.0),
-          ],
-        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)),
+    canvas.drawPath(path, paint);
+
+    // Draw dot at last point
+    final lastX = size.width.toDouble();
+    final lastY = size.height - (values.last - minV) / range * size.height;
+    canvas.drawCircle(
+      Offset(lastX, lastY),
+      4,
+      Paint()..color = AppColors.primary,
     );
-
-    // Line
-    final linePath = Path();
-    linePath.moveTo(x(0), y(data[0]));
-    for (int i = 1; i < data.length; i++) {
-      linePath.lineTo(x(i), y(data[i]));
-    }
-    canvas.drawPath(
-      linePath,
-      Paint()
-        ..color = const Color(0xFF1A8A9A)
-        ..strokeWidth = 2
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round,
-    );
-
-    // Dots
-    for (int i = 0; i < data.length; i++) {
-      final color = data[i] <= 3
-          ? AppColors.success
-          : data[i] <= 6
-          ? AppColors.warning
-          : AppColors.danger;
-      canvas.drawCircle(
-        Offset(x(i), y(data[i])),
-        3.5,
-        Paint()..color = color,
-      );
-    }
   }
 
   @override
-  bool shouldRepaint(_SparklinePainter old) => old.data != data;
+  bool shouldRepaint(_SparklinePainter old) => old.values != values;
 }
