@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:stoneguard/widgets/banner_ad_widget.dart';
 import '../theme/app_theme.dart';
+import '../widgets/gradient_scaffold.dart';
 import 'emergency_care_screen.dart';
 
 class EducationScreen extends StatefulWidget {
@@ -21,14 +22,11 @@ class _EducationScreenState extends State<EducationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: ListView(
-          padding: AppSpacing.pagePadding.add(const EdgeInsets.only(bottom: 32)),
-          children: [
-            const AppScreenTitle('Learn'),
-            const SizedBox(height: 16),
+    return GradientScaffold(
+      title: 'Learn',
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+        children: [
 
           // ── EMERGENCY CARE BANNER ──
           GestureDetector(
@@ -198,8 +196,7 @@ class _EducationScreenState extends State<EducationScreen> {
           ),
           const BannerAdWidget(),
           const SizedBox(height: 16),
-          ],
-        ),
+        ],
       ),
     );
   }
