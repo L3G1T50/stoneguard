@@ -23,7 +23,7 @@ Future<void> main() async {
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light, // white icons on teal
+    statusBarIconBrightness: Brightness.light,
     systemNavigationBarColor: AppColors.navBg,
     systemNavigationBarIconBrightness: Brightness.dark,
   ));
@@ -75,7 +75,7 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> screens = [
-      // ── 0: Shield (has its own gradient background) ──
+      // ── 0: Shield ──
       const HomeShieldScreen(),
 
       // ── 1: Food Guide ──
@@ -94,11 +94,11 @@ class _MainShellState extends State<MainShell> {
         body: const FoodGuideScreen(),
       ),
 
-      // ── 2: Journal ──
-      const JournalScreen(),
-
-      // ── 3: History ──
+      // ── 2: History (swapped) ──
       const HistoryProgressScreen(),
+
+      // ── 3: Journal (swapped) ──
+      const JournalScreen(),
 
       // ── 4: Education ──
       const EducationScreen(),
@@ -127,14 +127,14 @@ class _MainShellState extends State<MainShell> {
             label: 'Food',
           ),
           NavigationDestination(
-            icon: Icon(Icons.book_outlined),
-            selectedIcon: Icon(Icons.book, color: Color(0xFF01696F)),
-            label: 'Journal',
-          ),
-          NavigationDestination(
             icon: Icon(Icons.bar_chart_outlined),
             selectedIcon: Icon(Icons.bar_chart, color: Color(0xFF01696F)),
             label: 'History',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.book_outlined),
+            selectedIcon: Icon(Icons.book, color: Color(0xFF01696F)),
+            label: 'Journal',
           ),
           NavigationDestination(
             icon: Icon(Icons.school_outlined),

@@ -576,6 +576,8 @@ class _JournalScreenState extends State<JournalScreen> {
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredEntries;
+    // Extra bottom padding so content clears the nav bar on all devices
+    final bottomPad = MediaQuery.of(context).padding.bottom + 16;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -901,7 +903,8 @@ class _JournalScreenState extends State<JournalScreen> {
               ),
             ),
 
-          const SliverToBoxAdapter(child: SizedBox(height: 32)),
+          // ── Bottom spacer accounts for nav bar + safe area ──
+          SliverToBoxAdapter(child: SizedBox(height: bottomPad + 32)),
         ],
         ),
       ),
