@@ -8,8 +8,9 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home_shield_screen.dart';
 import 'screens/journal_screen.dart';
-import 'screens/history_screen.dart';
-import 'screens/progress_screen.dart';
+import 'screens/history_progress_screen.dart';
+import 'screens/food_guide_screen.dart';
+import 'screens/education_screen.dart';
 import 'screens/settings_screen.dart';
 import 'theme/app_theme.dart';
 
@@ -54,7 +55,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'StoneGuard',
       debugShowCheckedModeBanner: false,
-      theme: buildAppTheme(),   // ← single theme from app_theme.dart
+      theme: buildAppTheme(),
       home: const SplashScreen(),
     );
   }
@@ -74,9 +75,9 @@ class _MainShellState extends State<MainShell> {
   final List<Widget> _screens = const [
     HomeShieldScreen(),
     JournalScreen(),
-    HistoryScreen(),
-    ProgressScreen(),
-    SettingsScreen(),
+    HistoryProgressScreen(),
+    FoodGuideScreen(),
+    EducationScreen(),
   ];
 
   @override
@@ -106,14 +107,14 @@ class _MainShellState extends State<MainShell> {
             label: 'History',
           ),
           NavigationDestination(
-            icon: Icon(Icons.trending_up_outlined),
-            selectedIcon: Icon(Icons.trending_up),
-            label: 'Progress',
+            icon: Icon(Icons.restaurant_menu_outlined),
+            selectedIcon: Icon(Icons.restaurant_menu),
+            label: 'Food',
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Settings',
+            icon: Icon(Icons.school_outlined),
+            selectedIcon: Icon(Icons.school),
+            label: 'Learn',
           ),
         ],
       ),
