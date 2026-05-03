@@ -697,7 +697,7 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
               const SizedBox(height: 20),
               _exportOption(
                 icon: Icons.picture_as_pdf_rounded,
-                iconColor: const Color(0xFFD32F2F),
+                iconColor: Color(0xFFD32F2F),
                 title: 'PDF Report',
                 subtitle:
                 'Charts, summary table & full daily log — best for printing or emailing',
@@ -745,13 +745,12 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
         child: Row(
           children: [
             Container(
-              width: 44,
-              height: 44,
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: iconColor.withAlpha(20),
+                color: iconColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: iconColor, size: 24),
+              child: Icon(icon, color: iconColor, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -761,24 +760,20 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
                   Text(
                     title,
                     style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
                       color: _textPri,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Text(
                     subtitle,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: _textMuted,
-                      height: 1.3,
-                    ),
+                    style: const TextStyle(fontSize: 12, color: _textMuted),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: _textMuted),
+            const Icon(Icons.chevron_right, color: Color(0xFFCCCCCC), size: 20),
           ],
         ),
       ),
@@ -787,510 +782,285 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final canExport = _isPremium && !_isLoading && _entries.isNotEmpty;
-
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(
         backgroundColor: _appBar,
         elevation: 0,
-        iconTheme: const IconThemeData(color: _textPri),
-        title: const Text(
-          'Doctor View',
-          style: TextStyle(color: _textPri, fontWeight: FontWeight.bold),
+        title: Text(
+          _userName.isNotEmpty ? '$_userName — Doctor View' : 'Doctor View',
+          style: const TextStyle(
+            color: _textPri,
+            fontWeight: FontWeight.bold,
+            fontSize: 17,
+          ),
         ),
+        iconTheme: const IconThemeData(color: _textPri),
         actions: [
-          if (!_isLoading && _entries.isNotEmpty)
-            Tooltip(
-              message: _isPremium ? 'Export report' : 'StoneGuard Plus required',
-              child: IconButton(
-                icon: const Icon(Icons.ios_share_rounded, color: _teal),
-                onPressed: _showExportSheet,
-              ),
-            ),
+          IconButton(
+            icon: const Icon(Icons.ios_share),
+            tooltip: 'Export report',
+            onPressed: _showExportSheet,
+          ),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _entries.isEmpty
-          ? _buildEmptyState()
-          : Column(
-        children: [
-          _buildTimeframePicker(),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (!_isPremium) _buildPremiumBanner(),
-                  _buildHeaderNote(),
-                  const SizedBox(height: 16),
-                  _buildSummaryCard(),
-                  const SizedBox(height: 16),
-                  _buildLineCard(
-                    title:
-                    'Daily Water Intake (oz) — goal ${_waterGoal.toStringAsFixed(0)} oz',
-                    color: _teal,
-                    goal: _waterGoal,
-                    valueSelector: (e) =>
-                        (e['water_oz'] as num).toDouble(),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildLineCard(
-                    title:
-                    'Daily Oxalate Load (mg) — limit ${_oxGoal.toStringAsFixed(0)} mg',
-                    color: _red,
-                    goal: _oxGoal,
-                    valueSelector: (e) =>
-                        (e['oxalate_mg'] as num).toDouble(),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildExportCard(canExport: canExport),
-                  const SizedBox(height: 8),
-                  _buildDisclaimer(),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+          : _buildBody(),
     );
   }
 
-  Widget _buildPremiumBanner() => Container(
-    width: double.infinity,
-    margin: const EdgeInsets.only(bottom: 16),
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: const Color(0xFFEAF6F8),
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const Color(0xFFB2DDE4)),
-    ),
-    child: Row(
-      children: [
-        const Icon(Icons.lock_outline, color: _teal, size: 22),
-        const SizedBox(width: 10),
-        const Expanded(
-          child: Text(
-            'Free preview: 30 days only. Upgrade to StoneGuard Plus for 6M and 12M Doctor View, report export, and ad removal.',
-            style: TextStyle(
-              color: _textPri,
-              fontSize: 12,
-              height: 1.3,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
+  Widget _buildBody() {
+    final stats = _computeStats();
 
-  Widget _buildTimeframePicker() {
-    return SizedBox(
-      height: 56,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        children: _timeframes.map((tf) {
-          final isSelected = _daysBack == tf['days'];
-          final isLocked = tf['premium'] == true && !_isPremium;
-
-          return GestureDetector(
-            onTap: () => _selectTimeframe(tf),
-            child: Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: isSelected ? _teal : _surface,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: isSelected ? _teal : _border),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    tf['label'] as String,
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : _textPri,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (isLocked) ...[
-                    const SizedBox(width: 6),
-                    Icon(
-                      Icons.lock_outline,
-                      size: 14,
-                      color: isSelected ? Colors.white : _textMuted,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildHeaderNote() => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: const [
-      Text(
-        'For your healthcare provider',
-        style: TextStyle(
-          color: _textMuted,
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-      SizedBox(height: 4),
-      Text(
-        'These charts show my daily water intake and oxalate load. Please review together with labs, imaging, and clinical history.',
-        style: TextStyle(color: _textMuted, fontSize: 12, height: 1.4),
-      ),
-    ],
-  );
-
-  Widget _buildSummaryCard() {
-    final s = _computeStats();
-    final daysLogged = s['daysLogged'] as int;
-    final avgWater = s['avgWater'] as double;
-    final avgOxalate = s['avgOxalate'] as double;
-    final waterPct = s['waterPct'] as int;
-    final oxalatePct = s['oxalatePct'] as int;
-
-    return Container(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _border),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Summary',
-            style: TextStyle(
-              color: _textPri,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 12),
+          // ── TIMEFRAME SELECTOR ──────────────────────────────────────────
           Row(
-            children: [
-              _statTile('Days Logged', '$daysLogged', _textPri),
-              _statTile('Avg Water', '${avgWater.toStringAsFixed(1)} oz', _teal),
-              _statTile(
-                'Avg Oxalate',
-                '${avgOxalate.toStringAsFixed(1)} mg',
-                _red,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _statTile('Water Goal Met', '$waterPct%', _teal),
-              _statTile(
-                'Oxalate Goal Met',
-                '$oxalatePct%',
-                oxalatePct >= 70 ? const Color(0xFF4CAF50) : _red,
-              ),
-              const Expanded(child: SizedBox()),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _statTile(String label, String value, Color valueColor) => Expanded(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(color: _textMuted, fontSize: 11)),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: TextStyle(
-            color: valueColor,
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-          ),
-        ),
-      ],
-    ),
-  );
-
-  Widget _buildLineCard({
-    required String title,
-    required Color color,
-    required double goal,
-    required double Function(Map<String, dynamic>) valueSelector,
-  }) {
-    if (_entries.isEmpty) return _emptyCard('No data to display yet.');
-
-    final spots = <FlSpot>[
-      for (int i = 0; i < _entries.length; i++)
-        FlSpot(i.toDouble(), valueSelector(_entries[i])),
-    ];
-
-    double maxY = spots.fold(0.0, (m, s) => s.y > m ? s.y : m);
-    if (goal > maxY) maxY = goal;
-    if (maxY == 0) maxY = 10;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: _textPri,
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 180,
-            child: LineChart(
-              LineChartData(
-                minX: 0,
-                maxX: spots.length > 1 ? (spots.length - 1).toDouble() : 1,
-                minY: 0,
-                maxY: maxY * 1.2,
-                clipData: const FlClipData.all(),
-                gridData: FlGridData(
-                  show: true,
-                  horizontalInterval: maxY / 4,
-                  getDrawingHorizontalLine: (_) =>
-                  const FlLine(color: Color(0xFFE0E0E0), strokeWidth: 1),
-                  drawVerticalLine: false,
-                ),
-                borderData: FlBorderData(
-                  show: true,
-                  border: const Border(
-                    left: BorderSide(color: Color(0xFFB0B0B0)),
-                    bottom: BorderSide(color: Color(0xFFB0B0B0)),
-                    right: BorderSide(color: Colors.transparent),
-                    top: BorderSide(color: Colors.transparent),
+            children: _timeframes.map((tf) {
+              final isSelected = _daysBack == tf['days'];
+              final isPremiumOnly = tf['premium'] == true;
+              return GestureDetector(
+                onTap: () => _selectTimeframe(tf),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isSelected ? _teal : _surface,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isSelected ? _teal : _border,
+                    ),
                   ),
-                ),
-                titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 40,
-                      interval: maxY / 4,
-                      getTitlesWidget: (v, _) => Padding(
-                        padding: const EdgeInsets.only(right: 4),
-                        child: Text(
-                          v.toStringAsFixed(0),
-                          style: const TextStyle(fontSize: 9, color: _textMuted),
-                          textAlign: TextAlign.right,
+                  child: Row(
+                    children: [
+                      if (isPremiumOnly && !_isPremium)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 4),
+                          child: Icon(Icons.lock, size: 12, color: Colors.white),
+                        ),
+                      Text(
+                        tf['label'] as String,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : _textMuted,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
                         ),
                       ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 20),
+
+          // ── STATS GRID ──────────────────────────────────────────────────
+          if (stats['daysLogged'] == 0)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: _surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: _border),
+              ),
+              child: const Column(
+                children: [
+                  Icon(Icons.bar_chart, size: 40, color: Color(0xFFCCCCCC)),
+                  SizedBox(height: 12),
+                  Text(
+                    'No data logged yet',
+                    style: TextStyle(color: _textMuted, fontSize: 15),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Start logging water and oxalate intake to generate your doctor report.',
+                    style: TextStyle(color: _textMuted, fontSize: 12),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            )
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    _statCard('Days Logged', '${stats['daysLogged']}', _teal),
+                    const SizedBox(width: 10),
+                    _statCard('Avg Water', '${(stats['avgWater'] as double).toStringAsFixed(1)} oz', _teal),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _statCard('Water Goal', '${stats['waterPct']}%', _teal),
+                    const SizedBox(width: 10),
+                    _statCard('Oxalate Goal', '${stats['oxalatePct']}%',
+                        (stats['oxalatePct'] as int) >= 70 ? _teal : _red),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                _buildChart(
+                  title: 'DAILY WATER INTAKE (oz)',
+                  values: _entries.map((e) => e['water_oz'] as double).toList(),
+                  goal: _waterGoal,
+                  color: _teal,
+                  goalIsMax: true,
+                ),
+                const SizedBox(height: 20),
+                _buildChart(
+                  title: 'DAILY OXALATE LOAD (mg)',
+                  values: _entries.map((e) => e['oxalate_mg'] as double).toList(),
+                  goal: _oxGoal,
+                  color: _red,
+                  goalIsMax: false,
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: _showExportSheet,
+                  icon: const Icon(Icons.ios_share, size: 18),
+                  label: const Text('Export Report for Doctor'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _teal,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 20,
-                      interval: _entries.length > 1
-                          ? (_entries.length / 4).ceilToDouble()
-                          : 1,
-                      getTitlesWidget: (v, _) {
-                        final idx = v.toInt();
-                        if (idx < 0 || idx >= _entries.length) {
-                          return const SizedBox.shrink();
-                        }
-                        final d = _entries[idx]['date'] as DateTime;
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            '${d.month}/${d.day}',
-                            style: const TextStyle(fontSize: 9, color: _textMuted),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
+                ),
+              ],
+            ),
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+
+  Widget _statCard(String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _border),
+        ),
+        child: Column(
+          children: [
+            Text(label, style: const TextStyle(color: _textMuted, fontSize: 11)),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChart({
+    required String title,
+    required List<double> values,
+    required double goal,
+    required Color color,
+    required bool goalIsMax,
+  }) {
+    if (values.isEmpty) return const SizedBox();
+    final maxY = (values.fold(0.0, (m, v) => v > m ? v : m)) * 1.2;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: _textMuted,
+            fontSize: 11,
+            letterSpacing: 1.4,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
+          decoration: BoxDecoration(
+            color: _surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _border),
+          ),
+          child: SizedBox(
+            height: 160,
+            child: BarChart(
+              BarChartData(
+                maxY: maxY > 0 ? maxY : goal * 1.5,
+                alignment: BarChartAlignment.spaceAround,
+                gridData: FlGridData(
+                  show: true,
+                  horizontalInterval: goal / 2,
+                  getDrawingHorizontalLine: (_) =>
+                      FlLine(color: _border, strokeWidth: 1),
+                  drawVerticalLine: false,
+                ),
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  bottomTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  leftTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
                   topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
+                      sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
                 ),
                 extraLinesData: ExtraLinesData(
                   horizontalLines: [
                     HorizontalLine(
                       y: goal,
-                      color: color.withAlpha(120),
+                      color: color.withValues(alpha: 0.5),
                       strokeWidth: 1.5,
                       dashArray: [6, 4],
                       label: HorizontalLineLabel(
                         show: true,
-                        alignment: Alignment.topRight,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: color,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        labelResolver: (_) => 'goal',
+                        style: TextStyle(color: color, fontSize: 10),
+                        labelResolver: (_) =>
+                            'Goal: ${goal.toStringAsFixed(0)}',
                       ),
                     ),
                   ],
                 ),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: spots,
-                    isCurved: true,
-                    curveSmoothness: 0.35,
-                    color: color,
-                    barWidth: 2.5,
-                    dotData: FlDotData(
-                      show: spots.length <= 30,
-                      getDotPainter: (spot, idx, bar, pct) => FlDotCirclePainter(
-                        radius: 3,
-                        color: color,
-                        strokeWidth: 0,
-                        strokeColor: Colors.transparent,
+                barGroups: List.generate(values.length, (i) {
+                  final v = values[i];
+                  final met = goalIsMax ? v >= goal : v <= goal;
+                  return BarChartGroupData(
+                    x: i,
+                    barRods: [
+                      BarChartRodData(
+                        toY: v,
+                        width: values.length <= 30 ? 8 : 4,
+                        borderRadius: BorderRadius.circular(3),
+                        color: met ? color : _red,
                       ),
-                    ),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: color.withAlpha(25),
-                    ),
-                  ),
-                ],
+                    ],
+                  );
+                }),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildExportCard({required bool canExport}) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: const Color(0xFFEAF6F8),
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: const Color(0xFFB2DDE4)),
-    ),
-    child: Row(
-      children: [
-        const Icon(Icons.ios_share_rounded, color: _teal, size: 28),
-        const SizedBox(width: 12),
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Share with your doctor',
-                style: TextStyle(
-                  color: _textPri,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
-              SizedBox(height: 3),
-              Text(
-                'Export as a PDF (with charts) or plain text — ready to email, text, or print.',
-                style: TextStyle(
-                  color: _textMuted,
-                  fontSize: 11,
-                  height: 1.4,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        ElevatedButton(
-          onPressed: canExport ? _showExportSheet : _openPaywall,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _teal,
-            foregroundColor: Colors.white,
-            padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            elevation: 0,
-          ),
-          child: Text(
-            canExport ? 'Export' : 'Plus only',
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
             ),
           ),
         ),
       ],
-    ),
-  );
-
-  Widget _buildDisclaimer() => const Padding(
-    padding: EdgeInsets.symmetric(horizontal: 4),
-    child: Text(
-      'StoneGuard is a self-tracking tool only. This report does not replace clinical evaluation, lab results, imaging, or medical advice. Please review with your healthcare provider.',
-      style: TextStyle(
-        color: Color(0xFFAAAAAA),
-        fontSize: 11,
-        height: 1.4,
-      ),
-    ),
-  );
-
-  Widget _buildEmptyState() => const Center(
-    child: Padding(
-      padding: EdgeInsets.all(32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.bar_chart_rounded, size: 56, color: Color(0xFFCCCCCC)),
-          SizedBox(height: 16),
-          Text(
-            'No history yet',
-            style: TextStyle(
-              color: Color(0xFF2C2C2C),
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Log water and food for a few days, then come back here to see your report and share it with your doctor.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Color(0xFF888888),
-              fontSize: 13,
-              height: 1.5,
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-
-  Widget _emptyCard(String message) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: _surface,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: _border),
-    ),
-    child: Text(message, style: const TextStyle(color: _textMuted)),
-  );
+    );
+  }
 }
