@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import 'doctor_view_screen.dart';
+import '../app_theme.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -18,20 +19,6 @@ class _HistoryScreenState extends State<HistoryScreen>
   double _waterGoal = 80;
   int? _selectedIndex;
   int _selectedDays = 7;
-
-  // ── Light theme palette ───────────────────────────────────────────────────
-  static const Color _bg         = Color(0xFFF8F8F8);
-  static const Color _surface    = Color(0xFFFFFFFF);
-  static const Color _surface2   = Color(0xFFF1F4F8);
-  static const Color _border     = Color(0xFFE0E4EA);
-  static const Color _textPri    = Color(0xFF1A1A2E);
-  static const Color _textMuted  = Color(0xFF6B7280);
-  static const Color _textFaint  = Color(0xFFB0B7C3);
-  static const Color _accent     = Color(0xFF00BCD4);
-  static const Color _accentDark = Color(0xFF0097A7);
-  static const Color _accentSel  = Color(0xFF00E5FF);
-  static const Color _gridLine   = Color(0xFFE8ECF0);
-  static const Color _barMissed  = Color(0xFFCFD8DC);
 
   @override
   bool get wantKeepAlive => true;
@@ -108,10 +95,10 @@ class _HistoryScreenState extends State<HistoryScreen>
   }
 
   Color _oxColor(double mg) {
-    if (mg >= 100) return const Color(0xFFE53935);
-    if (mg >= 50)  return const Color(0xFFFFA726);
+    if (mg >= 100) return AppColors.danger;
+    if (mg >= 50)  return AppColors.warning;
     if (mg >= 25)  return const Color(0xFFFFB300);
-    return const Color(0xFF43A047);
+    return AppColors.success;
   }
 
   List<Map<String, dynamic>> get _chartData {
@@ -143,9 +130,9 @@ class _HistoryScreenState extends State<HistoryScreen>
     final chartData = _chartData;
 
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: _surface,
+        backgroundColor: AppColors.surface,
         elevation: 0,
         shadowColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
@@ -155,26 +142,26 @@ class _HistoryScreenState extends State<HistoryScreen>
           _selectedDays <= 180 ? '6-Month History' :
           _selectedDays <= 365 ? '1-Year History'  : '2-Year History',
           style: const TextStyle(
-            color: _textPri,
+            color: AppColors.textPrimary,
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
         ),
-        iconTheme: const IconThemeData(color: _textPri),
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: _border),
+          child: Container(height: 1, color: AppColors.border),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.medical_information, color: _accentDark),
+            icon: const Icon(Icons.medical_information, color: AppColors.primaryMuted),
             tooltip: 'Doctor view',
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const DoctorViewScreen()),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.ios_share, color: _accentDark),
+            icon: const Icon(Icons.ios_share, color: AppColors.primaryMuted),
             tooltip: 'Export for doctor',
             onPressed: _showExportSheet,
           ),
@@ -190,20 +177,20 @@ class _HistoryScreenState extends State<HistoryScreen>
               margin: const EdgeInsets.only(bottom: 14),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: _accent.withValues(alpha: 0.07),
+                color: AppColors.primary.withValues(alpha: 0.07),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _accent.withValues(alpha: 0.18)),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.18)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: const [
-                  Icon(Icons.local_hospital, color: _accentDark, size: 16),
+                  Icon(Icons.local_hospital, color: AppColors.primaryMuted, size: 16),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Use the icons in the top right to view charts for your doctor and export a summary of your last 30 days up to 2 years.',
                       style: TextStyle(
-                        color: _accentDark,
+                        color: AppColors.primaryMuted,
                         fontSize: 12,
                         height: 1.4,
                       ),
@@ -229,19 +216,19 @@ class _HistoryScreenState extends State<HistoryScreen>
                       margin: const EdgeInsets.only(right: 8),
                       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                       decoration: BoxDecoration(
-                        color: isSelected ? _accent : _surface,
+                        color: isSelected ? AppColors.primary : AppColors.surface,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isSelected ? _accent : _border,
+                          color: isSelected ? AppColors.primary : AppColors.border,
                         ),
                         boxShadow: isSelected
-                            ? [BoxShadow(color: _accent.withValues(alpha: 0.25), blurRadius: 6, offset: const Offset(0, 2))]
+                            ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.25), blurRadius: 6, offset: const Offset(0, 2))]
                             : null,
                       ),
                       child: Text(
                         tf['label'] as String,
                         style: TextStyle(
-                          color: isSelected ? Colors.white : _textMuted,
+                          color: isSelected ? Colors.white : AppColors.textMuted,
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                         ),
@@ -260,7 +247,7 @@ class _HistoryScreenState extends State<HistoryScreen>
               _selectedDays <= 180 ? 'WEEKLY AVG WATER INTAKE (oz)'  :
                                      'MONTHLY AVG WATER INTAKE (oz)',
               style: const TextStyle(
-                color: _textMuted,
+                color: AppColors.textMuted,
                 fontSize: 11,
                 letterSpacing: 1.5,
                 fontWeight: FontWeight.w600,
@@ -272,9 +259,9 @@ class _HistoryScreenState extends State<HistoryScreen>
             Container(
               padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
               decoration: BoxDecoration(
-                color: _surface,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: _border),
+                border: Border.all(color: AppColors.border),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.04),
@@ -299,7 +286,7 @@ class _HistoryScreenState extends State<HistoryScreen>
                         }
                       },
                       touchTooltipData: BarTouchTooltipData(
-                        getTooltipColor: (_) => _textPri,
+                        getTooltipColor: (_) => AppColors.textPrimary,
                         getTooltipItem: (group, _, rod, _) => BarTooltipItem(
                           '${rod.toY.toInt()} oz',
                           const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -345,7 +332,7 @@ class _HistoryScreenState extends State<HistoryScreen>
                                 child: Text(
                                   label,
                                   style: TextStyle(
-                                    color: _selectedIndex == idx ? _accent : _textFaint,
+                                    color: _selectedIndex == idx ? AppColors.primary : AppColors.textFaint,
                                     fontSize: _selectedDays <= 7 ? 9 : 8,
                                     fontWeight: _selectedIndex == idx ? FontWeight.bold : FontWeight.normal,
                                   ),
@@ -361,7 +348,7 @@ class _HistoryScreenState extends State<HistoryScreen>
                           reservedSize: 36,
                           getTitlesWidget: (value, _) => Text(
                             '${value.toInt()}',
-                            style: const TextStyle(color: _textFaint, fontSize: 10),
+                            style: const TextStyle(color: AppColors.textFaint, fontSize: 10),
                           ),
                         ),
                       ),
@@ -371,7 +358,7 @@ class _HistoryScreenState extends State<HistoryScreen>
                     gridData: FlGridData(
                       show: true,
                       horizontalInterval: 20,
-                      getDrawingHorizontalLine: (_) => const FlLine(color: _gridLine, strokeWidth: 1),
+                      getDrawingHorizontalLine: (_) => const FlLine(color: AppColors.border, strokeWidth: 1),
                       drawVerticalLine: false,
                     ),
                     borderData: FlBorderData(show: false),
@@ -388,11 +375,11 @@ class _HistoryScreenState extends State<HistoryScreen>
                                  : _selectedDays <= 30 ? (isSel ? 14 : 10)
                                  :                       (isSel ? 8  : 5),
                             borderRadius: BorderRadius.circular(4),
-                            color: isSel ? _accentSel : hitGoal ? _accent : _barMissed,
+                            color: isSel ? AppColors.primaryLight : hitGoal ? AppColors.primary : AppColors.textFaint,
                             backDrawRodData: BackgroundBarChartRodData(
                               show: true,
                               toY: _waterGoal.toDouble(),
-                              color: _surface2,
+                              color: AppColors.cardBackground,
                             ),
                           ),
                         ],
@@ -408,11 +395,11 @@ class _HistoryScreenState extends State<HistoryScreen>
             // ── LEGEND ─────────────────────────────────────────────────────
             Row(
               children: [
-                _dot(_accent,     'Goal met'),
+                _dot(AppColors.primary,      'Goal met'),
                 const SizedBox(width: 16),
-                _dot(_barMissed,  'Goal missed'),
+                _dot(AppColors.textFaint,    'Goal missed'),
                 const SizedBox(width: 16),
-                _dot(_accentSel,  'Selected'),
+                _dot(AppColors.primaryLight, 'Selected'),
               ],
             ),
 
@@ -428,7 +415,7 @@ class _HistoryScreenState extends State<HistoryScreen>
                   padding: const EdgeInsets.only(top: 4, bottom: 8),
                   child: Text(
                     '👆 Tap a bar to see that day\'s food log',
-                    style: const TextStyle(color: _textMuted, fontSize: 13),
+                    style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
                   ),
                 ),
               ),
@@ -458,15 +445,15 @@ class _HistoryScreenState extends State<HistoryScreen>
         const Text(
           'PERIOD SUMMARY',
           style: TextStyle(
-            color: _textMuted, fontSize: 11, letterSpacing: 1.5, fontWeight: FontWeight.w600,
+            color: AppColors.textMuted, fontSize: 11, letterSpacing: 1.5, fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 10),
         Row(
           children: [
-            Expanded(child: _summaryCard('📅 Days Logged',    '${daysWithData.length}',              _accent)),
+            Expanded(child: _summaryCard('📅 Days Logged',    '${daysWithData.length}',              AppColors.primary)),
             const SizedBox(width: 10),
-            Expanded(child: _summaryCard('💧 Water Goal Met', '$daysGoalMet days',                   _accentDark)),
+            Expanded(child: _summaryCard('💧 Water Goal Met', '$daysGoalMet days',                   AppColors.primaryMuted)),
           ],
         ),
         const SizedBox(height: 10),
@@ -474,7 +461,7 @@ class _HistoryScreenState extends State<HistoryScreen>
           children: [
             Expanded(child: _summaryCard('⚗️ Avg Oxalate',   '${avgOx.toStringAsFixed(0)} mg',       _oxColor(avgOx))),
             const SizedBox(width: 10),
-            Expanded(child: _summaryCard('💧 Avg Water',     '${avgWater.toStringAsFixed(0)} oz',   _accent)),
+            Expanded(child: _summaryCard('💧 Avg Water',     '${avgWater.toStringAsFixed(0)} oz',   AppColors.primary)),
           ],
         ),
         const SizedBox(height: 24),
@@ -486,14 +473,14 @@ class _HistoryScreenState extends State<HistoryScreen>
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _surface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _border),
+        border: Border.all(color: AppColors.border),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 2))],
       ),
       child: Column(
         children: [
-          Text(title, style: const TextStyle(color: _textMuted, fontSize: 11)),
+          Text(title, style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
           const SizedBox(height: 6),
           Text(value, style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.bold)),
         ],
@@ -514,9 +501,9 @@ class _HistoryScreenState extends State<HistoryScreen>
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: _surface,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _accent.withValues(alpha: 0.35), width: 1.5),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.35), width: 1.5),
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3))],
         ),
         child: Column(
@@ -525,7 +512,7 @@ class _HistoryScreenState extends State<HistoryScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
-                color: _accent.withValues(alpha: 0.08),
+                color: AppColors.primary.withValues(alpha: 0.08),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
               ),
               child: Row(
@@ -533,11 +520,11 @@ class _HistoryScreenState extends State<HistoryScreen>
                 children: [
                   Text(
                     '📅  $date',
-                    style: const TextStyle(color: _accentDark, fontWeight: FontWeight.bold, fontSize: 15),
+                    style: const TextStyle(color: AppColors.primaryMuted, fontWeight: FontWeight.bold, fontSize: 15),
                   ),
                   GestureDetector(
                     onTap: () => setState(() => _selectedIndex = null),
-                    child: const Icon(Icons.close, color: _textMuted, size: 18),
+                    child: const Icon(Icons.close, color: AppColors.textMuted, size: 18),
                   ),
                 ],
               ),
@@ -547,7 +534,7 @@ class _HistoryScreenState extends State<HistoryScreen>
               child: Row(
                 children: [
                   _statChip('💧', '${waterOz.toInt()} oz',
-                      waterOz >= _waterGoal ? _accent : _textMuted),
+                      waterOz >= _waterGoal ? AppColors.primary : AppColors.textMuted),
                   const SizedBox(width: 10),
                   _statChip('🧪', '${oxalateMg.toStringAsFixed(0)} mg', _oxColor(oxalateMg)),
                 ],
@@ -558,7 +545,7 @@ class _HistoryScreenState extends State<HistoryScreen>
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: Text(
                 'FOODS LOGGED',
-                style: TextStyle(color: _textMuted, fontSize: 11, letterSpacing: 1.4, fontWeight: FontWeight.w600),
+                style: TextStyle(color: AppColors.textMuted, fontSize: 11, letterSpacing: 1.4, fontWeight: FontWeight.w600),
               ),
             ),
             const SizedBox(height: 10),
@@ -566,14 +553,14 @@ class _HistoryScreenState extends State<HistoryScreen>
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Text('No foods logged this day',
-                    style: TextStyle(color: _textFaint, fontSize: 13)),
+                    style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
               )
             else
               ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: foodLog.length,
-                separatorBuilder: (_, _) => const Divider(color: _border, height: 1, indent: 16, endIndent: 16),
+                separatorBuilder: (_, _) => const Divider(color: AppColors.border, height: 1, indent: 16, endIndent: 16),
                 itemBuilder: (_, i) {
                   final food = foodLog[i];
                   final name = food['name'] as String;
@@ -593,7 +580,7 @@ class _HistoryScreenState extends State<HistoryScreen>
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(name,
-                                    style: const TextStyle(color: _textPri, fontSize: 13),
+                                    style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
                                     overflow: TextOverflow.ellipsis),
                               ),
                             ],
@@ -621,7 +608,7 @@ class _HistoryScreenState extends State<HistoryScreen>
           decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3)),
         ),
         const SizedBox(width: 5),
-        Text(label, style: const TextStyle(color: _textMuted, fontSize: 11)),
+        Text(label, style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
       ],
     );
   }
@@ -647,7 +634,7 @@ class _HistoryScreenState extends State<HistoryScreen>
   void _showExportSheet() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: _surface,
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -658,33 +645,33 @@ class _HistoryScreenState extends State<HistoryScreen>
             Container(
               width: 36, height: 4,
               margin: const EdgeInsets.only(top: 12, bottom: 8),
-              decoration: BoxDecoration(color: _border, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
             ),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Text(
                 'Export History for Your Doctor',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _textPri),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary),
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.calendar_view_month, color: _accentDark),
-              title: const Text('Last 30 days', style: TextStyle(color: _textPri)),
+              leading: const Icon(Icons.calendar_view_month, color: AppColors.primaryMuted),
+              title: const Text('Last 30 days', style: TextStyle(color: AppColors.textPrimary)),
               onTap: () { Navigator.pop(ctx); _exportHistory(daysBack: 30); },
             ),
             ListTile(
-              leading: const Icon(Icons.calendar_view_month_outlined, color: _accentDark),
-              title: const Text('Last 6 months', style: TextStyle(color: _textPri)),
+              leading: const Icon(Icons.calendar_view_month_outlined, color: AppColors.primaryMuted),
+              title: const Text('Last 6 months', style: TextStyle(color: AppColors.textPrimary)),
               onTap: () { Navigator.pop(ctx); _exportHistory(daysBack: 180); },
             ),
             ListTile(
-              leading: const Icon(Icons.calendar_today_outlined, color: _accentDark),
-              title: const Text('Last 12 months', style: TextStyle(color: _textPri)),
+              leading: const Icon(Icons.calendar_today_outlined, color: AppColors.primaryMuted),
+              title: const Text('Last 12 months', style: TextStyle(color: AppColors.textPrimary)),
               onTap: () { Navigator.pop(ctx); _exportHistory(daysBack: 365); },
             ),
             ListTile(
-              leading: const Icon(Icons.calendar_month, color: _accentDark),
-              title: const Text('Last 2 years', style: TextStyle(color: _textPri)),
+              leading: const Icon(Icons.calendar_month, color: AppColors.primaryMuted),
+              title: const Text('Last 2 years', style: TextStyle(color: AppColors.textPrimary)),
               onTap: () { Navigator.pop(ctx); _exportHistory(daysBack: 730); },
             ),
             const SizedBox(height: 8),
