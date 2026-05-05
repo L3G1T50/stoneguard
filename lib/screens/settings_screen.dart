@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import '../screens/about_screen.dart';
+import '../screens/doctor_view_screen.dart';
 import '../main.dart';
 import 'paywall_screen.dart';
 import '../theme/app_theme.dart';
@@ -373,6 +374,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // ── STONEGUARD PLUS ──
                 const AppSectionHeader('StoneGuard Plus'),
                 _plusCard(),
+
+                // ── TOOLS ──
+                const AppSectionHeader('Tools'),
+                AppCard(
+                  child: _row(
+                    Icons.medical_services_outlined,
+                    AppColors.teal,
+                    'Export to Doctor',
+                    'Share your health report as PDF or text',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const DoctorViewScreen()),
+                    ),
+                  ),
+                ),
 
                 // ── NOTIFICATIONS ──
                 const AppSectionHeader('Notifications'),
