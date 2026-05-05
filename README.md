@@ -18,32 +18,6 @@ StoneGuard is a Flutter app designed to help people who suffer from calcium oxal
 
 ---
 
-## 🚀 Getting Started
-
-### Prerequisites
-
-- [Flutter SDK](https://docs.flutter.dev/get-started/install) (stable channel)
-- Android Studio or VS Code with Flutter extension
-- Android emulator or physical device (Android 6.0+)
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/L3G1T50/stoneguard.git
-
-# Navigate to the project folder
-cd stoneguard
-
-# Install dependencies
-flutter pub get
-
-# Run the app
-flutter run
-```
-
----
-
 ## 🏗️ Tech Stack
 
 | Layer | Technology |
