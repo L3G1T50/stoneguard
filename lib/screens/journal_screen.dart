@@ -4,6 +4,7 @@ import '../database_helper.dart';
 import 'dart:math' as math;
 import '../app_theme.dart';
 import '../widgets/gradient_scaffold.dart';
+import 'settings_screen.dart';
 
 class JournalScreen extends StatefulWidget {
   const JournalScreen({super.key});
@@ -766,8 +767,6 @@ class _JournalScreenState extends State<JournalScreen> {
   Widget build(BuildContext context) {
     final filtered = _filteredEntries;
 
-    // The body contains all the journal content (form + list).
-    // GradientScaffold supplies the teal-to-white header and background.
     final body = CustomScrollView(
       slivers: [
 
@@ -1107,6 +1106,16 @@ class _JournalScreenState extends State<JournalScreen> {
 
     return GradientScaffold(
       title: 'Pain Journal',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.settings_outlined, color: Colors.white, size: 22),
+          tooltip: 'Settings',
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SettingsScreen()),
+          ),
+        ),
+      ],
       body: body,
     );
   }
@@ -1139,7 +1148,6 @@ class _SparklinePainter extends CustomPainter {
     }
     canvas.drawPath(path, paint);
 
-    // Draw dot at last point
     final lastX = size.width.toDouble();
     final lastY = size.height - (values.last - minV) / range * size.height;
     canvas.drawCircle(

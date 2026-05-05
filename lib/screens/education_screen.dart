@@ -3,6 +3,7 @@ import 'package:stoneguard/widgets/banner_ad_widget.dart';
 import '../theme/app_theme.dart';
 import '../widgets/gradient_scaffold.dart';
 import 'emergency_care_screen.dart';
+import 'settings_screen.dart';
 
 class EducationScreen extends StatefulWidget {
   const EducationScreen({super.key});
@@ -24,6 +25,16 @@ class _EducationScreenState extends State<EducationScreen> {
   Widget build(BuildContext context) {
     return GradientScaffold(
       title: 'Learn',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.settings_outlined, color: Colors.white, size: 22),
+          tooltip: 'Settings',
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SettingsScreen()),
+          ),
+        ),
+      ],
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [

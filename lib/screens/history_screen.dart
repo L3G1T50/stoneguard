@@ -1,7 +1,11 @@
+// ─── HISTORY SCREEN ───────────────────────────────────────────────────────────
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../database_helper.dart';
 import '../app_theme.dart';
 import 'dart:math' as math;
+import '../widgets/gradient_scaffold.dart';
+import 'settings_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -14,6 +18,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
   bool _loading = true;
   String _filterSeverity = 'All';
   String _sortOrder = 'Newest';
+
+  // Chart tab: 'pain' or 'entries'
+  String _chartTab = 'pain';
 
   @override
   void initState() {
@@ -59,6 +66,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return '${months[date.month - 1]} ${date.year}';
   }
 
+  String _shortMonth(String isoDate) {
+    final date = DateTime.parse(isoDate);
+    final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return months[date.month - 1];
+  }
+
   List<Map<String, dynamic>> get _filteredEntries {
     List<Map<String, dynamic>> result = _entries;
     if (_filterSeverity != 'All') {
@@ -100,6 +113,306 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return groups;
   }
 
+  // ── CHART DATA HELPERS ──────────────────────────────────────────────────────
+
+  /// Returns the last N entries in chronological order (oldest first)
+  List<Map<String, dynamic>> _lastN(int n) {
+    if (_entries.isEmpty) return [];
+    final sorted = List<Map<String, dynamic>>.from(_entries)
+      ..sort((a, b) => (a['date'] as String).compareTo(b['date'] as String));
+    return sorted.length > n ? sorted.sublist(sorted.length - n) : sorted;
+  }
+
+  /// Entries per month for the last 6 months (bar chart)
+  List<_MonthBucket> _entriesPerMonth() {
+    final now = DateTime.now();
+    final months = List.generate(6, (i) {
+      final d = DateTime(now.year, now.month - 5 + i, 1);
+      return d;
+    });
+    final shortNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return months.map((m) {
+      final count = _entries.where((e) {
+        final d = DateTime.parse(e['date'] as String);
+        return d.year == m.year && d.month == m.month;
+      }).length;
+      return _MonthBucket(shortNames[m.month - 1], count.toDouble());
+    }).toList();
+  }
+
+  // ── LINE CHART (last 10 pain entries) ──────────────────────────────────────
+  Widget _buildPainLineChart() {
+    final data = _lastN(10);
+    if (data.length < 2) {
+      return _chartPlaceholder('Log at least 2 entries to see your pain trend.');
+    }
+    final spots = data.asMap().entries.map((e) {
+      return FlSpot(e.key.toDouble(), (e.value['pain'] as int).toDouble());
+    }).toList();
+
+    return SizedBox(
+      height: 200,
+      child: LineChart(
+        LineChartData(
+          minY: 0,
+          maxY: 10,
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            horizontalInterval: 2,
+            getDrawingHorizontalLine: (_) => FlLine(
+              color: AppColors.border.withValues(alpha: 0.6),
+              strokeWidth: 1,
+              dashArray: [4, 4],
+            ),
+          ),
+          borderData: FlBorderData(show: false),
+          titlesData: FlTitlesData(
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                interval: 2,
+                reservedSize: 28,
+                getTitlesWidget: (v, _) => Text(
+                  '${v.toInt()}',
+                  style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
+                ),
+              ),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 22,
+                getTitlesWidget: (v, _) {
+                  final idx = v.toInt();
+                  if (idx < 0 || idx >= data.length) return const SizedBox.shrink();
+                  return Text(
+                    _shortMonth(data[idx]['date'] as String),
+                    style: const TextStyle(fontSize: 9, color: AppColors.textMuted),
+                  );
+                },
+              ),
+            ),
+            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          ),
+          lineBarsData: [
+            LineChartBarData(
+              spots: spots,
+              isCurved: true,
+              curveSmoothness: 0.3,
+              color: AppColors.primary,
+              barWidth: 2.5,
+              isStrokeCapRound: true,
+              dotData: FlDotData(
+                show: true,
+                getDotPainter: (spot, _, __, ___) => FlDotCirclePainter(
+                  radius: 4,
+                  color: _painColor(spot.y.toInt()),
+                  strokeColor: Colors.white,
+                  strokeWidth: 1.5,
+                ),
+              ),
+              belowBarData: BarAreaData(
+                show: true,
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.primary.withValues(alpha: 0.18),
+                    AppColors.primary.withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          lineTouchData: LineTouchData(
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipItems: (spots) => spots.map((s) => LineTooltipItem(
+                'Pain: ${s.y.toInt()}',
+                TextStyle(
+                  color: _painColor(s.y.toInt()),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              )).toList(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── BAR CHART (entries per month, last 6 months) ───────────────────────────
+  Widget _buildEntriesBarChart() {
+    final buckets = _entriesPerMonth();
+    final maxVal = buckets.map((b) => b.count).reduce(math.max).clamp(1.0, double.infinity);
+
+    return SizedBox(
+      height: 200,
+      child: BarChart(
+        BarChartData(
+          maxY: maxVal + 1,
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            horizontalInterval: 1,
+            getDrawingHorizontalLine: (_) => FlLine(
+              color: AppColors.border.withValues(alpha: 0.6),
+              strokeWidth: 1,
+              dashArray: [4, 4],
+            ),
+          ),
+          borderData: FlBorderData(show: false),
+          titlesData: FlTitlesData(
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 28,
+                interval: 1,
+                getTitlesWidget: (v, _) => v == v.floorToDouble()
+                    ? Text('${v.toInt()}',
+                        style: const TextStyle(fontSize: 10, color: AppColors.textMuted))
+                    : const SizedBox.shrink(),
+              ),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 22,
+                getTitlesWidget: (v, _) {
+                  final idx = v.toInt();
+                  if (idx < 0 || idx >= buckets.length) return const SizedBox.shrink();
+                  return Text(buckets[idx].label,
+                      style: const TextStyle(fontSize: 10, color: AppColors.textMuted));
+                },
+              ),
+            ),
+            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          ),
+          barGroups: buckets.asMap().entries.map((e) {
+            return BarChartGroupData(
+              x: e.key,
+              barRods: [
+                BarChartRodData(
+                  toY: e.value.count,
+                  color: AppColors.primary,
+                  width: 22,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                  backDrawRodData: BackgroundBarChartRodData(
+                    show: true,
+                    toY: maxVal + 1,
+                    color: AppColors.border.withValues(alpha: 0.25),
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+          barTouchData: BarTouchData(
+            touchTooltipData: BarTouchTooltipData(
+              getTooltipItem: (group, _, rod, __) => BarTooltipItem(
+                '${rod.toY.toInt()} entries',
+                const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _chartPlaceholder(String msg) {
+    return SizedBox(
+      height: 120,
+      child: Center(
+        child: Text(msg,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
+      ),
+    );
+  }
+
+  // ── CHARTS SECTION ──────────────────────────────────────────────────────────
+  Widget _buildChartsSection() {
+    if (_entries.isEmpty) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Tab row
+          Row(
+            children: [
+              _chartTabBtn('pain', Icons.show_chart_rounded, 'Pain Trend'),
+              const SizedBox(width: 8),
+              _chartTabBtn('entries', Icons.bar_chart_rounded, 'Monthly'),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Chart
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: _chartTab == 'pain'
+                ? _buildPainLineChart()
+                : _buildEntriesBarChart(),
+          ),
+          const SizedBox(height: 8),
+          // Caption
+          Text(
+            _chartTab == 'pain'
+                ? 'Last 10 journal entries · Tap a dot for details'
+                : 'Journal entries per month · Last 6 months',
+            style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chartTabBtn(String id, IconData icon, String label) {
+    final active = _chartTab == id;
+    return GestureDetector(
+      onTap: () => setState(() => _chartTab = id),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: active ? AppColors.primary.withValues(alpha: 0.12) : AppColors.background,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+              color: active ? AppColors.primary : AppColors.border, width: 1.5),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: active ? AppColors.primary : AppColors.textMuted),
+            const SizedBox(width: 5),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: active ? AppColors.primary : AppColors.textMuted)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── STATS SECTION ───────────────────────────────────────────────────────────
   Widget _buildStatCard(String label, String value, IconData icon, Color color) {
     return Expanded(
       child: Container(
@@ -565,48 +878,74 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final grouped = _groupedEntries;
     final filtered = _filteredEntries;
 
-    // Render as plain scrollable content — no Scaffold/AppBar (parent tab shell provides those)
     if (_loading) {
       return const Center(child: CircularProgressIndicator(color: AppColors.primary));
     }
 
     if (_entries.isEmpty) return _buildEmptyState();
 
-    return CustomScrollView(
+    final body = CustomScrollView(
       slivers: [
-        SliverToBoxAdapter(child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-          child: _buildStatsSection(),
-        )),
-        SliverToBoxAdapter(child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Text('FILTER & SORT',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textMuted, letterSpacing: 1.1)),
-            ),
-            _buildFilterBar(),
-            const SizedBox(height: 16),
-          ],
-        )),
-        SliverToBoxAdapter(child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-          child: Row(children: [
-            const Text('ENTRIES',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textMuted, letterSpacing: 1.1)),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
+        // ── Stats ──
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+            child: _buildStatsSection(),
+          ),
+        ),
+
+        // ── Charts ──
+        SliverToBoxAdapter(child: _buildChartsSection()),
+
+        // ── Filter bar ──
+        SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Text('FILTER & SORT',
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textMuted,
+                        letterSpacing: 1.1)),
               ),
-              child: Text('${filtered.length}',
-                  style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 11)),
-            ),
-          ]),
-        )),
+              _buildFilterBar(),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+
+        // ── Entry count header ──
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Row(children: [
+              const Text('ENTRIES',
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textMuted,
+                      letterSpacing: 1.1)),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text('${filtered.length}',
+                    style: const TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11)),
+              ),
+            ]),
+          ),
+        ),
+
+        // ── Entry list ──
         if (filtered.isEmpty)
           SliverFillRemaining(hasScrollBody: false, child: _buildEmptyState())
         else
@@ -626,11 +965,34 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   }
                   return items[index];
                 },
-                childCount: grouped.entries.fold<int>(0, (sum, e) => sum + 1 + e.value.length),
+                childCount: grouped.entries
+                    .fold<int>(0, (sum, e) => sum + 1 + e.value.length),
               ),
             ),
           ),
       ],
     );
+
+    return GradientScaffold(
+      title: 'History',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.settings_outlined, color: Colors.white, size: 22),
+          tooltip: 'Settings',
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SettingsScreen()),
+          ),
+        ),
+      ],
+      body: body,
+    );
   }
+}
+
+// ── Helper data class ────────────────────────────────────────────────────────
+class _MonthBucket {
+  final String label;
+  final double count;
+  const _MonthBucket(this.label, this.count);
 }
