@@ -1,17 +1,95 @@
-# stoneguard
+# 🛡️ StoneGuard
 
-A new Flutter project.
+**Your personal kidney stone prevention companion.**
 
-## Getting Started
+StoneGuard is a Flutter app designed to help people who suffer from calcium oxalate kidney stones manage their diet, hydration, and daily habits — putting prevention in their hands.
 
-This project is a starting point for a Flutter application.
+---
 
-A few resources to get you started if this is your first Flutter project:
+## 📱 Features
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- **Food Guide** — Browse foods sorted by oxalate level (Low, Moderate, High, Very High) with kidney-stone-friendly recommendations
+- **Water Tracker** — Log daily water intake and set hydration goals to flush oxalates
+- **Water Reminders** — Customizable notification reminders to stay on top of hydration
+- **Symptom & Stone Logger** — Track kidney stone events, symptoms, and pain levels over time
+- **Diet Tips** — Evidence-based tips for reducing calcium oxalate stone risk
+- **Progress Dashboard** — Visual charts to monitor hydration trends and habits
+- **Settings** — Personalize your water goal, reminder frequency, and app theme
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- [Flutter SDK](https://docs.flutter.dev/get-started/install) (stable channel)
+- Android Studio or VS Code with Flutter extension
+- Android emulator or physical device (Android 6.0+)
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/L3G1T50/stoneguard.git
+
+# Navigate to the project folder
+cd stoneguard
+
+# Install dependencies
+flutter pub get
+
+# Run the app
+flutter run
+```
+
+---
+
+## 🏗️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Flutter (Dart) |
+| State Management | setState / Provider |
+| Local Storage | shared_preferences |
+| Notifications | flutter_local_notifications |
+| Charts | fl_chart |
+| Fonts | google_fonts |
+
+---
+
+## 🗂️ Project Structure
+
+```
+lib/
+├── main.dart
+├── screens/
+│   ├── home_screen.dart
+│   ├── food_guide_screen.dart
+│   ├── water_tracker_screen.dart
+│   ├── settings_screen.dart
+│   └── ...
+├── widgets/
+└── theme/
+```
+
+---
+
+## 🤝 Contributing
+
+This project is under active development. Pull requests and suggestions are welcome! If you suffer from kidney stones and have feature ideas that could help others, feel free to open an issue.
+
+---
+
+## ⚠️ Disclaimer
+
+StoneGuard is intended for informational and wellness purposes only. It is **not** a substitute for professional medical advice. Always consult your doctor or urologist for medical guidance regarding kidney stones.
+
+---
+
+## 📄 License
+
+This project is open source. See [LICENSE](LICENSE) for details.
+
+---
+
+*Built with ❤️ by a kidney stone sufferer, for kidney stone sufferers.*
