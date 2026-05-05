@@ -5,6 +5,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home_shield_screen.dart';
 import 'screens/food_guide_screen.dart';
@@ -85,9 +86,28 @@ class _MainShellState extends State<MainShell> {
   }
 
   // Called by FoodGuideScreen when the user logs a food item.
-  // Refreshes the shield so the oxalate total updates immediately.
-  void _onLogFood(double mg, String name) {
+  // Saves entry to SharedPreferences, refreshes the shield, and
+  // rebuilds the shell so the log-button badge count updates.
+  void _onLogFood(double mg, String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final logKey = 'oxalate_log_${now.year}_${now.month}_${now.day}';
+    final oxKey  = 'oxalate_${now.year}_${now.month}_${now.day}';
+
+    // Append the new food entry to today's log list
+    final log = List<String>.from(prefs.getStringList(logKey) ?? []);
+    log.add('$name|$mg');
+    await prefs.setStringList(logKey, log);
+
+    // Add to today's running oxalate total
+    final current = prefs.getDouble(oxKey) ?? 0.0;
+    await prefs.setDouble(oxKey, current + mg);
+
+    // Refresh home shield oxalate display
     _shieldKey.currentState?.loadData();
+
+    // Rebuild shell so the FutureBuilder log-badge re-reads the updated count
+    if (mounted) setState(() {});
   }
 
   @override

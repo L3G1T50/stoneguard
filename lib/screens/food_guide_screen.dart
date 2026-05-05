@@ -18,10 +18,22 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
   bool _showFavoritesOnly = false;
   Set<String> _favorites = {};
 
+  // Tracks today's log count so the badge rebuilds after each log
+  int _todayLogCount = 0;
+
   @override
   void initState() {
     super.initState();
     _loadFavorites();
+    _refreshLogCount();
+  }
+
+  Future<void> _refreshLogCount() async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final logKey = 'oxalate_log_${now.year}_${now.month}_${now.day}';
+    final count = (prefs.getStringList(logKey) ?? []).length;
+    if (mounted) setState(() => _todayLogCount = count);
   }
 
   Future<void> _loadFavorites() async {
@@ -210,6 +222,8 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                                 log = updatedLog;
                                 total = updatedTotal;
                               });
+                              // Refresh badge count after deletion
+                              _refreshLogCount();
                             },
                             child: Icon(Icons.delete_outline,
                                 color: Colors.red.shade300, size: 22),
@@ -260,8 +274,8 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                       SnackBar(
                         content: Text(
                           _favorites.contains(food.name)
-                              ? '💔 Removed from Favorites'
-                              : '❤️ Added to Favorites',
+                              ? '\u{1F494} Removed from Favorites'
+                              : '\u2764\uFE0F Added to Favorites',
                         ),
                         backgroundColor: Colors.teal,
                         behavior: SnackBarBehavior.floating,
@@ -339,6 +353,8 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                 onPressed: () {
                   _logFood(food.oxalateMg, food.name);
                   Navigator.pop(context);
+                  // Refresh the badge count immediately after logging
+                  Future.delayed(const Duration(milliseconds: 200), _refreshLogCount);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Row(children: [
@@ -431,23 +447,44 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                     ),
                   ),
                   const SizedBox(width: 10),
+                  // Log button with live count badge
                   GestureDetector(
-                    onTap: () => _showTodaysLog(),
+                    onTap: () async {
+                      await _showTodaysLog();
+                      // Refresh count after the sheet closes (in case items were deleted)
+                      _refreshLogCount();
+                    },
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
+                        color: _todayLogCount > 0
+                            ? Colors.teal.withValues(alpha: 0.1)
+                            : Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(20),
+                        border: _todayLogCount > 0
+                            ? Border.all(color: Colors.teal.withValues(alpha: 0.4))
+                            : null,
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.list_alt, color: Colors.grey.shade700, size: 16),
+                          Icon(
+                            Icons.list_alt,
+                            color: _todayLogCount > 0 ? Colors.teal : Colors.grey.shade700,
+                            size: 16,
+                          ),
                           const SizedBox(width: 6),
-                          Text('📋 Log',
-                              style: TextStyle(
-                                  color: Colors.grey.shade700,
-                                  fontWeight: FontWeight.normal,
-                                  fontSize: 13)),
+                          Text(
+                            _todayLogCount > 0
+                                ? '\u{1F4CB} Log ($_todayLogCount)'
+                                : '\u{1F4CB} Log',
+                            style: TextStyle(
+                              color: _todayLogCount > 0 ? Colors.teal : Colors.grey.shade700,
+                              fontWeight: _todayLogCount > 0
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              fontSize: 13,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -473,7 +510,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                           color: _showFavoritesOnly ? Colors.redAccent : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Text('❤️ Faves',
+                        child: Text('\u2764\uFE0F Faves',
                             style: TextStyle(
                               color: _showFavoritesOnly ? Colors.white : Colors.grey.shade700,
                               fontWeight: _showFavoritesOnly ? FontWeight.bold : FontWeight.normal,
@@ -482,13 +519,13 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    _filterChip('✅ Low', OxalateLevel.low),
+                    _filterChip('\u2705 Low', OxalateLevel.low),
                     const SizedBox(width: 8),
-                    _filterChip('⚠️ Moderate', OxalateLevel.moderate),
+                    _filterChip('\u26A0\uFE0F Moderate', OxalateLevel.moderate),
                     const SizedBox(width: 8),
-                    _filterChip('🚫 High', OxalateLevel.high),
+                    _filterChip('\u{1F6AB} High', OxalateLevel.high),
                     const SizedBox(width: 8),
-                    _filterChip('☠️ Very High', OxalateLevel.veryHigh),
+                    _filterChip('\u{1F480} Very High', OxalateLevel.veryHigh),
                   ],
                 ),
               ),
@@ -539,7 +576,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                             Text(food.name,
                                 style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
                             const SizedBox(height: 2),
-                            Text('${food.category} • ${food.serving}',
+                            Text('${food.category} \u2022 ${food.serving}',
                                 style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
                           ],
                         ),
