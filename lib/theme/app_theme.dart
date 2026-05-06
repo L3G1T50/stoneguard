@@ -181,48 +181,51 @@ abstract class AppDynamic {
 }
 
 // ─── TEXT STYLES ─────────────────────────────────────────────────────────────
+// NOTE: Static getters intentionally omit a hardcoded color (color: null /
+// inherit: true) so they inherit from the DefaultTextStyle pushed by AppCard
+// or any parent widget.  Use the ...Of(context) variants when you need an
+// explicit color outside of a card context.
 abstract class AppTextStyles {
   static TextStyle get screenTitle => GoogleFonts.inter(
     fontSize: 26,
     fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
     letterSpacing: -0.5,
     height: 1.2,
+    // color intentionally omitted — inherits from DefaultTextStyle
   );
 
   static TextStyle get appBarTitle => GoogleFonts.inter(
     fontSize: 18,
     fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
     letterSpacing: -0.3,
   );
 
   static TextStyle get sectionLabel => GoogleFonts.inter(
     fontSize: 11,
     fontWeight: FontWeight.w700,
-    color: AppColors.textHint,
     letterSpacing: 1.4,
+    // color intentionally omitted — inherits from DefaultTextStyle
   );
 
   static TextStyle get itemTitle => GoogleFonts.inter(
     fontSize: 15,
     fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
     height: 1.3,
+    // color intentionally omitted — inherits from DefaultTextStyle
   );
 
   static TextStyle get body => GoogleFonts.inter(
     fontSize: 13,
     fontWeight: FontWeight.w400,
-    color: AppColors.textSecond,
     height: 1.45,
+    // color intentionally omitted — inherits from DefaultTextStyle
   );
 
   static TextStyle get micro => GoogleFonts.inter(
     fontSize: 11,
     fontWeight: FontWeight.w500,
-    color: AppColors.textHint,
     letterSpacing: 0.3,
+    // color intentionally omitted — inherits from DefaultTextStyle
   );
 
   static TextStyle get button => GoogleFonts.inter(
@@ -232,7 +235,7 @@ abstract class AppTextStyles {
     letterSpacing: 0.2,
   );
 
-  // ── Context-aware versions ──
+  // ── Context-aware versions — use outside of AppCard ──
   static TextStyle screenTitleOf(BuildContext ctx) {
     final isDark = Theme.of(ctx).brightness == Brightness.dark;
     return screenTitle.copyWith(
@@ -272,7 +275,6 @@ abstract class AppTextStyles {
   static TextStyle get sectionHeader => sectionLabel;
   static TextStyle get cardTitle     => itemTitle;
   static TextStyle get label         => GoogleFonts.inter(
-    color: AppColors.textSecond,
     fontWeight: FontWeight.w600,
     fontSize: 13,
   );
@@ -341,41 +343,95 @@ class AppCard extends StatelessWidget {
         isDark ? AppColors.darkBorder : AppColors.border;
     final shadowColor =
         isDark ? const Color(0x40000000) : const Color(0x08000000);
-    final textColor =
+
+    // ── Push context-aware text colors so every Text inside
+    //    this card automatically uses the right dark/light color
+    //    without needing ...Of(context) calls in every screen. ──
+    final primaryTextColor =
         isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
+    final secondaryTextColor =
+        isDark ? AppColors.darkTextSecond : AppColors.textSecond;
+    final hintTextColor =
+        isDark ? AppColors.darkTextHint : AppColors.textHint;
 
     return Semantics(
       container: true,
-      child: DefaultTextStyle.merge(
-        style: TextStyle(color: textColor),
-        child: Material(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(radius),
-          clipBehavior: Clip.antiAlias,
-          elevation: 0,
-          child: InkWell(
+      child: DefaultTextStyle(
+        // Primary text color as the baseline for all Text widgets in the card.
+        style: GoogleFonts.inter(
+          fontSize: 15,
+          fontWeight: FontWeight.w400,
+          color: primaryTextColor,
+        ),
+        child: IconTheme(
+          // Icons inside the card also inherit dark-aware color
+          data: IconThemeData(
+            color: isDark ? AppColors.darkTextHint : AppColors.textHint,
+          ),
+          child: Material(
+            color: cardColor,
             borderRadius: BorderRadius.circular(radius),
-            onTap: onTap,
-            splashColor: AppColors.teal.withValues(alpha: 0.06),
-            highlightColor: AppColors.teal.withValues(alpha: 0.04),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(radius),
-                border: Border.all(color: borderColor),
-                boxShadow: [
-                  BoxShadow(
-                    color: shadowColor,
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+            clipBehavior: Clip.antiAlias,
+            elevation: 0,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(radius),
+              onTap: onTap,
+              splashColor: AppColors.teal.withValues(alpha: 0.06),
+              highlightColor: AppColors.teal.withValues(alpha: 0.04),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(radius),
+                  border: Border.all(color: borderColor),
+                  boxShadow: [
+                    BoxShadow(
+                      color: shadowColor,
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                padding: padding ?? AppSpacing.cardPadding,
+                // Provide secondary & hint colors via an InheritedTheme
+                // so that AppTextStyles.body / .micro also resolve correctly
+                // when used with .copyWith(color: null).
+                child: _CardTextTheme(
+                  primaryColor: primaryTextColor,
+                  secondaryColor: secondaryTextColor,
+                  hintColor: hintTextColor,
+                  child: child,
+                ),
               ),
-              padding: padding ?? AppSpacing.cardPadding,
-              child: child,
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Provides the three card-level text colors down the widget tree.
+/// AppTextStyles static getters now omit their hardcoded color so
+/// they inherit from DefaultTextStyle (primary).  Callers that want
+/// the secondary or hint shade should still use ...Of(context).
+class _CardTextTheme extends StatelessWidget {
+  final Color primaryColor;
+  final Color secondaryColor;
+  final Color hintColor;
+  final Widget child;
+
+  const _CardTextTheme({
+    required this.primaryColor,
+    required this.secondaryColor,
+    required this.hintColor,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Re-apply primary as DefaultTextStyle so Text() with no explicit style picks it up.
+    return DefaultTextStyle.merge(
+      style: TextStyle(color: primaryColor),
+      child: child,
     );
   }
 }
@@ -495,10 +551,13 @@ class AppIconBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // In dark mode use a slightly more opaque tint so the badge is visible
+    final bgOpacity = isDark ? 0.18 : 0.10;
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
+        color: color.withValues(alpha: bgOpacity),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Icon(icon, color: color, size: size),
@@ -535,7 +594,9 @@ class StoneGuardAppBar extends StatelessWidget implements PreferredSizeWidget {
       centerTitle: centerTitle,
       leading: leading,
       actions: actions,
-      title: Text(title, style: AppTextStyles.appBarTitle),
+      title: Text(title, style: AppTextStyles.appBarTitle.copyWith(
+        color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+      )),
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(1),
         child: Divider(
@@ -573,7 +634,7 @@ ThemeData buildAppTheme() {
       elevation: 0,
       scrolledUnderElevation: 1,
       centerTitle: false,
-      titleTextStyle: AppTextStyles.appBarTitle,
+      titleTextStyle: AppTextStyles.appBarTitle.copyWith(color: AppColors.textPrimary),
       systemOverlayStyle: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.dark,
