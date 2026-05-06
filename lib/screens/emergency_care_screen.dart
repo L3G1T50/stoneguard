@@ -1,248 +1,209 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../widgets/gradient_scaffold.dart';
+import 'settings_screen.dart';
 
 class EmergencyCareScreen extends StatelessWidget {
   const EmergencyCareScreen({super.key});
 
-  static const Color bgColor     = Color(0xFFF8F8F8);
-  static const Color cardColor   = Color(0xFFFFFFFF);
-  static const Color borderColor = Color(0xFFD0D0D8);
-  static const Color textColor   = Color(0xFF2C2C2C);
-  static const Color mutedColor  = Color(0xFF888888);
-  static const Color accentTeal  = Color(0xFF1A8A9A);
-
-  Future<void> _callEmergency() async {
-    final uri = Uri(scheme: 'tel', path: '911');
-    if (await canLaunchUrl(uri)) await launchUrl(uri);
-  }
-
-  Widget _sectionHeader(String text, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Container(width: 4, height: 20,
-              decoration: BoxDecoration(
-                  color: color, borderRadius: BorderRadius.circular(2))),
-          const SizedBox(width: 10),
-          Text(text,
-              style: TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.bold, color: color)),
-        ],
-      ),
-    );
-  }
-
-  Widget _symptomRow(String emoji, String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 18)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(text,
-                style: const TextStyle(
-                    fontSize: 14, color: textColor, height: 1.5)),
-          ),
-        ],
-      ),
-    );
-  }
+  // Colors resolved dynamically in build()
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor     = isDark ? const Color(0xFF0F1419) : const Color(0xFFF8F8F8);
+    final cardColor   = isDark ? const Color(0xFF1A2332) : const Color(0xFFFFFFFF);
+    final borderColor = isDark ? const Color(0xFF2E4055) : const Color(0xFFD0D0D8);
+    final textColor   = isDark ? const Color(0xFFE8EDF2) : const Color(0xFF2C2C2C);
+    final mutedColor  = isDark ? const Color(0xFF8FA8BE) : const Color(0xFF888888);
+    const accentTeal  = Color(0xFF1A8A9A);
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFE8E8EC),
+        backgroundColor: isDark ? const Color(0xFF1A2332) : const Color(0xFFE8E8EC),
         elevation: 0,
-        centerTitle: true,
-        title: const Text('Emergency Care',
-            style: TextStyle(
-                color: textColor, fontWeight: FontWeight.bold, fontSize: 20)),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: textColor, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Emergency Care',
+          style: TextStyle(
+              color: textColor, fontWeight: FontWeight.bold, fontSize: 20)),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
-
-          // ── CALL 911 BANNER ──
+          _section(
+            context,
+            color: const Color(0xFFE53935),
+            icon: Icons.warning_amber_rounded,
+            title: 'Call 911 Immediately If:',
+            cardColor: cardColor,
+            borderColor: borderColor,
+            textColor: textColor,
+            mutedColor: mutedColor,
+            items: [
+              '\u2022 Severe flank or back pain that is unbearable',
+              '\u2022 High fever (above 101\u00B0F) with stone symptoms',
+              '\u2022 Shaking, chills, or signs of sepsis',
+              '\u2022 Complete inability to urinate',
+              '\u2022 Vomiting so severe you cannot keep any fluids down',
+            ],
+          ),
+          const SizedBox(height: 12),
+          _section(
+            context,
+            color: const Color(0xFFE65100),
+            icon: Icons.local_hospital_outlined,
+            title: 'Go to the ER If:',
+            cardColor: cardColor,
+            borderColor: borderColor,
+            textColor: textColor,
+            mutedColor: mutedColor,
+            items: [
+              '\u2022 Pain is severe and not controlled with OTC medication',
+              '\u2022 Blood in urine with pain or fever',
+              '\u2022 You have only one kidney and suspect a stone',
+              '\u2022 Pain lasts more than 6 hours without relief',
+              '\u2022 You are pregnant and experiencing stone symptoms',
+            ],
+          ),
+          const SizedBox(height: 12),
+          _section(
+            context,
+            color: accentTeal,
+            icon: Icons.phone_outlined,
+            title: 'Call Your Doctor If:',
+            cardColor: cardColor,
+            borderColor: borderColor,
+            textColor: textColor,
+            mutedColor: mutedColor,
+            items: [
+              '\u2022 You have mild to moderate pain that is manageable',
+              '\u2022 You have had stones before and recognize the symptoms',
+              '\u2022 Blood in urine without fever or severe pain',
+              '\u2022 You passed a stone and want it analyzed',
+              '\u2022 Nausea with mild discomfort',
+            ],
+          ),
+          const SizedBox(height: 12),
+          _section(
+            context,
+            color: const Color(0xFF2E7D32),
+            icon: Icons.home_outlined,
+            title: 'You Can Wait and Monitor If:',
+            cardColor: cardColor,
+            borderColor: borderColor,
+            textColor: textColor,
+            mutedColor: mutedColor,
+            items: [
+              '\u2022 Pain is mild and comes and goes',
+              '\u2022 No fever, chills, or vomiting',
+              '\u2022 You are able to drink fluids normally',
+              '\u2022 You have passed stones before with similar symptoms',
+              '\u2022 Pain responds to OTC pain relievers (ibuprofen/naproxen)',
+            ],
+          ),
+          const SizedBox(height: 20),
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFE53935),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                    color: const Color(0xFFE53935).withValues(alpha: 0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4)),
-              ],
+              color: isDark ? const Color(0xFF1A2332) : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: borderColor),
             ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.emergency, color: Colors.white, size: 36),
-                const SizedBox(height: 8),
-                const Text('If you are in severe pain or\nhave a fever with stone symptoms',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        height: 1.5)),
-                const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.phone, size: 20),
-                    label: const Text('Call 911 Now',
+                Row(
+                  children: [
+                    const Icon(Icons.info_outline, color: Color(0xFF1A8A9A), size: 18),
+                    const SizedBox(width: 8),
+                    Text('Important Note',
                         style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFFE53935),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
-                    ),
-                    onPressed: _callEmergency,
-                  ),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: textColor)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'This guide is for general reference only. Always trust your instincts — '
+                  'if something feels seriously wrong, seek medical attention immediately. '
+                  'When in doubt, go to the ER.',
+                  style: TextStyle(fontSize: 12, color: mutedColor, height: 1.6),
                 ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
 
-          const SizedBox(height: 20),
-
-          // ── GO TO ER IMMEDIATELY ──
+  Widget _section(
+    BuildContext context, {
+    required Color color,
+    required IconData icon,
+    required String title,
+    required Color cardColor,
+    required Color borderColor,
+    required Color textColor,
+    required Color mutedColor,
+    required List<String> items,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2))
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE53935).withValues(alpha: 0.3)),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2)),
+              color: color.withValues(alpha: 0.10),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, color: color, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(title,
+                      style: TextStyle(
+                          color: color,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14)),
+                ),
               ],
             ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _sectionHeader('🚨  Go to the ER Immediately',
-                    const Color(0xFFE53935)),
-                _symptomRow('🌡️',
-                    'Fever (above 101°F / 38.3°C) combined with flank or back pain — this may signal a kidney infection, which is a medical emergency.'),
-                _symptomRow('🚫',
-                    'Complete inability to urinate — could mean a full urinary blockage.'),
-                _symptomRow('🤮',
-                    'Persistent vomiting that prevents you from keeping fluids down.'),
-                _symptomRow('💉',
-                    'Heavy blood in urine (bright red or large clots).'),
-                _symptomRow('😰',
-                    'Excruciating, uncontrolled pain that peaks and won\'t subside — especially with sweating, nausea, or dizziness.'),
-                _symptomRow('🫀',
-                    'Rapid heartbeat, confusion, or chills alongside any of the above.'),
-              ],
+              children: items
+                  .map((item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(item,
+                            style: TextStyle(
+                                fontSize: 13.5,
+                                color: textColor,
+                                height: 1.45)),
+                      ))
+                  .toList(),
             ),
           ),
-
-          const SizedBox(height: 16),
-
-          // ── SEE DOCTOR SOON ──
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                  color: const Color(0xFFFFA726).withValues(alpha: 0.4)),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2)),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _sectionHeader('⚠️  See Your Doctor Soon',
-                    const Color(0xFFFFA726)),
-                _symptomRow('🩸',
-                    'Trace blood in urine (pink or light red) without severe pain.'),
-                _symptomRow('😣',
-                    'Mild to moderate flank, back, or lower abdominal pain that comes and goes.'),
-                _symptomRow('🔁',
-                    'A new stone episode — even if manageable, your urologist should know.'),
-                _symptomRow('💊',
-                    'Pain that requires regular over-the-counter medication to manage.'),
-                _symptomRow('📉',
-                    'Noticeably reduced urine output over several days without an obvious reason.'),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // ── GOOD SIGNS ──
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                  color: const Color(0xFF66BB6A).withValues(alpha: 0.4)),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2)),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _sectionHeader('✅  Signs You\'re Managing Well',
-                    const Color(0xFF66BB6A)),
-                _symptomRow('💧',
-                    'Pale yellow urine throughout the day — you\'re well hydrated.'),
-                _symptomRow('📉',
-                    'Pain is mild and manageable with normal movement and fluids.'),
-                _symptomRow('🚽',
-                    'Urinating regularly (every 2–4 hours) without burning or blockage.'),
-                _symptomRow('🌡️',
-                    'No fever — temperature is normal.'),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // ── DISCLAIMER ──
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: borderColor),
-            ),
-            child: const Text(
-              '⚠️ StoneGuard is a tracking and educational tool only. '
-                  'It is not a medical device and does not provide medical advice. '
-                  'Always follow the guidance of your physician or urologist. '
-                  'When in doubt, seek emergency care immediately.',
-              style: TextStyle(fontSize: 12, color: Colors.black54, height: 1.6),
-              textAlign: TextAlign.center,
-            ),
-          ),
-
-          const SizedBox(height: 24),
         ],
       ),
     );
