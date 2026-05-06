@@ -80,7 +80,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (start != null) _quietStart = start;
       if (end   != null) _quietEnd   = end;
     });
-    // Re-schedule so quiet hours take effect immediately
     if (_notificationsEnabled) scheduleWaterReminders(_reminderInterval);
   }
 
@@ -91,10 +90,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final s = _quietStart.hour;
     final e = _quietEnd.hour;
     if (s < e) {
-      // Same-day window (e.g. 13:00 – 15:00)
       return hour >= s && hour < e;
     } else {
-      // Overnight window (e.g. 22:00 – 07:00)
       return hour >= s || hour < e;
     }
   }
@@ -233,9 +230,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ];
     int notifId = 0;
     for (int i = 0; i < 24; i += intervalHours) {
-      // Skip this hour if it falls inside the quiet window
       if (_isQuietHour(i)) continue;
-
       final now = tz.TZDateTime.now(tz.local);
       var t = tz.TZDateTime(tz.local, now.year, now.month, now.day, i, 0);
       if (t.isBefore(now)) t = t.add(const Duration(days: 1));
@@ -528,7 +523,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
 
-                      // ── Interval picker (only when reminders on) ──
+                      // ── Interval + Quiet Hours (only when reminders on) ──
                       if (_notificationsEnabled) ...[
                         const Divider(height: 24),
                         Row(
@@ -557,122 +552,122 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ],
                         ),
 
-                        // ── Quiet Hours section ──
+                        // ── Quiet Hours toggle row ──
                         const Divider(height: 24),
+                        // FIX: outer Row uses Expanded on the label side
+                        // so the Switch always has room and never overflows.
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(children: [
-                              const AppIconBadge(
-                                icon: Icons.bedtime_outlined,
-                                color: Color(0xFF3949AB),
-                              ),
-                              const SizedBox(width: 14),
-                              Column(
+                            const AppIconBadge(
+                              icon: Icons.bedtime_outlined,
+                              color: Color(0xFF3949AB),
+                            ),
+                            const SizedBox(width: 14),
+                            // ← KEY FIX: Expanded here prevents overflow
+                            Expanded(
+                              child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text('Quiet Hours',
                                       style: AppTextStyles.itemTitle),
-                                  Text('No reminders during this window',
-                                      style: AppTextStyles.body),
+                                  Text(
+                                    'No reminders during this window',
+                                    style: AppTextStyles.body,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ],
                               ),
-                            ]),
+                            ),
                             Switch(
                               value: _quietHoursEnabled,
-                              onChanged: (val) => _saveQuietTime(enabled: val),
+                              onChanged: (val) =>
+                                  _saveQuietTime(enabled: val),
                             ),
                           ],
                         ),
 
-                        // ── Start / End time pickers (only when quiet hours on) ──
+                        // ── Time picker card (only when quiet hours on) ──
                         if (_quietHoursEnabled) ...[
                           const SizedBox(height: 14),
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 14, vertical: 12),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF3949AB).withValues(alpha: 0.06),
+                              color: const Color(0xFF3949AB)
+                                  .withValues(alpha: 0.06),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: const Color(0xFF3949AB).withValues(alpha: 0.15),
+                                color: const Color(0xFF3949AB)
+                                    .withValues(alpha: 0.15),
                               ),
                             ),
-                            child: Row(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(Icons.bedtime_outlined,
-                                    color: Color(0xFF3949AB), size: 18),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'No reminders sent between:',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Color(0xFF3949AB),
-                                          fontWeight: FontWeight.w600,
+                                const Row(
+                                  children: [
+                                    Icon(Icons.bedtime_outlined,
+                                        color: Color(0xFF3949AB), size: 16),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'No reminders sent between:',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF3949AB),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                // From → Until in a Row
+                                Row(
+                                  children: [
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text('From',
+                                            style: AppTextStyles.micro),
+                                        const SizedBox(height: 4),
+                                        _timeBadge(
+                                          _quietStart,
+                                          onTap: () => _pickQuietTime(
+                                              isStart: true),
                                         ),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Row(
-                                        children: [
-                                          // Start time
-                                          Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text('From',
-                                                  style: AppTextStyles.micro),
-                                              const SizedBox(height: 4),
-                                              _timeBadge(
-                                                _quietStart,
-                                                onTap: () => _pickQuietTime(
-                                                    isStart: true),
-                                              ),
-                                            ],
-                                          ),
-                                          const Padding(
-                                            padding: EdgeInsets.symmetric(
-                                                horizontal: 12),
-                                            child: Icon(Icons.arrow_forward,
-                                                size: 16,
-                                                color: AppColors.textHint),
-                                          ),
-                                          // End time
-                                          Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text('Until',
-                                                  style: AppTextStyles.micro),
-                                              const SizedBox(height: 4),
-                                              _timeBadge(
-                                                _quietEnd,
-                                                onTap: () => _pickQuietTime(
-                                                    isStart: false),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
+                                      ],
+                                    ),
+                                    const Padding(
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 12),
+                                      child: Icon(Icons.arrow_forward,
+                                          size: 16,
+                                          color: AppColors.textHint),
+                                    ),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Until',
+                                            style: AppTextStyles.micro),
+                                        const SizedBox(height: 4),
+                                        _timeBadge(
+                                          _quietEnd,
+                                          onTap: () => _pickQuietTime(
+                                              isStart: false),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Padding(
-                            padding: const EdgeInsets.only(left: 2),
-                            child: Text(
-                              '💡 Tip: Default is 10:00 PM – 7:00 AM. '
-                              'Tap the times above to customise.',
-                              style: AppTextStyles.micro.copyWith(
-                                  color: AppColors.textHint),
-                            ),
+                          const SizedBox(height: 6),
+                          Text(
+                            '💡 Tap the times above to customise. Default: 10 PM – 7 AM',
+                            style: AppTextStyles.micro
+                                .copyWith(color: AppColors.textHint),
                           ),
                         ],
                       ],
