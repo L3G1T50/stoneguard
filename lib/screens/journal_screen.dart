@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import '../database_helper.dart';
 import 'dart:math' as math;
-import '../app_theme.dart';
+import '../theme/app_theme.dart';
 import '../widgets/gradient_scaffold.dart';
 import 'settings_screen.dart';
 
@@ -32,7 +32,6 @@ class _JournalScreenState extends State<JournalScreen> {
 
   static const List<String> _sideOptions = ['None', 'Left', 'Both', 'Right'];
 
-  // ── Persistence ───────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
@@ -114,142 +113,149 @@ class _JournalScreenState extends State<JournalScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Padding(
-          padding: EdgeInsets.only(
-              bottom: MediaQuery.of(ctx).viewInsets.bottom),
-          child: Container(
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40, height: 4,
-                      decoration: BoxDecoration(
-                        color: AppColors.border,
-                        borderRadius: BorderRadius.circular(2),
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        final sheetBg = isDark ? AppColors.darkSurface : AppColors.surface;
+        final borderCol = isDark ? AppColors.darkBorder : AppColors.border;
+        final textPri = isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
+        final textMut = isDark ? AppColors.darkTextSecond : AppColors.textSecond;
+        final bgCol = isDark ? AppColors.darkBackground : AppColors.background;
+
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) => Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            child: Container(
+              decoration: BoxDecoration(
+                color: sheetBg,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40, height: 4,
+                        decoration: BoxDecoration(
+                          color: borderCol,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Edit Entry',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                          color: AppColors.textPrimary)),
-                  const SizedBox(height: 16),
-                  Row(children: [
-                    const Text('Pain Level',
+                    const SizedBox(height: 16),
+                    Text('Edit Entry',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: textPri)),
+                    const SizedBox(height: 16),
+                    Row(children: [
+                      Text('Pain Level',
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: textMut,
+                              fontWeight: FontWeight.w600)),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _painColor(editPain).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text('$editPain - ${_painLabel(editPain)}',
+                            style: TextStyle(
+                                color: _painColor(editPain),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13)),
+                      ),
+                    ]),
+                    Slider(
+                      value: editPain.toDouble(),
+                      min: 1, max: 10, divisions: 9,
+                      activeColor: _painColor(editPain),
+                      inactiveColor: _painColor(editPain).withValues(alpha: 0.15),
+                      onChanged: (v) => setSheetState(() => editPain = v.round()),
+                    ),
+                    const SizedBox(height: 8),
+                    Text('Side',
                         style: TextStyle(
                             fontSize: 13,
-                            color: AppColors.textMuted,
+                            color: textMut,
                             fontWeight: FontWeight.w600)),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _painColor(editPain).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(20),
+                    const SizedBox(height: 6),
+                    _buildSideSelector(editSide, bgCol, borderCol,
+                        (s) => setSheetState(() => editSide = s)),
+                    const SizedBox(height: 12),
+                    Text('Symptoms',
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: textMut,
+                            fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 6),
+                    _buildSymptomChips(editSymptoms, bgCol, borderCol,
+                        (tag, val) => setSheetState(() {
+                          val ? editSymptoms.add(tag) : editSymptoms.remove(tag);
+                        })),
+                    const SizedBox(height: 12),
+                    _buildStonePassedToggle(
+                        editStonePassed, bgCol, borderCol, textPri,
+                        (v) => setSheetState(() => editStonePassed = v)),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: editNote,
+                      maxLines: 3,
+                      style: TextStyle(color: textPri),
+                      decoration: InputDecoration(
+                        hintText: 'Notes...',
+                        hintStyle: TextStyle(color: textMut, fontSize: 13),
+                        filled: true,
+                        fillColor: bgCol,
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: borderCol)),
+                        enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: borderCol)),
+                        focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
                       ),
-                      child: Text('$editPain - ${_painLabel(editPain)}',
-                          style: TextStyle(
-                              color: _painColor(editPain),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13)),
                     ),
-                  ]),
-                  Slider(
-                    value: editPain.toDouble(),
-                    min: 1, max: 10, divisions: 9,
-                    activeColor: _painColor(editPain),
-                    inactiveColor: _painColor(editPain).withValues(alpha: 0.15),
-                    onChanged: (v) => setSheetState(() => editPain = v.round()),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text('Side',
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textMuted,
-                          fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 6),
-                  _buildSideSelector(editSide,
-                          (s) => setSheetState(() => editSide = s)),
-                  const SizedBox(height: 12),
-                  const Text('Symptoms',
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textMuted,
-                          fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 6),
-                  _buildSymptomChips(editSymptoms,
-                          (tag, val) => setSheetState(() {
-                        val ? editSymptoms.add(tag) : editSymptoms.remove(tag);
-                      })),
-                  const SizedBox(height: 12),
-                  _buildStonePassedToggle(
-                      editStonePassed,
-                          (v) => setSheetState(() => editStonePassed = v)),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: editNote,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      hintText: 'Notes...',
-                      hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
-                      filled: true,
-                      fillColor: AppColors.background,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.border)),
-                      enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.border)),
-                      focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide:
-                          const BorderSide(color: AppColors.primary, width: 1.5)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () async {
+                          if (editNote.text.trim().isEmpty) return;
+                          final updated = Map<String, dynamic>.from(entry);
+                          updated['pain'] = editPain;
+                          updated['side'] = editSide;
+                          updated['stonePassed'] = editStonePassed;
+                          updated['symptoms'] = editSymptoms.toList();
+                          updated['note'] = editNote.text.trim();
+                          Navigator.pop(ctx);
+                          await _updateEntry(index, updated);
+                        },
+                        child: const Text('Save Changes',
+                            style: TextStyle(fontWeight: FontWeight.w600)),
                       ),
-                      onPressed: () async {
-                        if (editNote.text.trim().isEmpty) return;
-                        final updated = Map<String, dynamic>.from(entry);
-                        updated['pain'] = editPain;
-                        updated['side'] = editSide;
-                        updated['stonePassed'] = editStonePassed;
-                        updated['symptoms'] = editSymptoms.toList();
-                        updated['note'] = editNote.text.trim();
-                        Navigator.pop(ctx);
-                        await _updateEntry(index, updated);
-                      },
-                      child: const Text('Save Changes',
-                          style: TextStyle(fontWeight: FontWeight.w600)),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -267,188 +273,188 @@ class _JournalScreenState extends State<JournalScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(2),
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        final sheetBg = isDark ? AppColors.darkSurface : AppColors.surface;
+        final borderCol = isDark ? AppColors.darkBorder : AppColors.border;
+        final textPri = isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
+        final textMut = isDark ? AppColors.darkTextSecond : AppColors.textSecond;
+        final bgCol = isDark ? AppColors.darkBackground : AppColors.background;
+
+        return Container(
+          decoration: BoxDecoration(
+            color: sheetBg,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: borderCol,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Row(children: [
-              Container(
-                width: 56, height: 56,
-                decoration: BoxDecoration(
-                  color: _painColor(pain).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
+              const SizedBox(height: 20),
+              Row(children: [
+                Container(
+                  width: 56, height: 56,
+                  decoration: BoxDecoration(
+                    color: _painColor(pain).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Center(
+                    child: Text('$pain',
+                        style: TextStyle(
+                            color: _painColor(pain),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 22)),
+                  ),
                 ),
-                child: Center(
-                  child: Text('$pain',
-                      style: TextStyle(
-                          color: _painColor(pain),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 22)),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _painColor(pain).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _painColor(pain).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text('$pain / 10 — ${_painLabel(pain)}',
+                            style: TextStyle(
+                                color: _painColor(pain),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13)),
                       ),
-                      child: Text('$pain / 10 — ${_painLabel(pain)}',
-                          style: TextStyle(
-                              color: _painColor(pain),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13)),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(dateStr,
-                        style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(dateStr,
+                          style: TextStyle(color: textMut, fontSize: 12)),
+                    ],
+                  ),
                 ),
-              ),
-              if (stonePassed)
-                const Padding(
-                  padding: EdgeInsets.only(left: 8),
-                  child: Text('💎', style: TextStyle(fontSize: 22)),
-                ),
-            ]),
-            const SizedBox(height: 14),
-            if (side != 'None' || stonePassed) ...[
-              Wrap(spacing: 8, children: [
-                if (side != 'None')
-                  _infoBadge('$side Side', Icons.location_on_outlined, AppColors.primary),
                 if (stonePassed)
-                  _infoBadge('Stone Passed', Icons.check_circle_outline, AppColors.success),
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8),
+                    child: Text('💎', style: TextStyle(fontSize: 22)),
+                  ),
               ]),
-              const SizedBox(height: 12),
-            ],
-            if (symptoms.isNotEmpty) ...[
-              const Text('Symptoms',
+              const SizedBox(height: 14),
+              if (side != 'None' || stonePassed) ...[
+                Wrap(spacing: 8, children: [
+                  if (side != 'None')
+                    _infoBadge('$side Side', Icons.location_on_outlined, AppColors.primary),
+                  if (stonePassed)
+                    _infoBadge('Stone Passed', Icons.check_circle_outline, AppColors.success),
+                ]),
+                const SizedBox(height: 12),
+              ],
+              if (symptoms.isNotEmpty) ...[
+                Text('Symptoms',
+                    style: TextStyle(
+                        color: textMut,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.8)),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: symptoms.map((s) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(s,
+                        style: const TextStyle(
+                            color: AppColors.warning,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500)),
+                  )).toList(),
+                ),
+                const SizedBox(height: 12),
+              ],
+              Divider(color: borderCol, height: 1),
+              const SizedBox(height: 14),
+              Text('NOTE',
                   style: TextStyle(
-                      color: AppColors.textMuted,
+                      color: textMut,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.8)),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: symptoms.map((s) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.warning.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
-                  ),
-                  child: Text(s,
-                      style: const TextStyle(
-                          color: AppColors.warning,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500)),
-                )).toList(),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: bgCol,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: borderCol),
+                ),
+                child: Text(note,
+                    style: TextStyle(
+                        color: textPri, fontSize: 14, height: 1.6)),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 20),
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.delete_outline, color: AppColors.danger, size: 18),
+                    label: const Text('Delete', style: TextStyle(color: AppColors.danger)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.danger),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      await _deleteEntry(index);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.edit_outlined, color: AppColors.primary, size: 18),
+                    label: const Text('Edit', style: TextStyle(color: AppColors.primary)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.primary),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _showEditSheet(entry, index);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Close', style: TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ]),
             ],
-            const Divider(color: AppColors.border, height: 1),
-            const SizedBox(height: 14),
-            const Text('NOTE',
-                style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.8)),
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Text(note,
-                  style: const TextStyle(
-                      color: AppColors.textPrimary, fontSize: 14, height: 1.6)),
-            ),
-            const SizedBox(height: 20),
-            Row(children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.delete_outline,
-                      color: AppColors.danger, size: 18),
-                  label: const Text('Delete',
-                      style: TextStyle(color: AppColors.danger)),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.danger),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () async {
-                    Navigator.pop(ctx);
-                    await _deleteEntry(index);
-                  },
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.edit_outlined,
-                      color: AppColors.primary, size: 18),
-                  label: const Text('Edit',
-                      style: TextStyle(color: AppColors.primary)),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.primary),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    _showEditSheet(entry, index);
-                  },
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Close',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
-                ),
-              ),
-            ]),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -465,14 +471,14 @@ class _JournalScreenState extends State<JournalScreen> {
         Icon(icon, size: 13, color: color),
         const SizedBox(width: 4),
         Text(label,
-            style: TextStyle(
-                color: color, fontSize: 12, fontWeight: FontWeight.w500)),
+            style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500)),
       ]),
     );
   }
 
   Widget _buildSideSelector(
-      String currentSide, void Function(String) onSelect) {
+      String currentSide, Color bgCol, Color borderCol,
+      void Function(String) onSelect) {
     return Row(
       children: _sideOptions.map((s) {
         final selected = s == currentSide;
@@ -484,10 +490,10 @@ class _JournalScreenState extends State<JournalScreen> {
               margin: const EdgeInsets.only(right: 6),
               padding: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
-                color: selected ? AppColors.primary.withValues(alpha: 0.12) : AppColors.background,
+                color: selected ? AppColors.primary.withValues(alpha: 0.12) : bgCol,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                    color: selected ? AppColors.primary : AppColors.border, width: 1.5),
+                    color: selected ? AppColors.primary : borderCol, width: 1.5),
               ),
               child: Center(
                 child: Text(s,
@@ -504,7 +510,8 @@ class _JournalScreenState extends State<JournalScreen> {
   }
 
   Widget _buildSymptomChips(
-      Set<String> selected, void Function(String, bool) onToggle) {
+      Set<String> selected, Color bgCol, Color borderCol,
+      void Function(String, bool) onToggle) {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -516,12 +523,12 @@ class _JournalScreenState extends State<JournalScreen> {
             duration: const Duration(milliseconds: 160),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: active ? AppColors.warning.withValues(alpha: 0.12) : AppColors.background,
+              color: active ? AppColors.warning.withValues(alpha: 0.12) : bgCol,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                   color: active
                       ? AppColors.warning.withValues(alpha: 0.5)
-                      : AppColors.border),
+                      : borderCol),
             ),
             child: Text(tag,
                 style: TextStyle(
@@ -535,28 +542,29 @@ class _JournalScreenState extends State<JournalScreen> {
   }
 
   Widget _buildStonePassedToggle(
-      bool value, void Function(bool) onChanged) {
+      bool value, Color bgCol, Color borderCol, Color textPri,
+      void Function(bool) onChanged) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: value ? AppColors.success.withValues(alpha: 0.08) : AppColors.background,
+        color: value ? AppColors.success.withValues(alpha: 0.08) : bgCol,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
             color: value
                 ? AppColors.success.withValues(alpha: 0.4)
-                : AppColors.border),
+                : borderCol),
       ),
       child: Row(children: [
         const Text('💎', style: TextStyle(fontSize: 16)),
         const SizedBox(width: 10),
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Stone Passed',
+          Text('Stone Passed',
               style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary)),
-          Text('Mark if you passed a stone today',
-              style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+                  color: textPri)),
+          const Text('Mark if you passed a stone today',
+              style: TextStyle(fontSize: 11, color: AppColors.textHint)),
         ]),
         const Spacer(),
         Switch(
@@ -570,25 +578,28 @@ class _JournalScreenState extends State<JournalScreen> {
   }
 
   // ── Pain trend sparkline ──────────────────────────────────────────────────
-  Widget _buildPainTrend() {
+  Widget _buildPainTrend(bool isDark) {
     if (_entries.length < 2) return const SizedBox.shrink();
     final recent = _entries.take(7).toList().reversed.toList();
+    final surfaceCol = isDark ? AppColors.darkSurface : AppColors.surface;
+    final borderCol  = isDark ? AppColors.darkBorder  : AppColors.border;
+    final textMut    = isDark ? AppColors.darkTextSecond : AppColors.textSecond;
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: surfaceCol,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: borderCol),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('7-Entry Pain Trend',
+          Text('7-Entry Pain Trend',
               style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textMuted)),
+                  color: textMut)),
           const SizedBox(height: 10),
           SizedBox(
             height: 48,
@@ -603,9 +614,9 @@ class _JournalScreenState extends State<JournalScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('${recent.length} entries ago',
-                  style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
-              const Text('Latest',
-                  style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                  style: TextStyle(fontSize: 10, color: textMut)),
+              Text('Latest',
+                  style: TextStyle(fontSize: 10, color: textMut)),
             ],
           ),
         ],
@@ -663,8 +674,12 @@ class _JournalScreenState extends State<JournalScreen> {
     super.dispose();
   }
 
-  Widget _buildJournalEmptyState() {
-    final isFiltered = _filterSeverity != 'All';
+  Widget _buildJournalEmptyState(bool isDark) {
+    final isFiltered  = _filterSeverity != 'All';
+    final surfaceCol  = isDark ? AppColors.darkSurface  : AppColors.surface;
+    final borderCol   = isDark ? AppColors.darkBorder   : AppColors.border;
+    final textPri     = isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
+    final textMut     = isDark ? AppColors.darkTextSecond  : AppColors.textSecond;
 
     return Center(
       child: Padding(
@@ -672,9 +687,9 @@ class _JournalScreenState extends State<JournalScreen> {
         child: Container(
           padding: const EdgeInsets.fromLTRB(22, 26, 22, 22),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: surfaceCol,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: borderCol),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.04),
@@ -687,27 +702,18 @@ class _JournalScreenState extends State<JournalScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                height: 84,
-                width: 84,
+                height: 84, width: 84,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppColors.primary.withValues(alpha: 0.10),
                 ),
-                child: const Icon(
-                  Icons.edit_note_rounded,
-                  size: 42,
-                  color: AppColors.primary,
-                ),
+                child: const Icon(Icons.edit_note_rounded, size: 42, color: AppColors.primary),
               ),
               const SizedBox(height: 18),
               Text(
                 isFiltered ? 'No matching entries' : 'No journal entries yet',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPri),
               ),
               const SizedBox(height: 10),
               Text(
@@ -715,11 +721,7 @@ class _JournalScreenState extends State<JournalScreen> {
                     ? 'Try a different filter to see more entries.'
                     : 'Use Journal to track pain, symptoms, stone events, and notes for your doctor.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 14,
-                  height: 1.5,
-                  color: AppColors.textMuted,
-                ),
+                style: TextStyle(fontSize: 14, height: 1.5, color: textMut),
               ),
               const SizedBox(height: 18),
               SizedBox(
@@ -737,9 +739,7 @@ class _JournalScreenState extends State<JournalScreen> {
                       );
                     }
                   },
-                  icon: Icon(
-                    isFiltered ? Icons.filter_alt_off_rounded : Icons.edit_rounded,
-                  ),
+                  icon: Icon(isFiltered ? Icons.filter_alt_off_rounded : Icons.edit_rounded),
                   label: Text(
                     isFiltered ? 'Clear filter' : 'Write my first note',
                     style: const TextStyle(fontWeight: FontWeight.w600),
@@ -748,9 +748,7 @@ class _JournalScreenState extends State<JournalScreen> {
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
                 ),
@@ -765,7 +763,13 @@ class _JournalScreenState extends State<JournalScreen> {
   // ── Build ─────────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final filtered = _filteredEntries;
+    final isDark     = Theme.of(context).brightness == Brightness.dark;
+    final surfaceCol = isDark ? AppColors.darkSurface     : AppColors.surface;
+    final borderCol  = isDark ? AppColors.darkBorder      : AppColors.border;
+    final bgCol      = isDark ? AppColors.darkBackground  : AppColors.background;
+    final textPri    = isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
+    final textMut    = isDark ? AppColors.darkTextSecond  : AppColors.textSecond;
+    final filtered   = _filteredEntries;
 
     final body = CustomScrollView(
       slivers: [
@@ -776,9 +780,9 @@ class _JournalScreenState extends State<JournalScreen> {
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: surfaceCol,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: borderCol),
               boxShadow: [
                 BoxShadow(
                     color: Colors.black.withValues(alpha: 0.05),
@@ -789,24 +793,23 @@ class _JournalScreenState extends State<JournalScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'How are you feeling today?',
                   style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary),
+                      color: textPri),
                 ),
                 const SizedBox(height: 14),
                 Row(children: [
-                  const Text('Pain Level',
+                  Text('Pain Level',
                       style: TextStyle(
                           fontSize: 13,
-                          color: AppColors.textMuted,
+                          color: textMut,
                           fontWeight: FontWeight.w600)),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
                       color: _painColor(_painLevel).withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(20),
@@ -829,56 +832,50 @@ class _JournalScreenState extends State<JournalScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('1 - No pain',
-                        style: TextStyle(
-                            fontSize: 11, color: Colors.grey.shade400)),
-                    Text('10 - Extreme',
-                        style: TextStyle(
-                            fontSize: 11, color: Colors.grey.shade400)),
+                    Text('1 - No pain', style: TextStyle(fontSize: 11, color: textMut)),
+                    Text('10 - Extreme', style: TextStyle(fontSize: 11, color: textMut)),
                   ],
                 ),
                 const SizedBox(height: 14),
-                const Text('Pain Side',
+                Text('Pain Side',
                     style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textMuted,
-                        fontWeight: FontWeight.w600)),
+                        fontSize: 13, color: textMut, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
-                _buildSideSelector(_side, (s) => setState(() => _side = s)),
+                _buildSideSelector(_side, bgCol, borderCol,
+                    (s) => setState(() => _side = s)),
                 const SizedBox(height: 14),
-                const Text('Symptoms',
+                Text('Symptoms',
                     style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textMuted,
-                        fontWeight: FontWeight.w600)),
+                        fontSize: 13, color: textMut, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 _buildSymptomChips(
-                    _selectedSymptoms,
-                        (tag, val) => setState(() =>
+                    _selectedSymptoms, bgCol, borderCol,
+                    (tag, val) => setState(() =>
                     val ? _selectedSymptoms.add(tag)
                         : _selectedSymptoms.remove(tag))),
                 const SizedBox(height: 14),
                 _buildStonePassedToggle(
-                    _stonePassed, (v) => setState(() => _stonePassed = v)),
+                    _stonePassed, bgCol, borderCol, textPri,
+                    (v) => setState(() => _stonePassed = v)),
                 const SizedBox(height: 14),
                 TextField(
                   controller: _noteController,
                   maxLines: 3,
+                  style: TextStyle(color: textPri),
                   decoration: InputDecoration(
                     hintText: 'Notes — symptoms, water intake, diet, mood...',
-                    hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                    hintStyle: TextStyle(color: textMut, fontSize: 13),
                     filled: true,
-                    fillColor: AppColors.background,
+                    fillColor: bgCol,
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.border)),
+                        borderSide: BorderSide(color: borderCol)),
                     enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.border)),
+                        borderSide: BorderSide(color: borderCol)),
                     focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                        const BorderSide(color: AppColors.primary, width: 1.5)),
+                        borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -904,7 +901,7 @@ class _JournalScreenState extends State<JournalScreen> {
         ),
 
         // ── 2. Pain trend sparkline ─────────────────────────────────────
-        SliverToBoxAdapter(child: _buildPainTrend()),
+        SliverToBoxAdapter(child: _buildPainTrend(isDark)),
 
         // ── 3. Past entries header + filter ──────────────────────────────
         SliverToBoxAdapter(
@@ -914,15 +911,14 @@ class _JournalScreenState extends State<JournalScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(children: [
-                  const Text('Past Entries',
+                  Text('Past Entries',
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
-                          color: AppColors.textPrimary)),
+                          color: textPri)),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
@@ -934,8 +930,8 @@ class _JournalScreenState extends State<JournalScreen> {
                             fontSize: 12)),
                   ),
                   const Spacer(),
-                  const Text('Tap to view',
-                      style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                  Text('Tap to view',
+                      style: TextStyle(color: textMut, fontSize: 11)),
                 ]),
                 const SizedBox(height: 8),
                 SingleChildScrollView(
@@ -955,22 +951,19 @@ class _JournalScreenState extends State<JournalScreen> {
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 160),
                           margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                           decoration: BoxDecoration(
-                            color: active
-                                ? chipColor.withValues(alpha: 0.12)
-                                : AppColors.background,
+                            color: active ? chipColor.withValues(alpha: 0.12) : bgCol,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                                color: active ? chipColor : AppColors.border,
+                                color: active ? chipColor : borderCol,
                                 width: 1.5),
                           ),
                           child: Text(f,
                               style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: active ? chipColor : AppColors.textMuted)),
+                                  color: active ? chipColor : textMut)),
                         ),
                       );
                     }).toList(),
@@ -984,123 +977,118 @@ class _JournalScreenState extends State<JournalScreen> {
         // ── 4. Entry list or empty state ─────────────────────────────────
         filtered.isEmpty
             ? SliverFillRemaining(
-          hasScrollBody: false,
-          child: _buildJournalEmptyState(),
-        )
+                hasScrollBody: false,
+                child: _buildJournalEmptyState(isDark),
+              )
             : SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          sliver: SliverList(
-            delegate: SliverChildBuilderDelegate(
-                  (context, i) {
-                final e           = filtered[i];
-                final pain        = e['pain'] as int;
-                final note        = e['note'] as String;
-                final dateStr     = _formatDate(e['date'] as String);
-                final stonePassed = (e['stonePassed'] as bool?) ?? false;
-                final symptoms    = List<String>.from(
-                    (e['symptoms'] as List<dynamic>?) ?? []);
-                final masterIndex = _entries.indexOf(e);
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, i) {
+                      final e           = filtered[i];
+                      final pain        = e['pain'] as int;
+                      final note        = e['note'] as String;
+                      final dateStr     = _formatDate(e['date'] as String);
+                      final stonePassed = (e['stonePassed'] as bool?) ?? false;
+                      final symptoms    = List<String>.from(
+                          (e['symptoms'] as List<dynamic>?) ?? []);
+                      final masterIndex = _entries.indexOf(e);
 
-                return GestureDetector(
-                  onTap: () => _showEntryDetail(e, masterIndex),
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.border),
-                      boxShadow: [
-                        BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.03),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2)),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 48, height: 48,
+                      return GestureDetector(
+                        onTap: () => _showEntryDetail(e, masterIndex),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: _painColor(pain).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
+                            color: surfaceCol,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: borderCol),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.03),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2)),
+                            ],
                           ),
-                          child: Center(
-                            child: Text('$pain',
-                                style: TextStyle(
-                                    color: _painColor(pain),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18)),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
-                              Row(children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: _painColor(pain).withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Text(_painLabel(pain),
+                              Container(
+                                width: 48, height: 48,
+                                decoration: BoxDecoration(
+                                  color: _painColor(pain).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Center(
+                                  child: Text('$pain',
                                       style: TextStyle(
                                           color: _painColor(pain),
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold)),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18)),
                                 ),
-                                if (stonePassed) ...[
-                                  const SizedBox(width: 6),
-                                  const Text('💎',
-                                      style: TextStyle(fontSize: 13)),
-                                ],
-                                if (symptoms.isNotEmpty) ...[
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.warning.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      '+${symptoms.length} symptom${symptoms.length > 1 ? 's' : ''}',
-                                      style: const TextStyle(
-                                          color: AppColors.warning,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w600),
-                                    ),
-                                  ),
-                                ],
-                              ]),
-                              const SizedBox(height: 4),
-                              Text(note,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      color: AppColors.textPrimary,
-                                      fontSize: 13)),
-                              const SizedBox(height: 2),
-                              Text(dateStr,
-                                  style: const TextStyle(
-                                      color: AppColors.textMuted, fontSize: 11)),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: _painColor(pain).withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Text(_painLabel(pain),
+                                            style: TextStyle(
+                                                color: _painColor(pain),
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold)),
+                                      ),
+                                      if (stonePassed) ...[
+                                        const SizedBox(width: 6),
+                                        const Text('💎', style: TextStyle(fontSize: 13)),
+                                      ],
+                                      if (symptoms.isNotEmpty) ...[
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.warning.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            '+${symptoms.length} symptom${symptoms.length > 1 ? 's' : ''}',
+                                            style: const TextStyle(
+                                                color: AppColors.warning,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w600),
+                                          ),
+                                        ),
+                                      ],
+                                    ]),
+                                    const SizedBox(height: 4),
+                                    Text(note,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(color: textPri, fontSize: 13)),
+                                    const SizedBox(height: 2),
+                                    Text(dateStr,
+                                        style: TextStyle(color: textMut, fontSize: 11)),
+                                  ],
+                                ),
+                              ),
+                              Icon(Icons.chevron_right,
+                                  color: isDark ? AppColors.darkTextHint : AppColors.textFaint,
+                                  size: 20),
                             ],
                           ),
                         ),
-                        const Icon(Icons.chevron_right,
-                            color: AppColors.textFaint, size: 20),
-                      ],
-                    ),
+                      );
+                    },
+                    childCount: filtered.length,
                   ),
-                );
-              },
-              childCount: filtered.length,
-            ),
-          ),
-        ),
+                ),
+              ),
       ],
     );
 

@@ -1,90 +1,78 @@
 import 'package:flutter/material.dart';
-import 'history_screen.dart';
-import 'progress_screen.dart';
-import 'settings_screen.dart';
+import '../theme/app_theme.dart';
 import '../widgets/gradient_scaffold.dart';
 
-// ─── MERGED HISTORY + PROGRESS SCREEN ─────────────────────────────────────────────────
-class HistoryProgressScreen extends StatefulWidget {
+class HistoryProgressScreen extends StatelessWidget {
   const HistoryProgressScreen({super.key});
 
   @override
-  State<HistoryProgressScreen> createState() => _HistoryProgressScreenState();
-}
-
-class _HistoryProgressScreenState extends State<HistoryProgressScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this, initialIndex: 0);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // Chip-style tab switcher that sits just below the gradient header
-    final tabBar = Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-      child: Container(
-        height: 36,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.18),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-              color: Colors.white.withValues(alpha: 0.30), width: 1),
-        ),
-        child: TabBar(
-          controller: _tabController,
-          labelColor: const Color(0xFF01696F),
-          unselectedLabelColor: Colors.white70,
-          labelStyle: const TextStyle(
-              fontSize: 13, fontWeight: FontWeight.w600),
-          unselectedLabelStyle: const TextStyle(
-              fontSize: 13, fontWeight: FontWeight.w500),
-          indicator: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          indicatorSize: TabBarIndicatorSize.tab,
-          dividerColor: Colors.transparent,
-          tabs: const [
-            Tab(text: 'Charts'),
-            Tab(text: 'Entries'),
-          ],
-        ),
-      ),
-    );
+    final isDark     = Theme.of(context).brightness == Brightness.dark;
+    final surfaceCol = isDark ? AppColors.darkSurface     : AppColors.surface;
+    final borderCol  = isDark ? AppColors.darkBorder      : AppColors.border;
+    final textPri    = isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
+    final textMut    = isDark ? AppColors.darkTextSecond  : AppColors.textSecond;
 
     return GradientScaffold(
-      title: 'History & Progress',
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.settings_outlined, color: Colors.white),
-          tooltip: 'Settings',
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const SettingsScreen()),
-          ),
-        ),
-      ],
-      body: Column(
+      title: 'Progress History',
+      body: ListView(
+        padding: AppSpacing.pagePadding.copyWith(top: 20, bottom: 32),
         children: [
-          tabBar,
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: const [
-                _ProgressTab(),
-                _HistoryTab(),
-              ],
+          _SectionCard(
+            isDark: isDark,
+            surfaceCol: surfaceCol,
+            borderCol: borderCol,
+            textPri: textPri,
+            textMut: textMut,
+            title: 'Stone-Free Streak',
+            icon: Icons.local_fire_department_outlined,
+            iconColor: AppColors.warning,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Column(
+                  children: [
+                    Text('0', style: TextStyle(fontSize: 56, fontWeight: FontWeight.bold, color: AppColors.warning)),
+                    Text('days stone-free', style: TextStyle(fontSize: 14, color: textMut)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _SectionCard(
+            isDark: isDark,
+            surfaceCol: surfaceCol,
+            borderCol: borderCol,
+            textPri: textPri,
+            textMut: textMut,
+            title: 'Hydration Compliance',
+            icon: Icons.water_drop_outlined,
+            iconColor: AppColors.primary,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Log your daily water intake on the Home screen to see your 30-day compliance trend here.',
+                style: TextStyle(fontSize: 13, height: 1.5, color: textMut),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _SectionCard(
+            isDark: isDark,
+            surfaceCol: surfaceCol,
+            borderCol: borderCol,
+            textPri: textPri,
+            textMut: textMut,
+            title: 'Pain Journal Summary',
+            icon: Icons.bar_chart_outlined,
+            iconColor: AppColors.oxalate,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Add journal entries to see average pain, highest pain day, and monthly trends.',
+                style: TextStyle(fontSize: 13, height: 1.5, color: textMut),
+              ),
             ),
           ),
         ],
@@ -93,49 +81,61 @@ class _HistoryProgressScreenState extends State<HistoryProgressScreen>
   }
 }
 
-// ── Wrapper widgets ───────────────────────────────────────────────────────────────
-class _HistoryTab extends StatelessWidget {
-  const _HistoryTab();
-  @override
-  Widget build(BuildContext context) => const _EmbeddedHistory();
-}
+class _SectionCard extends StatelessWidget {
+  final bool isDark;
+  final Color surfaceCol;
+  final Color borderCol;
+  final Color textPri;
+  final Color textMut;
+  final String title;
+  final IconData icon;
+  final Color iconColor;
+  final Widget child;
 
-class _EmbeddedHistory extends StatefulWidget {
-  const _EmbeddedHistory();
-  @override
-  State<_EmbeddedHistory> createState() => _EmbeddedHistoryState();
-}
-
-class _EmbeddedHistoryState extends State<_EmbeddedHistory>
-    with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
+  const _SectionCard({
+    required this.isDark,
+    required this.surfaceCol,
+    required this.borderCol,
+    required this.textPri,
+    required this.textMut,
+    required this.title,
+    required this.icon,
+    required this.iconColor,
+    required this.child,
+  });
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
-    return Navigator(
-      onGenerateRoute: (_) => MaterialPageRoute(
-        builder: (_) => const HistoryScreen(),
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: surfaceCol,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderCol),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Icon(icon, size: 18, color: iconColor),
+            const SizedBox(width: 8),
+            Text(title,
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: textPri)),
+          ]),
+          const SizedBox(height: 12),
+          child,
+        ],
       ),
     );
-  }
-}
-
-class _ProgressTab extends StatefulWidget {
-  const _ProgressTab();
-  @override
-  State<_ProgressTab> createState() => _ProgressTabState();
-}
-
-class _ProgressTabState extends State<_ProgressTab>
-    with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
-
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    return const ProgressScreen();
   }
 }
