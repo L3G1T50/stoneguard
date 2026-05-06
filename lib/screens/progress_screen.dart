@@ -5,6 +5,34 @@ import 'package:confetti/confetti.dart';
 import 'dart:convert';
 import 'dart:math';
 
+// ── Timeframe enum ────────────────────────────────────────────────────────────
+enum ChartTimeframe { d7, d30, m6, y1, y2 }
+
+extension ChartTimeframeLabel on ChartTimeframe {
+  String get label {
+    switch (this) {
+      case ChartTimeframe.d7:  return '7D';
+      case ChartTimeframe.d30: return '30D';
+      case ChartTimeframe.m6:  return '6M';
+      case ChartTimeframe.y1:  return '1Y';
+      case ChartTimeframe.y2:  return '2Y';
+    }
+  }
+
+  int get days {
+    switch (this) {
+      case ChartTimeframe.d7:  return 7;
+      case ChartTimeframe.d30: return 30;
+      case ChartTimeframe.m6:  return 183;
+      case ChartTimeframe.y1:  return 365;
+      case ChartTimeframe.y2:  return 730;
+    }
+  }
+}
+
+// ── Chart metric enum ─────────────────────────────────────────────────────────
+enum ChartMetric { oxalate, water }
+
 class ProgressScreen extends StatefulWidget {
   const ProgressScreen({super.key});
 
@@ -14,23 +42,33 @@ class ProgressScreen extends StatefulWidget {
 
 class _ProgressScreenState extends State<ProgressScreen>
     with TickerProviderStateMixin {
-  // ── Data ──────────────────────────────────────────────────────────────────
-  List<Map<String, dynamic>> _weeklyData = [];
-  int _currentStreak = 0;
-  int _bestStreak = 0;
-  double _avgDailyOxalate = 0;
-  double _avgDailyWater = 0;
-  double _oxalateGoal = 200;
-  double _waterGoal = 80;
-  bool _isLoading = true;
-  int _totalDaysLogged = 0;
-  int _longestConsecutiveStreak = 0;
-  Set<String> _celebratedBadges = {};
+  // ── Raw data maps (full history) ──────────────────────────────────────────
+  Map<String, double> _allOxalate = {};
+  Map<String, double> _allWater   = {};
+
+  // ── Chart / display state ─────────────────────────────────────────────────
+  ChartTimeframe _selectedTimeframe = ChartTimeframe.d7;
+  ChartMetric    _selectedMetric    = ChartMetric.oxalate;
+  List<_ChartBar> _chartBars = [];
+
+  // ── Stats ─────────────────────────────────────────────────────────────────
+  List<Map<String, dynamic>> _weeklyData = []; // always 7-day for breakdown rows
+  int    _currentStreak            = 0;
+  int    _bestStreak               = 0;
+  double _avgDailyOxalate          = 0;
+  double _avgDailyWater            = 0;
+  double _oxalateGoal              = 200;
+  double _waterGoal                = 80;
+  bool   _isLoading                = true;
+  int    _totalDaysLogged          = 0;
+  int    _longestConsecutiveStreak = 0;
+  int    _daysLoggedInRange        = 0;
+  Set<String> _celebratedBadges   = {};
 
   // ── Animation controllers ─────────────────────────────────────────────────
   late ConfettiController _confettiController;
   final Map<String, AnimationController> _badgeAnimControllers = {};
-  final Map<String, Animation<double>> _badgeScaleAnims = {};
+  final Map<String, Animation<double>>   _badgeScaleAnims      = {};
 
   // ── Colours ───────────────────────────────────────────────────────────────
   static const Color cardColor   = Color(0xFFFFFFFF);
@@ -43,10 +81,11 @@ class _ProgressScreenState extends State<ProgressScreen>
   static const Color barOk       = Color(0xFF4AACCC);
   static const Color barOver     = Color(0xFFE07070);
   static const Color barEmpty    = Color(0xFFDDDDDD);
+  static const Color barWater    = Color(0xFF5BB8D4);
+  static const Color barWaterLow = Color(0xFFFFB347);
   static const Color goalLine    = Color(0xFF1A8A9A);
 
   // ── Badge definitions ─────────────────────────────────────────────────────
-  // 'milestone' badges get confetti + modal; others get pop + shimmer only.
   List<Map<String, dynamic>> get _achievements => [
     {
       'id': 'first_log',
@@ -63,7 +102,7 @@ class _ProgressScreenState extends State<ProgressScreen>
       'title': '3-Day Streak',
       'desc': 'Met both goals 3 days in a row',
       'unlocked': _currentStreak >= 3,
-      'progress': _currentStreak < 3 ? '${_currentStreak} / 3 days' : null,
+      'progress': _currentStreak < 3 ? '$_currentStreak / 3 days' : null,
       'milestone': false,
     },
     {
@@ -83,7 +122,9 @@ class _ProgressScreenState extends State<ProgressScreen>
       'title': 'Stone Guardian',
       'desc': 'Stayed under oxalate limit all week',
       'unlocked': _weeklyData.where((d) => d['oxalate'] > 0).isNotEmpty &&
-          _weeklyData.where((d) => d['oxalate'] > 0).every((d) => d['oxalateGoalMet']),
+          _weeklyData
+              .where((d) => d['oxalate'] > 0)
+              .every((d) => d['oxalateGoalMet']),
       'progress': null,
       'milestone': false,
     },
@@ -93,7 +134,7 @@ class _ProgressScreenState extends State<ProgressScreen>
       'title': '7-Day Champion',
       'desc': 'Met all goals 7 days in a row',
       'unlocked': _currentStreak >= 7,
-      'progress': _currentStreak < 7 ? '${_currentStreak} / 7 days' : null,
+      'progress': _currentStreak < 7 ? '$_currentStreak / 7 days' : null,
       'milestone': true,
     },
     {
@@ -149,7 +190,8 @@ class _ProgressScreenState extends State<ProgressScreen>
       'title': '6-Month Defender',
       'desc': 'Logged food on 180 different days',
       'unlocked': _totalDaysLogged >= 180,
-      'progress': _totalDaysLogged < 180 ? '$_totalDaysLogged / 180 days' : null,
+      'progress':
+          _totalDaysLogged < 180 ? '$_totalDaysLogged / 180 days' : null,
       'milestone': true,
     },
     {
@@ -158,7 +200,8 @@ class _ProgressScreenState extends State<ProgressScreen>
       'title': '1-Year Legend',
       'desc': 'Logged food for a full year!',
       'unlocked': _totalDaysLogged >= 365,
-      'progress': _totalDaysLogged < 365 ? '$_totalDaysLogged / 365 days' : null,
+      'progress':
+          _totalDaysLogged < 365 ? '$_totalDaysLogged / 365 days' : null,
       'milestone': true,
     },
     {
@@ -167,7 +210,8 @@ class _ProgressScreenState extends State<ProgressScreen>
       'title': '2-Year Diamond',
       'desc': "Logged food for 2 years — you're unstoppable!",
       'unlocked': _totalDaysLogged >= 730,
-      'progress': _totalDaysLogged < 730 ? '$_totalDaysLogged / 730 days' : null,
+      'progress':
+          _totalDaysLogged < 730 ? '$_totalDaysLogged / 730 days' : null,
       'milestone': true,
     },
   ];
@@ -202,11 +246,10 @@ class _ProgressScreenState extends State<ProgressScreen>
     _oxalateGoal = prefs.getDouble('goal_oxalate') ?? 200.0;
     _waterGoal   = prefs.getDouble('goal_water')   ?? 80.0;
 
-    // Load celebrated badge IDs so we only show the modal once per badge
     final celebratedList = prefs.getStringList('celebrated_badges') ?? [];
     _celebratedBadges = celebratedList.toSet();
 
-    // ── Build full date→value maps from daily_history ─────────────────────
+    // ── Build full date→value maps ────────────────────────────────────────
     final dailyHistoryRaw = prefs.getStringList('daily_history') ?? [];
     final Map<String, double> dailyOxalate = {};
     final Map<String, double> dailyWater   = {};
@@ -221,7 +264,7 @@ class _ProgressScreenState extends State<ProgressScreen>
       } catch (_) {}
     }
 
-    // Merge today's live prefs values
+    // Merge today's live prefs
     final now      = DateTime.now();
     final todayKey = '${now.year}_${now.month}_${now.day}';
     final todayStr =
@@ -229,11 +272,10 @@ class _ProgressScreenState extends State<ProgressScreen>
     dailyOxalate[todayStr] = prefs.getDouble('oxalate_$todayKey') ?? 0.0;
     dailyWater[todayStr]   = prefs.getDouble('water_$todayKey')   ?? 0.0;
 
-    // ── Total days logged (any day with oxalate > 0) ──────────────────────
-    final totalDaysLogged =
-        dailyOxalate.values.where((v) => v > 0).length;
+    // ── Total days logged ─────────────────────────────────────────────────
+    final totalDaysLogged = dailyOxalate.values.where((v) => v > 0).length;
 
-    // ── Current streak: scan FULL history backwards from today ────────────
+    // ── Current streak ────────────────────────────────────────────────────
     int currentStreak = 0;
     DateTime cursor = now;
     while (true) {
@@ -241,22 +283,18 @@ class _ProgressScreenState extends State<ProgressScreen>
           '${cursor.year}-${cursor.month.toString().padLeft(2, '0')}-${cursor.day.toString().padLeft(2, '0')}';
       final ox  = dailyOxalate[key] ?? 0.0;
       final wat = dailyWater[key]   ?? 0.0;
-      final oxGoalMet  = ox  > 0 && ox  <= _oxalateGoal;
-      final watGoalMet = wat >= _waterGoal;
-      if (oxGoalMet && watGoalMet) {
+      if (ox > 0 && ox <= _oxalateGoal && wat >= _waterGoal) {
         currentStreak++;
         cursor = cursor.subtract(const Duration(days: 1));
       } else {
         break;
       }
-      // Safety: don't loop more than 2 years back
       if (cursor.isBefore(now.subtract(const Duration(days: 730)))) break;
     }
 
-    // ── Longest consecutive streak across full history ────────────────────
-    int longestStreak = 0;
-    int runningStreak = 0;
-    // Sort all dates that have data
+    // ── Longest consecutive streak ────────────────────────────────────────
+    int longestStreak  = 0;
+    int runningStreak  = 0;
     final allDates = dailyOxalate.keys
         .where((k) => (dailyOxalate[k] ?? 0) > 0)
         .map((k) => DateTime.tryParse(k))
@@ -265,16 +303,11 @@ class _ProgressScreenState extends State<ProgressScreen>
       ..sort();
 
     for (int i = 0; i < allDates.length; i++) {
-      final ox  = dailyOxalate[
-              '${allDates[i].year}-${allDates[i].month.toString().padLeft(2, '0')}-${allDates[i].day.toString().padLeft(2, '0')}'] ??
-          0.0;
-      final wat = dailyWater[
-              '${allDates[i].year}-${allDates[i].month.toString().padLeft(2, '0')}-${allDates[i].day.toString().padLeft(2, '0')}'] ??
-          0.0;
-      final oxGoalMet  = ox  > 0 && ox  <= _oxalateGoal;
-      final watGoalMet = wat >= _waterGoal;
-
-      if (oxGoalMet && watGoalMet) {
+      final key =
+          '${allDates[i].year}-${allDates[i].month.toString().padLeft(2, '0')}-${allDates[i].day.toString().padLeft(2, '0')}';
+      final ox  = dailyOxalate[key] ?? 0.0;
+      final wat = dailyWater[key]   ?? 0.0;
+      if (ox > 0 && ox <= _oxalateGoal && wat >= _waterGoal) {
         if (i == 0) {
           runningStreak = 1;
         } else {
@@ -287,7 +320,7 @@ class _ProgressScreenState extends State<ProgressScreen>
       }
     }
 
-    // ── Best streak (persist if beaten) ──────────────────────────────────
+    // ── Best streak ───────────────────────────────────────────────────────
     int best = prefs.getInt('best_streak') ?? 0;
     if (currentStreak > best) {
       best = currentStreak;
@@ -298,8 +331,8 @@ class _ProgressScreenState extends State<ProgressScreen>
       await prefs.setInt('best_streak', best);
     }
 
-    // ── 7-day window for chart & averages ────────────────────────────────
-    final List<String> dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    // ── 7-day window for breakdown rows ──────────────────────────────────
+    const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     final List<Map<String, dynamic>> weeklyData = [];
     for (int i = 6; i >= 0; i--) {
       final day     = now.subtract(Duration(days: i));
@@ -308,16 +341,16 @@ class _ProgressScreenState extends State<ProgressScreen>
       final ox  = dailyOxalate[dateKey] ?? 0.0;
       final wat = dailyWater[dateKey]   ?? 0.0;
       weeklyData.add({
-        'label':        dayLabels[day.weekday % 7],
-        'date':         dateKey,
-        'oxalate':      ox,
-        'water':        wat,
+        'label':          dayLabels[day.weekday % 7],
+        'date':           dateKey,
+        'oxalate':        ox,
+        'water':          wat,
         'oxalateGoalMet': ox > 0 && ox <= _oxalateGoal,
         'waterGoalMet':   wat >= _waterGoal,
       });
     }
 
-    final daysWithOx = weeklyData.where((d) => (d['oxalate'] as double) > 0).toList();
+    final daysWithOx  = weeklyData.where((d) => (d['oxalate'] as double) > 0).toList();
     final avgOx = daysWithOx.isEmpty
         ? 0.0
         : daysWithOx.fold(0.0, (s, d) => s + (d['oxalate'] as double)) /
@@ -330,6 +363,8 @@ class _ProgressScreenState extends State<ProgressScreen>
             daysWithWat.length;
 
     setState(() {
+      _allOxalate              = dailyOxalate;
+      _allWater                = dailyWater;
       _weeklyData              = weeklyData;
       _currentStreak           = currentStreak;
       _bestStreak              = best;
@@ -340,39 +375,136 @@ class _ProgressScreenState extends State<ProgressScreen>
       _isLoading               = false;
     });
 
-    // Check for newly unlocked badges AFTER setState so _achievements is fresh
+    _rebuildChartBars();
     await _checkForNewUnlocks(prefs);
+  }
+
+  // ── Chart bar builder ─────────────────────────────────────────────────────
+  // Aggregates raw daily data into display bars based on the selected timeframe.
+  // 7D/30D → one bar per day
+  // 6M     → one bar per week (average of logged days)
+  // 1Y/2Y  → one bar per month (average of logged days)
+  void _rebuildChartBars() {
+    final now        = DateTime.now();
+    final totalDays  = _selectedTimeframe.days;
+    final isOxalate  = _selectedMetric == ChartMetric.oxalate;
+    final dataMap    = isOxalate ? _allOxalate : _allWater;
+    final goal       = isOxalate ? _oxalateGoal : _waterGoal;
+
+    List<_ChartBar> bars = [];
+
+    if (_selectedTimeframe == ChartTimeframe.d7 ||
+        _selectedTimeframe == ChartTimeframe.d30) {
+      // ── Daily bars ──────────────────────────────────────────────────────
+      const dayAbbr = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+      for (int i = totalDays - 1; i >= 0; i--) {
+        final day    = now.subtract(Duration(days: i));
+        final key    =
+            '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+        final value  = dataMap[key] ?? 0.0;
+        final String label = _selectedTimeframe == ChartTimeframe.d7
+            ? dayAbbr[day.weekday % 7]
+            : '${day.month}/${day.day}';
+        bars.add(_ChartBar(label: label, value: value, goal: goal));
+      }
+    } else if (_selectedTimeframe == ChartTimeframe.m6) {
+      // ── Weekly bars (last 26 weeks) ──────────────────────────────────
+      for (int w = 25; w >= 0; w--) {
+        final weekStart = now.subtract(Duration(days: (w + 1) * 7 - 1));
+        double total = 0;
+        int    count = 0;
+        for (int d = 0; d < 7; d++) {
+          final day = weekStart.add(Duration(days: d));
+          final key =
+              '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+          final v = dataMap[key] ?? 0.0;
+          if (v > 0) {
+            total += v;
+            count++;
+          }
+        }
+        final avg   = count > 0 ? total / count : 0.0;
+        final label = 'W${26 - w}';
+        bars.add(_ChartBar(label: label, value: avg, goal: goal));
+      }
+    } else {
+      // ── Monthly bars (1Y = 12 months, 2Y = 24 months) ────────────────
+      final months = _selectedTimeframe == ChartTimeframe.y1 ? 12 : 24;
+      for (int m = months - 1; m >= 0; m--) {
+        final targetMonth = DateTime(now.year, now.month - m, 1);
+        final yr  = targetMonth.year;
+        final mo  = targetMonth.month;
+        final daysInMonth =
+            DateUtils.getDaysInMonth(yr, mo);
+        double total = 0;
+        int    count = 0;
+        for (int d = 1; d <= daysInMonth; d++) {
+          final key =
+              '$yr-${mo.toString().padLeft(2, '0')}-${d.toString().padLeft(2, '0')}';
+          final v = dataMap[key] ?? 0.0;
+          if (v > 0) {
+            total += v;
+            count++;
+          }
+        }
+        final avg = count > 0 ? total / count : 0.0;
+        const monthAbbr = [
+          '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        ];
+        final label = monthAbbr[mo];
+        bars.add(_ChartBar(label: label, value: avg, goal: goal));
+      }
+    }
+
+    // ── Recompute range stats ─────────────────────────────────────────────
+    final logged = bars.where((b) => b.value > 0).toList();
+    final avgInRange = logged.isEmpty
+        ? 0.0
+        : logged.fold(0.0, (s, b) => s + b.value) / logged.length;
+
+    setState(() {
+      _chartBars          = bars;
+      _daysLoggedInRange  = logged.length;
+      if (_selectedMetric == ChartMetric.oxalate) {
+        _avgDailyOxalate = avgInRange;
+      } else {
+        _avgDailyWater = avgInRange;
+      }
+    });
+  }
+
+  // ── Switch timeframe ──────────────────────────────────────────────────────
+  void _onTimeframeChanged(ChartTimeframe tf) {
+    setState(() => _selectedTimeframe = tf);
+    _rebuildChartBars();
+  }
+
+  // ── Switch metric ─────────────────────────────────────────────────────────
+  void _onMetricChanged(ChartMetric m) {
+    setState(() => _selectedMetric = m);
+    _rebuildChartBars();
   }
 
   // ── Badge unlock detection ────────────────────────────────────────────────
   Future<void> _checkForNewUnlocks(SharedPreferences prefs) async {
     for (final badge in _achievements) {
-      final id       = badge['id'] as String;
-      final unlocked = badge['unlocked'] as bool;
+      final id          = badge['id']       as String;
+      final unlocked    = badge['unlocked'] as bool;
       final isMilestone = badge['milestone'] as bool;
 
       if (unlocked && !_celebratedBadges.contains(id)) {
-        // Mark as celebrated immediately so it only fires once
         _celebratedBadges.add(id);
         await prefs.setStringList(
             'celebrated_badges', _celebratedBadges.toList());
-
-        // Run the badge pop animation
         _triggerBadgePop(id);
-
-        // Short delay so user sees the screen before the modal/confetti
         await Future.delayed(const Duration(milliseconds: 400));
-
         if (!mounted) return;
-
         if (isMilestone) {
           _confettiController.play();
           HapticFeedback.heavyImpact();
         }
-
         _showAchievementModal(badge);
-
-        // Only show one celebration at a time
         break;
       }
     }
@@ -392,21 +524,19 @@ class _ProgressScreenState extends State<ProgressScreen>
 
     _badgeAnimControllers[id] = ctrl;
     _badgeScaleAnims[id]      = anim;
-
     ctrl.forward();
     setState(() {});
   }
 
   // ── Achievement modal ─────────────────────────────────────────────────────
   void _showAchievementModal(Map<String, dynamic> badge) {
-    final isMilestone = badge['milestone'] as bool;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (ctx) => _AchievementModal(
         badge: badge,
-        isMilestone: isMilestone,
+        isMilestone: badge['milestone'] as bool,
       ),
     );
   }
@@ -415,7 +545,8 @@ class _ProgressScreenState extends State<ProgressScreen>
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: accentTeal));
+      return const Center(
+          child: CircularProgressIndicator(color: accentTeal));
     }
 
     return Stack(
@@ -429,51 +560,65 @@ class _ProgressScreenState extends State<ProgressScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildStreakCard(
-                          '🔥 Current Streak', '$_currentStreak days',
-                          Colors.deepOrange)),
-                    const SizedBox(width: 12),
-                    Expanded(
+                // ── Streak / stat cards ─────────────────────────────────
+                Row(children: [
+                  Expanded(
+                      child: _buildStreakCard('🔥 Current Streak',
+                          '$_currentStreak days', Colors.deepOrange)),
+                  const SizedBox(width: 12),
+                  Expanded(
                       child: _buildStreakCard(
                           '🏆 Best Streak', '$_bestStreak days', accentGold)),
-                  ],
-                ),
+                ]),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatCard(
-                        '⚗️ Avg Oxalate',
-                        '${_avgDailyOxalate.toStringAsFixed(0)} mg/day',
-                        _avgDailyOxalate <= _oxalateGoal
-                            ? accentGreen
-                            : Colors.redAccent,
-                      ),
+                Row(children: [
+                  Expanded(
+                    child: _buildStatCard(
+                      '⚗️ Avg Oxalate',
+                      '${_avgDailyOxalate.toStringAsFixed(0)} mg/day',
+                      _avgDailyOxalate <= _oxalateGoal
+                          ? accentGreen
+                          : Colors.redAccent,
+                      subtitle: _selectedTimeframe.label,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildStatCard(
-                        '💧 Avg Water',
-                        '${_avgDailyWater.toStringAsFixed(0)} oz/day',
-                        _avgDailyWater >= _waterGoal
-                            ? accentTeal
-                            : Colors.orange,
-                      ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildStatCard(
+                      '💧 Avg Water',
+                      '${_avgDailyWater.toStringAsFixed(0)} oz/day',
+                      _avgDailyWater >= _waterGoal
+                          ? accentTeal
+                          : Colors.orange,
+                      subtitle: _selectedTimeframe.label,
                     ),
-                  ],
-                ),
+                  ),
+                ]),
+
                 const SizedBox(height: 20),
-                const Text('7-Day Oxalate Intake',
-                    style: TextStyle(
-                        color: textColor,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold)),
+
+                // ── Chart header ────────────────────────────────────────
+                _buildChartHeader(),
                 const SizedBox(height: 10),
+
+                // ── Timeframe selector ──────────────────────────────────
+                _buildTimeframeSelector(),
+                const SizedBox(height: 10),
+
+                // ── Metric toggle ───────────────────────────────────────
+                _buildMetricToggle(),
+                const SizedBox(height: 10),
+
+                // ── Chart ───────────────────────────────────────────────
                 _buildBarChart(),
+
+                // ── Days logged badge ───────────────────────────────────
+                const SizedBox(height: 8),
+                _buildDaysLoggedBadge(),
+
                 const SizedBox(height: 20),
+
+                // ── Daily breakdown (always 7-day) ──────────────────────
                 const Text('Daily Breakdown',
                     style: TextStyle(
                         color: textColor,
@@ -481,7 +626,10 @@ class _ProgressScreenState extends State<ProgressScreen>
                         fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
                 ..._weeklyData.map((day) => _buildDayRow(day)),
+
                 const SizedBox(height: 20),
+
+                // ── Achievements ────────────────────────────────────────
                 const Text('Achievements',
                     style: TextStyle(
                         color: textColor,
@@ -494,7 +642,7 @@ class _ProgressScreenState extends State<ProgressScreen>
           ),
         ),
 
-        // Confetti sits on top of everything, centred at top
+        // Confetti
         Align(
           alignment: Alignment.topCenter,
           child: ConfettiWidget(
@@ -515,6 +663,383 @@ class _ProgressScreenState extends State<ProgressScreen>
     );
   }
 
+  // ── Chart header ──────────────────────────────────────────────────────────
+  Widget _buildChartHeader() {
+    final isOxalate = _selectedMetric == ChartMetric.oxalate;
+    final String title = isOxalate
+        ? '${_selectedTimeframe.label} Oxalate Intake'
+        : '${_selectedTimeframe.label} Water Intake';
+    final String subtitle = _getTimeframeSubtitle();
+
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: const TextStyle(
+                      color: textColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold)),
+              Text(subtitle,
+                  style: const TextStyle(color: mutedColor, fontSize: 11)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _getTimeframeSubtitle() {
+    switch (_selectedTimeframe) {
+      case ChartTimeframe.d7:
+        return 'Daily values — last 7 days';
+      case ChartTimeframe.d30:
+        return 'Daily values — last 30 days';
+      case ChartTimeframe.m6:
+        return 'Weekly averages — last 6 months';
+      case ChartTimeframe.y1:
+        return 'Monthly averages — last 12 months';
+      case ChartTimeframe.y2:
+        return 'Monthly averages — last 2 years';
+    }
+  }
+
+  // ── Timeframe selector ────────────────────────────────────────────────────
+  Widget _buildTimeframeSelector() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.all(4),
+      child: Row(
+        children: ChartTimeframe.values.map((tf) {
+          final selected = tf == _selectedTimeframe;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => _onTimeframeChanged(tf),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: selected ? accentTeal : Colors.transparent,
+                  borderRadius: BorderRadius.circular(9),
+                  boxShadow: selected
+                      ? [
+                          BoxShadow(
+                              color: accentTeal.withValues(alpha: 0.25),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2))
+                        ]
+                      : [],
+                ),
+                child: Text(
+                  tf.label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: selected ? Colors.white : mutedColor,
+                    fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  // ── Metric toggle ─────────────────────────────────────────────────────────
+  Widget _buildMetricToggle() {
+    return Row(
+      children: [
+        _metricChip(
+          label: '⚗️ Oxalate',
+          selected: _selectedMetric == ChartMetric.oxalate,
+          onTap: () => _onMetricChanged(ChartMetric.oxalate),
+          activeColor: accentTeal,
+        ),
+        const SizedBox(width: 8),
+        _metricChip(
+          label: '💧 Water',
+          selected: _selectedMetric == ChartMetric.water,
+          onTap: () => _onMetricChanged(ChartMetric.water),
+          activeColor: barWater,
+        ),
+      ],
+    );
+  }
+
+  Widget _metricChip({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+    required Color activeColor,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? activeColor.withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? activeColor : borderColor,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? activeColor : mutedColor,
+            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Bar chart ─────────────────────────────────────────────────────────────
+  Widget _buildBarChart() {
+    if (_chartBars.isEmpty) {
+      return _buildEmptyChart();
+    }
+
+    final isOxalate = _selectedMetric == ChartMetric.oxalate;
+    final goal      = isOxalate ? _oxalateGoal : _waterGoal;
+    final maxValue  = _chartBars.fold(0.0, (m, b) => b.value > m ? b.value : m);
+    final chartMax  = maxValue < goal ? goal * 1.2 : maxValue * 1.2;
+
+    // For longer timeframes, show fewer x-axis labels to avoid crowding
+    final showEveryN = _selectedTimeframe == ChartTimeframe.d30
+        ? 5
+        : _selectedTimeframe == ChartTimeframe.m6
+            ? 4
+            : _selectedTimeframe == ChartTimeframe.y2
+                ? 2
+                : 1;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 10),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2))
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Legend
+          Row(children: [
+            _legendDot(
+                isOxalate ? barOk : barWater,
+                isOxalate ? 'Under goal' : 'Met goal'),
+            const SizedBox(width: 12),
+            _legendDot(
+                isOxalate ? barOver : barWaterLow,
+                isOxalate ? 'Over goal' : 'Under goal'),
+          ]),
+          const SizedBox(height: 10),
+
+          // Bars
+          SizedBox(
+            height: 140,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: List.generate(_chartBars.length, (idx) {
+                final bar       = _chartBars[idx];
+                final barH      = chartMax > 0
+                    ? (bar.value / chartMax) * 110
+                    : 0.0;
+                final goalLineH = chartMax > 0
+                    ? (goal / chartMax) * 110
+                    : 0.0;
+                Color barColor;
+                if (bar.value == 0) {
+                  barColor = barEmpty;
+                } else if (isOxalate) {
+                  barColor = bar.value > goal ? barOver : barOk;
+                } else {
+                  barColor = bar.value >= goal ? barWater : barWaterLow;
+                }
+
+                final showLabel = idx % showEveryN == 0;
+
+                return Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      // Value label (only on short timeframes)
+                      if (bar.value > 0 &&
+                          (_selectedTimeframe == ChartTimeframe.d7 ||
+                              _selectedTimeframe == ChartTimeframe.d30))
+                        Text(
+                          bar.value >= 1000
+                              ? '${(bar.value / 1000).toStringAsFixed(1)}k'
+                              : bar.value.toStringAsFixed(0),
+                          style: const TextStyle(
+                              color: mutedColor, fontSize: 7),
+                        ),
+                      const SizedBox(height: 2),
+                      Stack(
+                        alignment: Alignment.bottomCenter,
+                        children: [
+                          SizedBox(
+                            height: 115,
+                            child: Align(
+                              alignment: Alignment.bottomCenter,
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 350),
+                                curve: Curves.easeOut,
+                                width: _selectedTimeframe == ChartTimeframe.d7
+                                    ? 22
+                                    : _selectedTimeframe ==
+                                            ChartTimeframe.d30
+                                        ? 8
+                                        : _selectedTimeframe ==
+                                                ChartTimeframe.m6
+                                            ? 8
+                                            : 12,
+                                height: barH.clamp(2.0, 110.0),
+                                decoration: BoxDecoration(
+                                  color: barColor,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Goal line
+                          Positioned(
+                            bottom: goalLineH.clamp(0.0, 110.0),
+                            child: Container(
+                              width: _selectedTimeframe == ChartTimeframe.d7
+                                  ? 26
+                                  : 10,
+                              height: 1.5,
+                              color: goalLine.withValues(alpha: 0.45),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      if (showLabel)
+                        Text(bar.label,
+                            style: const TextStyle(
+                                color: mutedColor, fontSize: 9))
+                      else
+                        const SizedBox(height: 11),
+                    ],
+                  ),
+                );
+              }),
+            ),
+          ),
+
+          // Goal line legend
+          const SizedBox(height: 6),
+          Row(children: [
+            Container(width: 18, height: 2, color: goalLine.withValues(alpha: 0.45)),
+            const SizedBox(width: 4),
+            Text(
+              isOxalate
+                  ? 'Goal: ${_oxalateGoal.toStringAsFixed(0)} mg'
+                  : 'Goal: ${_waterGoal.toStringAsFixed(0)} oz',
+              style: const TextStyle(color: mutedColor, fontSize: 10),
+            ),
+          ]),
+        ],
+      ),
+    );
+  }
+
+  Widget _legendDot(Color color, String label) {
+    return Row(children: [
+      Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+              color: color, borderRadius: BorderRadius.circular(3))),
+      const SizedBox(width: 4),
+      Text(label, style: const TextStyle(color: mutedColor, fontSize: 11)),
+    ]);
+  }
+
+  Widget _buildEmptyChart() {
+    return Container(
+      height: 160,
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
+      ),
+      child: const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.bar_chart_rounded, color: mutedColor, size: 36),
+            SizedBox(height: 8),
+            Text('No data for this period',
+                style: TextStyle(color: mutedColor, fontSize: 13)),
+            SizedBox(height: 4),
+            Text('Start logging to see your trends',
+                style: TextStyle(color: mutedColor, fontSize: 11)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Days logged badge ─────────────────────────────────────────────────────
+  Widget _buildDaysLoggedBadge() {
+    final totalBars = _chartBars.length;
+    if (totalBars == 0) return const SizedBox.shrink();
+
+    final percent = totalBars > 0
+        ? (_daysLoggedInRange / totalBars * 100).clamp(0, 100).toInt()
+        : 0;
+
+    // Label adjusts for aggregated views
+    final unitLabel = (_selectedTimeframe == ChartTimeframe.m6)
+        ? 'weeks'
+        : (_selectedTimeframe == ChartTimeframe.y1 ||
+                _selectedTimeframe == ChartTimeframe.y2)
+            ? 'months'
+            : 'days';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: accentTeal.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: accentTeal.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.calendar_today_rounded,
+              color: accentTeal, size: 16),
+          const SizedBox(width: 8),
+          Text(
+            '$_daysLoggedInRange of $totalBars $unitLabel logged  •  $percent%',
+            style: const TextStyle(
+                color: accentTeal, fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Streak card ───────────────────────────────────────────────────────────
   Widget _buildStreakCard(String title, String value, Color color) {
     return Container(
@@ -530,23 +1055,19 @@ class _ProgressScreenState extends State<ProgressScreen>
               offset: const Offset(0, 2))
         ],
       ),
-      child: Column(
-        children: [
-          Text(title,
-              style: const TextStyle(color: mutedColor, fontSize: 12)),
-          const SizedBox(height: 6),
-          Text(value,
-              style: TextStyle(
-                  color: color,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold)),
-        ],
-      ),
+      child: Column(children: [
+        Text(title, style: const TextStyle(color: mutedColor, fontSize: 12)),
+        const SizedBox(height: 6),
+        Text(value,
+            style: TextStyle(
+                color: color, fontSize: 22, fontWeight: FontWeight.bold)),
+      ]),
     );
   }
 
   // ── Stat card ─────────────────────────────────────────────────────────────
-  Widget _buildStatCard(String title, String value, Color color) {
+  Widget _buildStatCard(String title, String value, Color color,
+      {String? subtitle}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -560,146 +1081,29 @@ class _ProgressScreenState extends State<ProgressScreen>
               offset: const Offset(0, 2))
         ],
       ),
-      child: Column(
-        children: [
-          Text(title,
-              style: const TextStyle(color: mutedColor, fontSize: 12)),
-          const SizedBox(height: 6),
-          Text(value,
-              style: TextStyle(
-                  color: color,
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold)),
+      child: Column(children: [
+        Text(title, style: const TextStyle(color: mutedColor, fontSize: 12)),
+        const SizedBox(height: 6),
+        Text(value,
+            style: TextStyle(
+                color: color, fontSize: 15, fontWeight: FontWeight.bold)),
+        if (subtitle != null) ...[
+          const SizedBox(height: 2),
+          Text(subtitle,
+              style: const TextStyle(color: mutedColor, fontSize: 10)),
         ],
-      ),
-    );
-  }
-
-  // ── Bar chart ─────────────────────────────────────────────────────────────
-  Widget _buildBarChart() {
-    final maxOxalate = _weeklyData.fold(
-        0.0,
-        (max, d) =>
-            (d['oxalate'] as double) > max ? d['oxalate'] as double : max);
-    final chartMax =
-        maxOxalate < _oxalateGoal ? _oxalateGoal * 1.2 : maxOxalate * 1.2;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
-      ),
-      height: 200,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                      color: barOk,
-                      borderRadius: BorderRadius.circular(3))),
-              const SizedBox(width: 4),
-              const Text('Under goal',
-                  style: TextStyle(color: mutedColor, fontSize: 11)),
-              const SizedBox(width: 12),
-              Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                      color: barOver,
-                      borderRadius: BorderRadius.circular(3))),
-              const SizedBox(width: 4),
-              const Text('Over goal',
-                  style: TextStyle(color: mutedColor, fontSize: 11)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: _weeklyData.map((day) {
-                final oxalate = day['oxalate'] as double;
-                final barHeight =
-                    chartMax > 0 ? (oxalate / chartMax) * 100 : 0.0;
-                final isOverGoal = oxalate > _oxalateGoal;
-                final Color barColor = oxalate == 0
-                    ? barEmpty
-                    : isOverGoal
-                        ? barOver
-                        : barOk;
-
-                return Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      if (oxalate > 0)
-                        Text(oxalate.toStringAsFixed(0),
-                            style: const TextStyle(
-                                color: mutedColor, fontSize: 8)),
-                      const SizedBox(height: 2),
-                      Stack(
-                        alignment: Alignment.bottomCenter,
-                        children: [
-                          SizedBox(
-                            height: 80,
-                            child: Align(
-                              alignment: Alignment.bottomCenter,
-                              child: Container(
-                                width: 22,
-                                height: barHeight.clamp(2.0, 80.0),
-                                decoration: BoxDecoration(
-                                  color: barColor,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            bottom: chartMax > 0
-                                ? (_oxalateGoal / chartMax) * 100
-                                : 0,
-                            child: Container(
-                              width: 26,
-                              height: 1.5,
-                              color: goalLine.withValues(alpha: 0.5),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(day['label'],
-                          style: const TextStyle(
-                              color: mutedColor, fontSize: 10)),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
+      ]),
     );
   }
 
   // ── Day row ───────────────────────────────────────────────────────────────
   Widget _buildDayRow(Map<String, dynamic> day) {
-    final oxalate    = day['oxalate']      as double;
-    final water      = day['water']        as double;
-    final oxGoalMet  = day['oxalateGoalMet'] as bool;
-    final waterGoalMet = day['waterGoalMet'] as bool;
-    final bothMet    = oxGoalMet && waterGoalMet;
-    final noData     = oxalate == 0 && water == 0;
+    final oxalate      = day['oxalate']       as double;
+    final water        = day['water']         as double;
+    final oxGoalMet    = day['oxalateGoalMet'] as bool;
+    final waterGoalMet = day['waterGoalMet']   as bool;
+    final bothMet      = oxGoalMet && waterGoalMet;
+    final noData       = oxalate == 0 && water == 0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -756,104 +1160,92 @@ class _ProgressScreenState extends State<ProgressScreen>
             const SizedBox(width: 14),
             Expanded(
               child: noData
-                  ? Row(
-                      children: [
-                        Icon(Icons.remove_circle_outline,
-                            color: mutedColor.withValues(alpha: 0.5),
-                            size: 16),
-                        const SizedBox(width: 6),
-                        const Text('No data logged',
-                            style: TextStyle(
-                                color: mutedColor,
-                                fontSize: 13,
-                                fontStyle: FontStyle.italic)),
-                      ],
-                    )
-                  : Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('OXALATE',
-                                  style: TextStyle(
-                                      color: mutedColor,
-                                      fontSize: 9,
-                                      letterSpacing: 1.2,
-                                      fontWeight: FontWeight.w600)),
-                              const SizedBox(height: 3),
-                              Text(
-                                '${oxalate.toStringAsFixed(0)} mg',
+                  ? Row(children: [
+                      Icon(Icons.remove_circle_outline,
+                          color: mutedColor.withValues(alpha: 0.5), size: 16),
+                      const SizedBox(width: 6),
+                      const Text('No data logged',
+                          style: TextStyle(
+                              color: mutedColor,
+                              fontSize: 13,
+                              fontStyle: FontStyle.italic)),
+                    ])
+                  : Row(children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('OXALATE',
                                 style: TextStyle(
-                                    color: oxGoalMet
-                                        ? accentGreen
-                                        : Colors.redAccent,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold),
+                                    color: mutedColor,
+                                    fontSize: 9,
+                                    letterSpacing: 1.2,
+                                    fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 3),
+                            Text(
+                              '${oxalate.toStringAsFixed(0)} mg',
+                              style: TextStyle(
+                                  color: oxGoalMet
+                                      ? accentGreen
+                                      : Colors.redAccent,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: (oxalate / _oxalateGoal).clamp(0.0, 1.0),
+                                minHeight: 4,
+                                backgroundColor: borderColor,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    oxGoalMet ? accentGreen : Colors.redAccent),
                               ),
-                              const SizedBox(height: 4),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: LinearProgressIndicator(
-                                  value: (oxalate / _oxalateGoal)
-                                      .clamp(0.0, 1.0),
-                                  minHeight: 4,
-                                  backgroundColor: borderColor,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      oxGoalMet
-                                          ? accentGreen
-                                          : Colors.redAccent),
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        Container(
-                            width: 1,
-                            height: 40,
-                            margin: const EdgeInsets.symmetric(horizontal: 12),
-                            color: borderColor),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('WATER',
-                                  style: TextStyle(
-                                      color: mutedColor,
-                                      fontSize: 9,
-                                      letterSpacing: 1.2,
-                                      fontWeight: FontWeight.w600)),
-                              const SizedBox(height: 3),
-                              Text(
-                                '${water.toStringAsFixed(0)} oz',
+                      ),
+                      Container(
+                          width: 1,
+                          height: 40,
+                          margin: const EdgeInsets.symmetric(horizontal: 12),
+                          color: borderColor),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('WATER',
                                 style: TextStyle(
-                                    color: waterGoalMet
-                                        ? accentTeal
-                                        : Colors.orange,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold),
+                                    color: mutedColor,
+                                    fontSize: 9,
+                                    letterSpacing: 1.2,
+                                    fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 3),
+                            Text(
+                              '${water.toStringAsFixed(0)} oz',
+                              style: TextStyle(
+                                  color: waterGoalMet ? accentTeal : Colors.orange,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: (water / _waterGoal).clamp(0.0, 1.0),
+                                minHeight: 4,
+                                backgroundColor: borderColor,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    waterGoalMet ? accentTeal : Colors.orange),
                               ),
-                              const SizedBox(height: 4),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: LinearProgressIndicator(
-                                  value:
-                                      (water / _waterGoal).clamp(0.0, 1.0),
-                                  minHeight: 4,
-                                  backgroundColor: borderColor,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      waterGoalMet
-                                          ? accentTeal
-                                          : Colors.orange),
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ]),
             ),
-            if (!noData) ...[const SizedBox(width: 10),
+            if (!noData) ...[
+              const SizedBox(width: 10),
               Container(
                 width: 32,
                 height: 32,
@@ -864,9 +1256,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
-                  bothMet
-                      ? Icons.check_circle
-                      : Icons.warning_amber_rounded,
+                  bothMet ? Icons.check_circle : Icons.warning_amber_rounded,
                   color: bothMet ? accentGreen : Colors.orange,
                   size: 20,
                 ),
@@ -882,12 +1272,11 @@ class _ProgressScreenState extends State<ProgressScreen>
   Widget _buildAchievements() {
     return Column(
       children: _achievements.map((a) {
-        final id        = a['id']       as String;
-        final unlocked  = a['unlocked'] as bool;
-        final progress  = a['progress'] as String?;
+        final id          = a['id']       as String;
+        final unlocked    = a['unlocked'] as bool;
+        final progress    = a['progress'] as String?;
         final isMilestone = a['milestone'] as bool;
-
-        final scaleAnim = _badgeScaleAnims[id];
+        final scaleAnim   = _badgeScaleAnims[id];
 
         Widget card = Container(
           margin: const EdgeInsets.only(bottom: 8),
@@ -895,8 +1284,8 @@ class _ProgressScreenState extends State<ProgressScreen>
           decoration: BoxDecoration(
             color: unlocked
                 ? (isMilestone
-                    ? const Color(0xFFFFF8E1)   // warm gold tint for milestones
-                    : const Color(0xFFF0FAF4))  // green tint for regulars
+                    ? const Color(0xFFFFF8E1)
+                    : const Color(0xFFF0FAF4))
                 : cardColor,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
@@ -915,12 +1304,13 @@ class _ProgressScreenState extends State<ProgressScreen>
           ),
           child: Row(
             children: [
-              // Emoji — greyed out when locked
               Text(
                 a['icon'] as String,
                 style: TextStyle(
                   fontSize: 28,
-                  color: unlocked ? null : Colors.grey.withValues(alpha: 0.35),
+                  color: unlocked
+                      ? null
+                      : Colors.grey.withValues(alpha: 0.35),
                 ),
               ),
               const SizedBox(width: 14),
@@ -928,26 +1318,22 @@ class _ProgressScreenState extends State<ProgressScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      a['title'] as String,
-                      style: TextStyle(
-                          color: unlocked ? textColor : mutedColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14),
-                    ),
-                    Text(a['desc'] as String,
-                        style:
-                            const TextStyle(color: mutedColor, fontSize: 12)),
-                    // Progress hint for locked badges
-                    if (!unlocked && progress != null) ...[const SizedBox(height: 4),
-                      Text(
-                        progress,
+                    Text(a['title'] as String,
                         style: TextStyle(
-                          color: accentTeal.withValues(alpha: 0.8),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                            color: unlocked ? textColor : mutedColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14)),
+                    Text(a['desc'] as String,
+                        style: const TextStyle(
+                            color: mutedColor, fontSize: 12)),
+                    if (!unlocked && progress != null) ...[
+                      const SizedBox(height: 4),
+                      Text(progress,
+                          style: TextStyle(
+                            color: accentTeal.withValues(alpha: 0.8),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          )),
                     ],
                   ],
                 ),
@@ -964,7 +1350,6 @@ class _ProgressScreenState extends State<ProgressScreen>
           ),
         );
 
-        // Wrap in scale animation if one is active for this badge
         if (scaleAnim != null) {
           card = AnimatedBuilder(
             animation: scaleAnim,
@@ -973,22 +1358,25 @@ class _ProgressScreenState extends State<ProgressScreen>
             child: card,
           );
         }
-
         return card;
       }).toList(),
     );
   }
 }
 
+// ── Chart bar data model ──────────────────────────────────────────────────────
+class _ChartBar {
+  final String label;
+  final double value;
+  final double goal;
+  const _ChartBar({required this.label, required this.value, required this.goal});
+}
+
 // ── Achievement Unlock Modal ──────────────────────────────────────────────────
 class _AchievementModal extends StatefulWidget {
   final Map<String, dynamic> badge;
   final bool isMilestone;
-
-  const _AchievementModal({
-    required this.badge,
-    required this.isMilestone,
-  });
+  const _AchievementModal({required this.badge, required this.isMilestone});
 
   @override
   State<_AchievementModal> createState() => _AchievementModalState();
@@ -1039,31 +1427,21 @@ class _AchievementModalState extends State<_AchievementModal>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Drag handle
             Container(
-              width: 40,
-              height: 4,
+              width: 40, height: 4,
               margin: const EdgeInsets.only(bottom: 20),
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2)),
             ),
-
-            // Animated emoji
             ScaleTransition(
               scale: _scaleAnim,
-              child: Text(
-                badge['icon'] as String,
-                style: const TextStyle(fontSize: 72),
-              ),
+              child: Text(badge['icon'] as String,
+                  style: const TextStyle(fontSize: 72)),
             ),
             const SizedBox(height: 12),
-
-            // "Achievement Unlocked!" label
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
                 color: isMilestone
                     ? const Color(0xFFD4A020).withValues(alpha: 0.12)
@@ -1082,24 +1460,18 @@ class _AchievementModalState extends State<_AchievementModal>
               ),
             ),
             const SizedBox(height: 14),
-
-            Text(
-              badge['title'] as String,
-              style: const TextStyle(
-                  color: Color(0xFF2C2C2C),
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
+            Text(badge['title'] as String,
+                style: const TextStyle(
+                    color: Color(0xFF2C2C2C),
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center),
             const SizedBox(height: 6),
-            Text(
-              badge['desc'] as String,
-              style: const TextStyle(color: Color(0xFF888888), fontSize: 14),
-              textAlign: TextAlign.center,
-            ),
+            Text(badge['desc'] as String,
+                style:
+                    const TextStyle(color: Color(0xFF888888), fontSize: 14),
+                textAlign: TextAlign.center),
             const SizedBox(height: 24),
-
-            // Dismiss button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -1111,13 +1483,12 @@ class _AchievementModalState extends State<_AchievementModal>
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
+                      borderRadius: BorderRadius.circular(14)),
                   elevation: 0,
                 ),
                 child: const Text('Awesome! 🙌',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16)),
               ),
             ),
           ],
