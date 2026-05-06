@@ -2,9 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../database_helper.dart';
-import '../theme/app_theme.dart';
+import '../app_theme.dart';
 import 'dart:math' as math;
-import 'settings_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -54,7 +53,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
     final ampm = date.hour >= 12 ? 'PM' : 'AM';
     final min = date.minute.toString().padLeft(2, '0');
-    return '${days[date.weekday - 1]}, ${months[date.month - 1]} ${date.day} \u00b7 $hour:$min $ampm';
+    return '${days[date.weekday - 1]}, ${months[date.month - 1]} ${date.day} · $hour:$min $ampm';
   }
 
   String _monthKey(String isoDate) {
@@ -101,9 +100,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Map<String, List<Map<String, dynamic>>> get _groupedEntries {
-    final filtered = _filteredEntries;
     final Map<String, List<Map<String, dynamic>>> groups = {};
-    for (final entry in filtered) {
+    for (final entry in _filteredEntries) {
       final key = _monthKey(entry['date'] as String);
       groups.putIfAbsent(key, () => []).add(entry);
     }
@@ -130,7 +128,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }).toList();
   }
 
-  // ── CHARTS ───────────────────────────────────────────────────────────────────
+  // ── CHARTS ──────────────────────────────────────────────────────────────────
 
   Widget _buildPainLineChart(Color mutedColor, Color borderCol) {
     final data = _lastN(10);
@@ -138,9 +136,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
       return SizedBox(
         height: 120,
         child: Center(
-          child: Text('Log at least 2 entries to see your pain trend.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: mutedColor, fontSize: 13)),
+          child: Text(
+            'Log at least 2 entries to see your pain trend.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: mutedColor, fontSize: 13),
+          ),
         ),
       );
     }
@@ -150,61 +150,59 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     return SizedBox(
       height: 200,
-      child: LineChart(
-        LineChartData(
-          minY: 0, maxY: 10,
-          gridData: FlGridData(
-            show: true, drawVerticalLine: false, horizontalInterval: 2,
-            getDrawingHorizontalLine: (_) => FlLine(
-              color: borderCol.withValues(alpha: 0.6), strokeWidth: 1, dashArray: [4, 4]),
-          ),
-          borderData: FlBorderData(show: false),
-          titlesData: FlTitlesData(
-            leftTitles: AxisTitles(sideTitles: SideTitles(
-              showTitles: true, interval: 2, reservedSize: 28,
-              getTitlesWidget: (v, _) => Text('${v.toInt()}',
-                  style: TextStyle(fontSize: 10, color: mutedColor)),
-            )),
-            bottomTitles: AxisTitles(sideTitles: SideTitles(
-              showTitles: true, reservedSize: 22,
-              getTitlesWidget: (v, _) {
-                final idx = v.toInt();
-                if (idx < 0 || idx >= data.length) return const SizedBox.shrink();
-                return Text(_shortMonth(data[idx]['date'] as String),
-                    style: TextStyle(fontSize: 9, color: mutedColor));
-              },
-            )),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          ),
-          lineBarsData: [LineChartBarData(
-            spots: spots, isCurved: true, curveSmoothness: 0.3,
-            color: AppColors.primary, barWidth: 2.5, isStrokeCapRound: true,
-            dotData: FlDotData(show: true, getDotPainter: (spot, _, __, ___) =>
-                FlDotCirclePainter(
-                  radius: 4, color: _painColor(spot.y.toInt()),
-                  strokeColor: Colors.white, strokeWidth: 1.5)),
-            belowBarData: BarAreaData(
-              show: true,
-              gradient: LinearGradient(
-                begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                colors: [
-                  AppColors.primary.withValues(alpha: 0.18),
-                  AppColors.primary.withValues(alpha: 0.0),
-                ],
-              ),
+      child: LineChart(LineChartData(
+        minY: 0, maxY: 10,
+        gridData: FlGridData(
+          show: true, drawVerticalLine: false, horizontalInterval: 2,
+          getDrawingHorizontalLine: (_) => FlLine(
+            color: borderCol.withValues(alpha: 0.6), strokeWidth: 1, dashArray: [4, 4]),
+        ),
+        borderData: FlBorderData(show: false),
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(sideTitles: SideTitles(
+            showTitles: true, interval: 2, reservedSize: 28,
+            getTitlesWidget: (v, _) => Text('${v.toInt()}',
+                style: TextStyle(fontSize: 10, color: mutedColor)),
+          )),
+          bottomTitles: AxisTitles(sideTitles: SideTitles(
+            showTitles: true, reservedSize: 22,
+            getTitlesWidget: (v, _) {
+              final idx = v.toInt();
+              if (idx < 0 || idx >= data.length) return const SizedBox.shrink();
+              return Text(_shortMonth(data[idx]['date'] as String),
+                  style: TextStyle(fontSize: 9, color: mutedColor));
+            },
+          )),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        ),
+        lineBarsData: [LineChartBarData(
+          spots: spots, isCurved: true, curveSmoothness: 0.3,
+          color: AppColors.primary, barWidth: 2.5, isStrokeCapRound: true,
+          dotData: FlDotData(show: true, getDotPainter: (spot, _, __, ___) =>
+              FlDotCirclePainter(
+                radius: 4, color: _painColor(spot.y.toInt()),
+                strokeColor: Colors.white, strokeWidth: 1.5)),
+          belowBarData: BarAreaData(
+            show: true,
+            gradient: LinearGradient(
+              begin: Alignment.topCenter, end: Alignment.bottomCenter,
+              colors: [
+                AppColors.primary.withValues(alpha: 0.18),
+                AppColors.primary.withValues(alpha: 0.0),
+              ],
             ),
-          )],
-          lineTouchData: LineTouchData(
-            touchTooltipData: LineTouchTooltipData(
-              getTooltipItems: (spots) => spots.map((s) => LineTooltipItem(
-                'Pain: ${s.y.toInt()}',
-                TextStyle(color: _painColor(s.y.toInt()), fontWeight: FontWeight.bold, fontSize: 12),
-              )).toList(),
-            ),
+          ),
+        )],
+        lineTouchData: LineTouchData(
+          touchTooltipData: LineTouchTooltipData(
+            getTooltipItems: (spots) => spots.map((s) => LineTooltipItem(
+              'Pain: ${s.y.toInt()}',
+              TextStyle(color: _painColor(s.y.toInt()), fontWeight: FontWeight.bold, fontSize: 12),
+            )).toList(),
           ),
         ),
-      ),
+      )),
     );
   }
 
@@ -262,8 +260,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _buildChartsSection(bool isDark, Color surfaceCol, Color borderCol, Color mutedColor) {
+  Widget _buildChartsSection(BuildContext context) {
     if (_entries.isEmpty) return const SizedBox.shrink();
+    final surfaceCol = AppDynamic.surface(context);
+    final borderCol  = AppDynamic.border(context);
+    final mutedColor = AppDynamic.textSecond(context);
+    final bgColor    = AppDynamic.background(context);
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       padding: const EdgeInsets.all(16),
@@ -272,16 +275,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: borderCol),
         boxShadow: [BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 10, offset: const Offset(0, 3))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            _chartTabBtn('pain', Icons.show_chart_rounded, 'Pain Trend', isDark, borderCol, mutedColor),
+            _chartTabBtn(context, 'pain', Icons.show_chart_rounded, 'Pain Trend', bgColor, borderCol, mutedColor),
             const SizedBox(width: 8),
-            _chartTabBtn('entries', Icons.bar_chart_rounded, 'Monthly', isDark, borderCol, mutedColor),
+            _chartTabBtn(context, 'entries', Icons.bar_chart_rounded, 'Monthly', bgColor, borderCol, mutedColor),
           ]),
           const SizedBox(height: 16),
           AnimatedSwitcher(
@@ -293,8 +296,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
           const SizedBox(height: 8),
           Text(
             _chartTab == 'pain'
-                ? 'Last 10 journal entries \u00b7 Tap a dot for details'
-                : 'Journal entries per month \u00b7 Last 6 months',
+                ? 'Last 10 journal entries · Tap a dot for details'
+                : 'Journal entries per month · Last 6 months',
             style: TextStyle(fontSize: 10, color: mutedColor),
           ),
         ],
@@ -302,10 +305,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _chartTabBtn(String id, IconData icon, String label,
-      bool isDark, Color borderCol, Color mutedColor) {
+  Widget _chartTabBtn(BuildContext context, String id, IconData icon, String label,
+      Color bgColor, Color borderCol, Color mutedColor) {
     final active = _chartTab == id;
-    final bgColor = isDark ? AppColors.darkBackground : AppColors.background;
     return GestureDetector(
       onTap: () => setState(() => _chartTab = id),
       child: AnimatedContainer(
@@ -314,27 +316,26 @@ class _HistoryScreenState extends State<HistoryScreen> {
         decoration: BoxDecoration(
           color: active ? AppColors.primary.withValues(alpha: 0.15) : bgColor,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-              color: active ? AppColors.primary : borderCol, width: 1.5),
+          border: Border.all(color: active ? AppColors.primary : borderCol, width: 1.5),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: active ? AppColors.primary : mutedColor),
-            const SizedBox(width: 5),
-            Text(label, style: TextStyle(
-                fontSize: 12, fontWeight: FontWeight.w600,
-                color: active ? AppColors.primary : mutedColor)),
-          ],
-        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 14, color: active ? AppColors.primary : mutedColor),
+          const SizedBox(width: 5),
+          Text(label, style: TextStyle(
+              fontSize: 12, fontWeight: FontWeight.w600,
+              color: active ? AppColors.primary : mutedColor)),
+        ]),
       ),
     );
   }
 
-  // ── STAT CARDS ───────────────────────────────────────────────────────────────
+  // ── STAT CARDS ──────────────────────────────────────────────────────────────
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color,
-      Color surfaceCol, Color borderCol) {
+  Widget _buildStatCard(BuildContext context, String label, String value, IconData icon, Color color) {
+    final surfaceCol = AppDynamic.surface(context);
+    final borderCol  = AppDynamic.border(context);
+    final mutedColor = AppDynamic.textSecond(context);
+
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
@@ -343,7 +344,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: borderCol),
           boxShadow: [BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 2))],
+              color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))],
         ),
         child: Column(children: [
           Container(
@@ -355,43 +356,45 @@ class _HistoryScreenState extends State<HistoryScreen> {
           Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
           const SizedBox(height: 2),
           Text(label, textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.w500)),
+              style: TextStyle(fontSize: 10, color: mutedColor, fontWeight: FontWeight.w500)),
         ]),
       ),
     );
   }
 
-  Widget _buildStatsSection(Color surfaceCol, Color borderCol, Color mutedColor) {
+  Widget _buildStatsSection(BuildContext context) {
     final s = _stats;
     if (s['total'] == 0) return const SizedBox.shrink();
     final avg = (s['avgPain'] as double).toStringAsFixed(1);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('OVERVIEW', style: TextStyle(
-              fontSize: 11, fontWeight: FontWeight.w700, color: mutedColor, letterSpacing: 1.1)),
-          const SizedBox(height: 8),
-          Row(children: [
-            _buildStatCard('Entries', '${s['total']}', Icons.edit_note_rounded, AppColors.primary, surfaceCol, borderCol),
-            const SizedBox(width: 8),
-            _buildStatCard('Avg Pain', avg, Icons.show_chart_rounded, AppColors.warning, surfaceCol, borderCol),
-            const SizedBox(width: 8),
-            _buildStatCard('Stones\nPassed', '${s['stonesPassed']}', Icons.diamond_outlined, AppColors.success, surfaceCol, borderCol),
-            const SizedBox(width: 8),
-            _buildStatCard('Days\nTracked', '${s['streak']}', Icons.calendar_today_outlined, AppColors.primary, surfaceCol, borderCol),
-          ]),
-        ],
-      ),
+    final mutedColor = AppDynamic.textSecond(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('OVERVIEW', style: TextStyle(
+            fontSize: 11, fontWeight: FontWeight.w700, color: mutedColor, letterSpacing: 1.1)),
+        const SizedBox(height: 8),
+        Row(children: [
+          _buildStatCard(context, 'Entries', '${s['total']}', Icons.edit_note_rounded, AppColors.primary),
+          const SizedBox(width: 8),
+          _buildStatCard(context, 'Avg Pain', avg, Icons.show_chart_rounded, AppColors.warning),
+          const SizedBox(width: 8),
+          _buildStatCard(context, 'Stones\nPassed', '${s['stonesPassed']}', Icons.diamond_outlined, AppColors.success),
+          const SizedBox(width: 8),
+          _buildStatCard(context, 'Days\nTracked', '${s['streak']}', Icons.calendar_today_outlined, AppColors.primary),
+        ]),
+      ],
     );
   }
 
-  // ── FILTER BAR ────────────────────────────────────────────────────────────────
+  // ── FILTER BAR ──────────────────────────────────────────────────────────────
 
-  Widget _buildFilterBar(bool isDark, Color borderCol, Color mutedColor) {
+  Widget _buildFilterBar(BuildContext context) {
     final filters = ['All', 'Mild', 'Moderate', 'Severe', 'Stone'];
-    final bgColor = isDark ? AppColors.darkBackground : AppColors.background;
+    final bgColor    = AppDynamic.background(context);
+    final borderCol  = AppDynamic.border(context);
+    final mutedColor = AppDynamic.textSecond(context);
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -422,7 +425,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           switch (f) {
             case 'Mild':     chipColor = AppColors.success; break;
             case 'Moderate': chipColor = AppColors.warning; break;
-            case 'Severe':   chipColor = AppColors.danger; break;
+            case 'Severe':   chipColor = AppColors.danger;  break;
             case 'Stone':    chipColor = AppColors.success; break;
             default:         chipColor = AppColors.primary;
           }
@@ -435,12 +438,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
               decoration: BoxDecoration(
                 color: active ? chipColor.withValues(alpha: 0.15) : bgColor,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                    color: active ? chipColor : borderCol, width: 1.5),
+                border: Border.all(color: active ? chipColor : borderCol, width: 1.5),
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 if (f == 'Stone') ...[
-                  const Text('\u{1F48E}', style: TextStyle(fontSize: 11)),
+                  const Text('💎', style: TextStyle(fontSize: 11)),
                   const SizedBox(width: 4),
                 ],
                 Text(f, style: TextStyle(
@@ -454,16 +456,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  // ── ENTRY CARD ───────────────────────────────────────────────────────────────
+  // ── ENTRY CARD ──────────────────────────────────────────────────────────────
 
-  Widget _buildEntryCard(Map<String, dynamic> e, Color surfaceCol, Color borderCol,
-      Color textPri, Color mutedColor) {
-    final pain = e['pain'] as int;
-    final note = e['note'] as String;
-    final dateStr = _formatDate(e['date'] as String);
+  Widget _buildEntryCard(BuildContext context, Map<String, dynamic> e) {
+    final surfaceCol = AppDynamic.surface(context);
+    final borderCol  = AppDynamic.border(context);
+    final textPri    = AppDynamic.textPrimary(context);
+    final mutedColor = AppDynamic.textSecond(context);
+
+    final pain        = e['pain'] as int;
+    final note        = e['note'] as String;
+    final dateStr     = _formatDate(e['date'] as String);
     final stonePassed = (e['stonePassed'] as bool?) ?? false;
-    final symptoms = List<String>.from((e['symptoms'] as List<dynamic>?) ?? []);
-    final side = (e['side'] as String?) ?? 'None';
+    final symptoms    = List<String>.from((e['symptoms'] as List<dynamic>?) ?? []);
+    final side        = (e['side'] as String?) ?? 'None';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -472,14 +478,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: borderCol),
         boxShadow: [BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 2))],
+            color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))],
       ),
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
-          onTap: () => _showEntryDetail(e, surfaceCol, borderCol, textPri, mutedColor),
+          onTap: () => _showEntryDetail(context, e),
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Row(
@@ -513,7 +519,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         ),
                         if (stonePassed) ...[
                           const SizedBox(width: 6),
-                          const Text('\u{1F48E}', style: TextStyle(fontSize: 13)),
+                          const Text('💎', style: TextStyle(fontSize: 13)),
                         ],
                         if (side != 'None') ...[
                           const SizedBox(width: 6),
@@ -557,7 +563,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _buildMonthHeader(String month, int count, Color mutedColor) {
+  Widget _buildMonthHeader(BuildContext context, String month, int count) {
+    final mutedColor = AppDynamic.textSecond(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10, top: 4),
       child: Row(children: [
@@ -577,8 +584,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _buildEmptyState(Color surfaceCol, Color borderCol, Color textPri, Color mutedColor) {
+  Widget _buildEmptyState(BuildContext context) {
+    final surfaceCol = AppDynamic.surface(context);
+    final borderCol  = AppDynamic.border(context);
+    final textPri    = AppDynamic.textPrimary(context);
+    final mutedColor = AppDynamic.textSecond(context);
     final isFiltered = _filterSeverity != 'All';
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -589,7 +601,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: borderCol),
             boxShadow: [BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04), blurRadius: 18, offset: const Offset(0, 8))],
+                color: Colors.black.withValues(alpha: 0.05), blurRadius: 18, offset: const Offset(0, 8))],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -638,17 +650,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  void _showEntryDetail(Map<String, dynamic> entry,
-      Color surfaceCol, Color borderCol, Color textPri, Color mutedColor) {
-    final pain = entry['pain'] as int;
-    final note = entry['note'] as String;
-    final dateStr = _formatDate(entry['date'] as String);
-    final side = (entry['side'] as String?) ?? 'None';
+  void _showEntryDetail(BuildContext context, Map<String, dynamic> entry) {
+    final surfaceCol = AppDynamic.surface(context);
+    final borderCol  = AppDynamic.border(context);
+    final textPri    = AppDynamic.textPrimary(context);
+    final mutedColor = AppDynamic.textSecond(context);
+    final bgColor    = AppDynamic.background(context);
+
+    final pain        = entry['pain'] as int;
+    final note        = entry['note'] as String;
+    final dateStr     = _formatDate(entry['date'] as String);
+    final side        = (entry['side'] as String?) ?? 'None';
     final stonePassed = (entry['stonePassed'] as bool?) ?? false;
-    final symptoms = List<String>.from((entry['symptoms'] as List<dynamic>?) ?? []);
-    final bgColor = Theme.of(context).brightness == Brightness.dark
-        ? AppColors.darkBackground
-        : AppColors.background;
+    final symptoms    = List<String>.from((entry['symptoms'] as List<dynamic>?) ?? []);
 
     showModalBottomSheet(
       context: context,
@@ -667,8 +681,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             Center(
               child: Container(
                 width: 40, height: 4,
-                decoration: BoxDecoration(
-                    color: borderCol, borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(color: borderCol, borderRadius: BorderRadius.circular(2)),
               ),
             ),
             const SizedBox(height: 20),
@@ -686,28 +699,25 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
               const SizedBox(width: 14),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _painColor(pain).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text('$pain / 10 \u2014 ${_painLabel(pain)}',
-                          style: TextStyle(
-                              color: _painColor(pain), fontWeight: FontWeight.bold, fontSize: 13)),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _painColor(pain).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    const SizedBox(height: 4),
-                    Text(dateStr, style: TextStyle(color: mutedColor, fontSize: 12)),
-                  ],
-                ),
+                    child: Text('$pain / 10 — ${_painLabel(pain)}',
+                        style: TextStyle(
+                            color: _painColor(pain), fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(dateStr, style: TextStyle(color: mutedColor, fontSize: 12)),
+                ]),
               ),
               if (stonePassed)
                 const Padding(
                     padding: EdgeInsets.only(left: 8),
-                    child: Text('\u{1F48E}', style: TextStyle(fontSize: 22))),
+                    child: Text('💎', style: TextStyle(fontSize: 22))),
             ]),
             const SizedBox(height: 14),
             if (side != 'None' || stonePassed) ...[
@@ -749,8 +759,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: borderCol),
               ),
-              child: Text(note, style: TextStyle(
-                  color: textPri, fontSize: 14, height: 1.6)),
+              child: Text(note, style: TextStyle(color: textPri, fontSize: 14, height: 1.6)),
             ),
             const SizedBox(height: 20),
             SizedBox(
@@ -793,19 +802,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark     = Theme.of(context).brightness == Brightness.dark;
-    final surfaceCol = isDark ? AppColors.darkSurface     : AppColors.surface;
-    final borderCol  = isDark ? AppColors.darkBorder      : AppColors.border;
-    final textPri    = isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
-    final mutedColor = isDark ? AppColors.darkTextSecond  : AppColors.textMuted;
-    final bgScroll   = isDark ? AppColors.darkBackground  : AppColors.background;
+    final bgScroll   = AppDynamic.background(context);
+    final mutedColor = AppDynamic.textSecond(context);
 
     if (_loading) {
       return const Center(child: CircularProgressIndicator(color: AppColors.primary));
     }
 
     if (_entries.isEmpty) {
-      return _buildEmptyState(surfaceCol, borderCol, textPri, mutedColor);
+      return _buildEmptyState(context);
     }
 
     final grouped  = _groupedEntries;
@@ -819,13 +824,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-              child: _buildStatsSection(surfaceCol, borderCol, mutedColor),
+              child: _buildStatsSection(context),
             ),
           ),
 
           // Charts
-          SliverToBoxAdapter(
-            child: _buildChartsSection(isDark, surfaceCol, borderCol, mutedColor)),
+          SliverToBoxAdapter(child: _buildChartsSection(context)),
 
           // Filter bar
           SliverToBoxAdapter(
@@ -838,13 +842,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       fontSize: 11, fontWeight: FontWeight.w700,
                       color: mutedColor, letterSpacing: 1.1)),
                 ),
-                _buildFilterBar(isDark, borderCol, mutedColor),
+                _buildFilterBar(context),
                 const SizedBox(height: 16),
               ],
             ),
           ),
 
-          // Entry count
+          // Entry count badge
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
@@ -866,11 +870,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ),
           ),
 
-          // Entry list
+          // Entry list or empty state
           if (filtered.isEmpty)
             SliverFillRemaining(
                 hasScrollBody: false,
-                child: _buildEmptyState(surfaceCol, borderCol, textPri, mutedColor))
+                child: _buildEmptyState(context))
           else
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
@@ -881,9 +885,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     final List<Widget> items = [];
                     for (final month in keys) {
                       final monthEntries = grouped[month]!;
-                      items.add(_buildMonthHeader(month, monthEntries.length, mutedColor));
+                      items.add(_buildMonthHeader(context, month, monthEntries.length));
                       for (final e in monthEntries) {
-                        items.add(_buildEntryCard(e, surfaceCol, borderCol, textPri, mutedColor));
+                        items.add(_buildEntryCard(context, e));
                       }
                     }
                     return items[index];
@@ -899,7 +903,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 }
 
-// ── Helper data class ─────────────────────────────────────────────────────────
 class _MonthBucket {
   final String label;
   final double count;
