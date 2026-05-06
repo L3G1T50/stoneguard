@@ -29,9 +29,10 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
   String _userName = '';
 
   final List<Map<String, dynamic>> _timeframes = [
-    {'label': '30D', 'days': 30, 'premium': false},
-    {'label': '6M', 'days': 180, 'premium': true},
-    {'label': '12M', 'days': 365, 'premium': true},
+    {'label': '30D',  'days': 30,  'premium': false},
+    {'label': '6M',   'days': 180, 'premium': true},
+    {'label': '12M',  'days': 365, 'premium': true},
+    {'label': '2Y',   'days': 730, 'premium': true},
   ];
 
   List<Map<String, dynamic>> _entries = [];
@@ -762,7 +763,6 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
               const Text('Choose a format to share with your doctor.',
                   style: TextStyle(fontSize: 13, color: _textMuted)),
               const SizedBox(height: 20),
-              // ── NEW: Enhanced PDF Report option ──────────────────────
               _exportOption(
                 icon: Icons.picture_as_pdf_rounded,
                 iconColor: const Color(0xFF1A8A9A),
@@ -891,7 +891,9 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── TIMEFRAME SELECTOR ────────────────────────────────────────
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: _timeframes.map((tf) {
               final isSelected = _daysBack == tf['days'];
               final isPremiumOnly = tf['premium'] == true;
@@ -899,7 +901,6 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
                 onTap: () => _selectTimeframe(tf),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  margin: const EdgeInsets.only(right: 8),
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
@@ -909,6 +910,7 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
                         color: isSelected ? _teal : _border),
                   ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       if (isPremiumOnly && !_isPremium)
                         const Padding(
