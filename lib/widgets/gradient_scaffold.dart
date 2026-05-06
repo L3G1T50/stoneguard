@@ -1,18 +1,12 @@
 // ─── SHARED GRADIENT SCAFFOLD ────────────────────────────────────────────────────────
-// All tabs use this widget so the teal-to-white gradient stays consistent
-// across the whole app. To update the theme, change it here once.
+// All tabs use this widget so the teal-to-theme gradient stays consistent
+// across the whole app. Supports both light and dark mode automatically.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../theme/app_theme.dart';
 
-const _kGradientColors = [
-  Color(0xFF01696F),
-  Color(0xFF2A9DA5),
-  Color(0xFFE0F4F5),
-  Colors.white,
-];
-const _kGradientStops = [0.0, 0.18, 0.42, 0.62];
 // ignore: unused_element
-const _kHeaderHeight = 112.0; // how tall the teal band is before it fades
+const _kHeaderHeight = 112.0;
 
 class GradientScaffold extends StatelessWidget {
   const GradientScaffold({
@@ -34,13 +28,31 @@ class GradientScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Keep status-bar icons white while the teal header is showing
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Gradient fades into the correct background for the active theme
+    final List<Color> gradientColors = isDark
+        ? [
+            const Color(0xFF01696F),
+            const Color(0xFF025A60),
+            AppColors.darkBg,
+            AppColors.darkBg,
+          ]
+        : [
+            const Color(0xFF01696F),
+            const Color(0xFF2A9DA5),
+            const Color(0xFFE0F4F5),
+            Colors.white,
+          ];
+
+    const gradientStops = [0.0, 0.18, 0.42, 0.62];
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: Colors.transparent,
       ),
       child: Scaffold(
-        backgroundColor: Colors.transparent,
+        backgroundColor: isDark ? AppColors.darkBg : Colors.white,
         resizeToAvoidBottomInset: resizeToAvoidBottomInset,
         floatingActionButton: floatingActionButton,
         bottomSheet: bottomSheet,
@@ -49,12 +61,12 @@ class GradientScaffold extends StatelessWidget {
             // ── Gradient background (full screen) ──
             Positioned.fill(
               child: Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
-                    end: Alignment(0, 0.55),
-                    colors: _kGradientColors,
-                    stops: _kGradientStops,
+                    end: const Alignment(0, 0.55),
+                    colors: gradientColors,
+                    stops: gradientStops,
                   ),
                 ),
               ),
@@ -87,8 +99,6 @@ class _GradientAppBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool canPop = Navigator.of(context).canPop();
 
-    // Use a Stack so the title is always pixel-perfect centered,
-    // regardless of how many icons sit on the left or right.
     return SizedBox(
       height: 52,
       child: Stack(
