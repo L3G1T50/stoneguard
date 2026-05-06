@@ -197,25 +197,14 @@ class _ProgressTabState extends State<_ProgressTab>
   }
 }
 
-// ── History (Entries) tab — renders HistoryScreen directly in the same
-//    Navigator/theme context so Theme.of(context) correctly sees dark mode ─────
+// ── History (Entries) tab — NO keepAlive so the widget fully rebuilds when
+//    the theme changes, ensuring Theme.of(context) is always fresh. ────────────
 
-class _HistoryTab extends StatefulWidget {
+class _HistoryTab extends StatelessWidget {
   const _HistoryTab();
-  @override
-  State<_HistoryTab> createState() => _HistoryTabState();
-}
-
-class _HistoryTabState extends State<_HistoryTab>
-    with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
-    // Render HistoryScreen directly — no nested Navigator — so it inherits
-    // the MaterialApp theme (including dark mode) from the parent context.
     return const HistoryScreen();
   }
 }
