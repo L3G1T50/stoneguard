@@ -1,4 +1,4 @@
-// ─── MAIN ENTRY POINT ──────────────────────────────────────────────────────────────────────────────
+// ─── MAIN ENTRY POINT ──────────────────────────────────────────────────────────────────────────────────────
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -12,6 +12,7 @@ import 'screens/food_guide_screen.dart';
 import 'screens/journal_screen.dart';
 import 'screens/history_progress_screen.dart';
 import 'screens/education_screen.dart';
+import 'screens/shop_screen.dart';
 import 'screens/settings_screen.dart';
 import 'theme/app_theme.dart';
 import 'widgets/gradient_scaffold.dart';
@@ -62,7 +63,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// ─── MAIN SHELL ───────────────────────────────────────────────────────────────────────────
+// ─── MAIN SHELL ─────────────────────────────────────────────────────────────────────────────────────
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -94,12 +95,12 @@ class _MainShellState extends State<MainShell> {
     final logKey = 'oxalate_log_${now.year}_${now.month}_${now.day}';
     final oxKey  = 'oxalate_${now.year}_${now.month}_${now.day}';
 
-    // Append the new food entry to today's log list
+    // Append the new food entry to today’s log list
     final log = List<String>.from(prefs.getStringList(logKey) ?? []);
     log.add('$name|$mg');
     await prefs.setStringList(logKey, log);
 
-    // Add to today's running oxalate total
+    // Add to today’s running oxalate total
     final current = prefs.getDouble(oxKey) ?? 0.0;
     await prefs.setDouble(oxKey, current + mg);
 
@@ -132,18 +133,21 @@ class _MainShellState extends State<MainShell> {
         body: FoodGuideScreen(onLogFood: _onLogFood),
       ),
 
-      // ── 2: History (swapped) ──
+      // ── 2: History ──
       const HistoryProgressScreen(),
 
-      // ── 3: Journal (swapped) ──
+      // ── 3: Journal ──
       const JournalScreen(),
 
-      // ── 4: Education ──
+      // ── 4: Shop ──
+      const ShopScreen(),
+
+      // ── 5: Education ──
       const EducationScreen(),
     ];
 
     return Scaffold(
-      // Transparent so each tab's GradientScaffold background shows through
+      // Transparent so each tab’s GradientScaffold background shows through
       backgroundColor: Colors.transparent,
       body: IndexedStack(
         index: _currentIndex,
@@ -175,6 +179,11 @@ class _MainShellState extends State<MainShell> {
             icon: Icon(Icons.book_outlined),
             selectedIcon: Icon(Icons.book, color: Color(0xFF01696F)),
             label: 'Journal',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.shopping_bag_outlined),
+            selectedIcon: Icon(Icons.shopping_bag, color: Color(0xFF01696F)),
+            label: 'Shop',
           ),
           NavigationDestination(
             icon: Icon(Icons.school_outlined),
