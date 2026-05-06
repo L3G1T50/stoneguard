@@ -35,6 +35,15 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
   double _waterGoal     = 80.0;
   int    _selectedDays  = 30;
 
+  // Period options: days → display label
+  static const List<Map<String, dynamic>> _periods = [
+    {'days': 7,   'label': '7 Days'},
+    {'days': 30,  'label': '30 Days'},
+    {'days': 90,  'label': '90 Days'},
+    {'days': 365, 'label': '1 Year'},
+    {'days': 730, 'label': '2 Years'},
+  ];
+
   // Loaded data
   Map<String, double> _dailyOxalate = {};
   Map<String, double> _dailyWater   = {};
@@ -79,7 +88,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
     oxMap[todayStr]  = prefs.getDouble('oxalate_$todayKey') ?? 0.0;
     watMap[todayStr] = prefs.getDouble('water_$todayKey')   ?? 0.0;
 
-    // Streak
+    // Streak — cap at 730 days back
     int streak = 0;
     DateTime cursor = now;
     while (true) {
@@ -134,6 +143,18 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
   String _dateKey(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
+  /// Human-readable label for the currently selected period
+  String get _periodLabel {
+    switch (_selectedDays) {
+      case 7:   return 'Last 7 Days';
+      case 30:  return 'Last 30 Days';
+      case 90:  return 'Last 90 Days';
+      case 365: return 'Last 1 Year';
+      case 730: return 'Last 2 Years';
+      default:  return 'Last $_selectedDays Days';
+    }
+  }
+
   // ── PDF Generation ─────────────────────────────────────────────────────
   Future<Uint8List> _buildPdf() async {
     final pdf = pw.Document();
@@ -166,11 +187,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
     final pdfWhite = PdfColors.white;
 
     final dateGenerated = '${now.month}/${now.day}/${now.year}';
-    final reportPeriod  = _selectedDays == 7
-        ? 'Last 7 Days'
-        : _selectedDays == 30
-            ? 'Last 30 Days'
-            : 'Last 90 Days';
+    final reportPeriod  = _periodLabel;
 
     // Label for the daily log section header
     final loggedCount = allRows.length;
@@ -695,21 +712,21 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Report period selector
+                  // Report period selector — Wrap so all 5 chips fit on any screen
                   const Text('Report Period',
                       style: TextStyle(
                           color: textColor,
                           fontSize: 14,
                           fontWeight: FontWeight.bold)),
                   const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      _periodChip(7,  '7 Days'),
-                      const SizedBox(width: 8),
-                      _periodChip(30, '30 Days'),
-                      const SizedBox(width: 8),
-                      _periodChip(90, '90 Days'),
-                    ],
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _periods.map((p) {
+                      final days  = p['days']  as int;
+                      final label = p['label'] as String;
+                      return _periodChip(days, label);
+                    }).toList(),
                   ),
                   const SizedBox(height: 20),
 
@@ -896,40 +913,37 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
 
   Widget _periodChip(int days, String label) {
     final selected = _selectedDays == days;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() => _selectedDays = days);
-          _recalcStats();
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: selected ? accentTeal : cardColor,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: selected ? accentTeal : borderColor,
-              width: selected ? 1.5 : 1,
-            ),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                        color: accentTeal.withValues(alpha: 0.2),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2))
-                  ]
-                : [],
+    return GestureDetector(
+      onTap: () {
+        setState(() => _selectedDays = days);
+        _recalcStats();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+        decoration: BoxDecoration(
+          color: selected ? accentTeal : cardColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? accentTeal : borderColor,
+            width: selected ? 1.5 : 1,
           ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: selected ? Colors.white : mutedColor,
-              fontWeight:
-                  selected ? FontWeight.bold : FontWeight.w500,
-              fontSize: 13,
-            ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                      color: accentTeal.withValues(alpha: 0.2),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2))
+                ]
+              : [],
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: selected ? Colors.white : mutedColor,
+            fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+            fontSize: 13,
           ),
         ),
       ),
