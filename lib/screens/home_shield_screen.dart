@@ -517,12 +517,12 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     );
   }
 
-  // ─── ACHIEVEMENTS TROPHY CARD ───────────────────────────────────────
+  // ─── ACHIEVEMENTS TROPHY CARD ────────────────────────────────────────
   Widget _buildAchievementsCard() {
-    final total      = _kAllBadges.length;
-    final unlocked   = _unlockedCount;
-    final progress   = total > 0 ? unlocked / total : 0.0;
-    final pct        = (progress * 100).round();
+    final total    = _kAllBadges.length;
+    final unlocked = _unlockedCount;
+    final progress = total > 0 ? unlocked / total : 0.0;
+    final pct      = (progress * 100).round();
 
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -619,8 +619,8 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                 itemCount: _kAllBadges.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 6),
                 itemBuilder: (_, i) {
-                  final badge      = _kAllBadges[i];
-                  final isUnlocked = _celebratedBadges.contains(badge['id']);
+                  final badge       = _kAllBadges[i];
+                  final isUnlocked  = _celebratedBadges.contains(badge['id']);
                   final isMilestone = badge['milestone'] as bool;
 
                   return Container(
@@ -757,6 +757,25 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
 
           const SizedBox(height: 24),
 
+          // ── WATER BUTTONS ── (back above oxalate card)
+          Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Log Water Intake',
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87))),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(child: _waterButton(8)),
+            const SizedBox(width: 10),
+            Expanded(child: _waterButton(12)),
+            const SizedBox(width: 10),
+            Expanded(child: _waterButton(16)),
+          ]),
+
+          const SizedBox(height: 24),
+
           // ── OXALATE STAT CARD ──
           Container(
             width: double.infinity,
@@ -851,25 +870,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
 
           // ── ACHIEVEMENTS TROPHY CARD ──
           _buildAchievementsCard(),
-
-          const SizedBox(height: 24),
-
-          // ── WATER BUTTONS ──
-          Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Log Water Intake',
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black87))),
-          const SizedBox(height: 12),
-          Row(children: [
-            Expanded(child: _waterButton(8)),
-            const SizedBox(width: 10),
-            Expanded(child: _waterButton(12)),
-            const SizedBox(width: 10),
-            Expanded(child: _waterButton(16)),
-          ]),
 
           const SizedBox(height: 14),
           TextButton.icon(
