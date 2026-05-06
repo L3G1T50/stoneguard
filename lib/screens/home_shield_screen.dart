@@ -1,4 +1,4 @@
-// ─── HOME SHIELD SCREEN ──────────────────────────────────────────────
+// ─── HOME SHIELD SCREEN ────────────────────────────────────
 import 'dart:io';
 import 'dart:math';
 import 'dart:convert';
@@ -9,9 +9,9 @@ import '../widgets/banner_ad_widget.dart';
 import '../main.dart';
 import 'settings_screen.dart';
 import 'history_progress_screen.dart';
-import 'screens/shop_screen.dart';
+import 'shop_screen.dart';
 
-// ─── WAVE PAINTER ────────────────────────────────────────────────────
+// ─── WAVE PAINTER ────────────────────────────────────────────────────────────────
 class _WavePainter extends CustomPainter {
   final double fillLevel;
   final double wavePhase;
@@ -82,7 +82,7 @@ class _WavePainter extends CustomPainter {
       old.waterColor != waterColor;
 }
 
-// ─── RING PAINTER (glow arc) ─────────────────────────────────────────
+// ─── RING PAINTER (glow arc) ──────────────────────────────────────────────────────
 class _GlowRingPainter extends CustomPainter {
   final double progress;
   final Color color;
@@ -159,7 +159,7 @@ class _GlowRingPainter extends CustomPainter {
       old.progress != progress || old.color != color;
 }
 
-// ─── ALL BADGE DEFINITIONS (must match progress_screen.dart) ─────────
+// ─── ALL BADGE DEFINITIONS (must match progress_screen.dart) ────────────────────────
 const List<Map<String, dynamic>> _kAllBadges = [
   {'id': 'first_log',    'icon': '🥇', 'milestone': false},
   {'id': 'streak_3',     'icon': '🔥', 'milestone': false},
@@ -176,7 +176,7 @@ const List<Map<String, dynamic>> _kAllBadges = [
   {'id': 'diamond_730',  'icon': '💎', 'milestone': true},
 ];
 
-// ─── MAIN SCREEN ─────────────────────────────────────────────────────
+// ─── MAIN SCREEN ────────────────────────────────────────────────────────────────────────────────
 class HomeShieldScreen extends StatefulWidget {
   const HomeShieldScreen({super.key});
   @override
@@ -518,7 +518,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     );
   }
 
-  // ─── ACHIEVEMENTS TROPHY CARD ────────────────────────────────────────
+  // ─── ACHIEVEMENTS TROPHY CARD ──────────────────────────────────────────────────────────
   Widget _buildAchievementsCard() {
     final total    = _kAllBadges.length;
     final unlocked = _unlockedCount;
@@ -569,7 +569,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                       color: const Color(0xFFD4A020).withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Text('🏅', style: TextStyle(fontSize: 18)),
+                    child: const Text('🎅', style: TextStyle(fontSize: 18)),
                   ),
                   const SizedBox(width: 10),
                   Column(
@@ -758,7 +758,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
 
           const SizedBox(height: 24),
 
-          // ── WATER BUTTONS ── (back above oxalate card)
+          // ── WATER BUTTONS ──
           Align(
               alignment: Alignment.centerLeft,
               child: Text('Log Water Intake',
