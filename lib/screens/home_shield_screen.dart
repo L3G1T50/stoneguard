@@ -9,6 +9,7 @@ import '../widgets/banner_ad_widget.dart';
 import '../main.dart';
 import 'settings_screen.dart';
 import 'history_progress_screen.dart';
+import 'screens/shop_screen.dart';
 
 // ─── WAVE PAINTER ────────────────────────────────────────────────────
 class _WavePainter extends CustomPainter {
