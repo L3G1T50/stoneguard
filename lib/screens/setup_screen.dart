@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import 'home_shield_screen.dart';
@@ -13,14 +14,25 @@ class SetupScreen extends StatefulWidget {
 
 class _SetupScreenState extends State<SetupScreen> {
   final TextEditingController _nameController = TextEditingController();
-  double _waterGoal = 80;
-  double _oxalateGoal = 200;
-  String? _avatarPath; // local file path chosen by the user
+  final TextEditingController _ageController  = TextEditingController();
+  double _waterGoal    = 80;
+  double _oxalateGoal  = 200;
+  String? _avatarPath;
+  String _stoneType = 'Unknown / Not diagnosed';
 
-  static const Color teal   = Color(0xFF0097A7);
-  static const Color purple = Color(0xFF7B1FA2);
+  static const Color teal     = Color(0xFF0097A7);
+  static const Color purple   = Color(0xFF7B1FA2);
   static const Color textDark = Color(0xFF263238);
   static const Color softBg   = Color(0xFFF9FBFC);
+
+  static const List<String> _stoneTypes = [
+    'Calcium Oxalate',
+    'Calcium Phosphate',
+    'Uric Acid',
+    'Struvite',
+    'Cystine',
+    'Unknown / Not diagnosed',
+  ];
 
   @override
   void initState() {
@@ -32,14 +44,16 @@ class _SetupScreenState extends State<SetupScreen> {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
-      _nameController.text = prefs.getString('user_name') ?? '';
+      _nameController.text = prefs.getString('user_name')    ?? '';
+      _ageController.text  = (prefs.getInt('user_age') ?? 0) == 0
+          ? '' : '${prefs.getInt('user_age')}' ;
       _waterGoal    = prefs.getDouble('goal_water')    ?? 80;
       _oxalateGoal  = prefs.getDouble('goal_oxalate')  ?? 200;
       _avatarPath   = prefs.getString('avatar_path');
+      _stoneType    = prefs.getString('stone_type') ?? 'Unknown / Not diagnosed';
     });
   }
 
-  // Opens the gallery and saves the picked path to state
   Future<void> _pickAvatar() async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
@@ -55,9 +69,12 @@ class _SetupScreenState extends State<SetupScreen> {
 
   Future<void> _completeSetup() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_name',     _nameController.text.trim());
-    await prefs.setDouble('goal_water',    _waterGoal);
-    await prefs.setDouble('goal_oxalate',  _oxalateGoal);
+    await prefs.setString('user_name',    _nameController.text.trim());
+    await prefs.setDouble('goal_water',   _waterGoal);
+    await prefs.setDouble('goal_oxalate', _oxalateGoal);
+    await prefs.setString('stone_type',   _stoneType);
+    final age = int.tryParse(_ageController.text.trim()) ?? 0;
+    await prefs.setInt('user_age', age);
     if (_avatarPath != null) {
       await prefs.setString('avatar_path', _avatarPath!);
     }
@@ -73,6 +90,7 @@ class _SetupScreenState extends State<SetupScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _ageController.dispose();
     super.dispose();
   }
 
@@ -123,7 +141,6 @@ class _SetupScreenState extends State<SetupScreen> {
                       child: Stack(
                         alignment: Alignment.bottomRight,
                         children: [
-                          // Avatar circle
                           Container(
                             height: 108,
                             width: 108,
@@ -165,8 +182,6 @@ class _SetupScreenState extends State<SetupScreen> {
                               ),
                             ),
                           ),
-
-                          // Camera badge overlay
                           Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
@@ -196,7 +211,7 @@ class _SetupScreenState extends State<SetupScreen> {
                     const SizedBox(height: 20),
 
                     const Text(
-                      'Set up your StoneGuard goals',
+                      'Set up your StoneGuard profile',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 28,
@@ -207,7 +222,7 @@ class _SetupScreenState extends State<SetupScreen> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Choose simple starting goals for water and oxalate. You can change them anytime later in Settings.',
+                      'Tell us a little about yourself and choose your starting goals. You can change everything anytime in Settings.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           fontSize: 15, color: Colors.grey.shade600, height: 1.5),
@@ -218,7 +233,7 @@ class _SetupScreenState extends State<SetupScreen> {
 
               const SizedBox(height: 28),
 
-              // ── Name + goals card ───────────────────────────────────────
+              // ── Profile + Goals card ────────────────────────────────────
               Container(
                 padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
                 decoration: BoxDecoration(
@@ -236,11 +251,11 @@ class _SetupScreenState extends State<SetupScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
 
-                    // Name field
+                    // ── Name ──
                     _buildSectionTitle('Your Name (optional)'),
                     const SizedBox(height: 6),
                     Text(
-                      'This helps personalize your experience and doctor report.',
+                      'Personalises your experience and doctor reports.',
                       style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                     ),
                     const SizedBox(height: 10),
@@ -249,8 +264,7 @@ class _SetupScreenState extends State<SetupScreen> {
                       textCapitalization: TextCapitalization.words,
                       decoration: InputDecoration(
                         hintText: 'Enter your first name',
-                        prefixIcon:
-                        const Icon(Icons.person_outline, color: teal),
+                        prefixIcon: const Icon(Icons.person_outline, color: teal),
                         filled: true,
                         fillColor: Colors.white,
                         contentPadding: const EdgeInsets.symmetric(
@@ -262,9 +276,75 @@ class _SetupScreenState extends State<SetupScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 22),
 
-                    // Water goal slider
+                    // ── Age ──
+                    _buildSectionTitle('Your Age (optional)'),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Helps contextualise your health data in doctor reports.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _ageController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      decoration: InputDecoration(
+                        hintText: 'e.g. 35',
+                        prefixIcon: const Icon(Icons.cake_outlined, color: teal),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 22),
+
+                    // ── Stone Type ──
+                    _buildSectionTitle('Kidney Stone Type (optional)'),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Used to tailor tips and your doctor report. Select the type your doctor identified, or choose Unknown.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600, height: 1.4),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _stoneType,
+                          isExpanded: true,
+                          icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                              color: teal),
+                          items: _stoneTypes
+                              .map((t) => DropdownMenuItem(
+                                    value: t,
+                                    child: Text(t,
+                                        style: const TextStyle(fontSize: 14)),
+                                  ))
+                              .toList(),
+                          onChanged: (v) {
+                            if (v != null) setState(() => _stoneType = v);
+                          },
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 28),
+                    const Divider(),
+                    const SizedBox(height: 20),
+
+                    // ── Water Goal ──
                     _buildSectionTitle('Daily Water Goal'),
                     const SizedBox(height: 6),
                     Row(
@@ -320,7 +400,7 @@ class _SetupScreenState extends State<SetupScreen> {
 
                     const SizedBox(height: 22),
 
-                    // Oxalate goal slider
+                    // ── Oxalate Goal ──
                     _buildSectionTitle('Daily Oxalate Limit'),
                     const SizedBox(height: 6),
                     Row(
@@ -379,7 +459,7 @@ class _SetupScreenState extends State<SetupScreen> {
 
               const SizedBox(height: 20),
 
-              // Disclaimer
+              // ── Disclaimer ──
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
@@ -398,7 +478,7 @@ class _SetupScreenState extends State<SetupScreen> {
 
               const SizedBox(height: 24),
 
-              // Continue button
+              // ── Continue button ──
               SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -422,7 +502,7 @@ class _SetupScreenState extends State<SetupScreen> {
               const SizedBox(height: 10),
               Center(
                 child: Text(
-                  'Your goals can always be updated later.',
+                  'Your profile and goals can always be updated later.',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                 ),

@@ -1,6 +1,7 @@
 // ─── SETTINGS SCREEN ─────────────────────────────────────────────────────────
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -19,18 +20,29 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  double _waterGoal = 80;
-  double _oxalateGoal = 200;
-  String _userName = '';
-  String _avatarPath = '';
-  bool _notificationsEnabled = false;
-  bool _isPremium = false;
-  int _reminderInterval = 2;
+  double _waterGoal    = 80;
+  double _oxalateGoal  = 200;
+  String _userName     = '';
+  String _avatarPath   = '';
+  bool   _notificationsEnabled = false;
+  bool   _isPremium    = false;
+  int    _reminderInterval = 2;
+  int    _userAge      = 0;
+  String _stoneType    = 'Unknown / Not diagnosed';
 
   // ── Quiet Hours ──
   bool _quietHoursEnabled = false;
-  TimeOfDay _quietStart = const TimeOfDay(hour: 22, minute: 0); // 10:00 PM
-  TimeOfDay _quietEnd   = const TimeOfDay(hour: 7,  minute: 0); // 7:00 AM
+  TimeOfDay _quietStart = const TimeOfDay(hour: 22, minute: 0);
+  TimeOfDay _quietEnd   = const TimeOfDay(hour: 7,  minute: 0);
+
+  static const List<String> _stoneTypes = [
+    'Calcium Oxalate',
+    'Calcium Phosphate',
+    'Uric Acid',
+    'Struvite',
+    'Cystine',
+    'Unknown / Not diagnosed',
+  ];
 
   @override
   void initState() {
@@ -49,6 +61,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _reminderInterval     = prefs.getInt('reminder_interval')      ?? 2;
       _isPremium            = prefs.getBool('is_premium')            ?? false;
       _quietHoursEnabled    = prefs.getBool('quiet_hours_enabled')   ?? false;
+      _userAge              = prefs.getInt('user_age')               ?? 0;
+      _stoneType            = prefs.getString('stone_type')          ?? 'Unknown / Not diagnosed';
       _quietStart = TimeOfDay(
         hour:   prefs.getInt('quiet_start_hour')   ?? 22,
         minute: prefs.getInt('quiet_start_minute') ?? 0,
@@ -83,8 +97,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (_notificationsEnabled) scheduleWaterReminders(_reminderInterval);
   }
 
-  /// Returns true if [hour] falls inside the quiet window.
-  /// Handles overnight ranges (e.g. 22:00 → 07:00).
   bool _isQuietHour(int hour) {
     if (!_quietHoursEnabled) return false;
     final s = _quietStart.hour;
@@ -167,6 +179,153 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final p = await SharedPreferences.getInstance();
       await p.setString('user_name', result);
       setState(() => _userName = result);
+    }
+  }
+
+  // ── Edit Age dialog ──────────────────────────────────────────────────────
+  Future<void> _editAge() async {
+    final controller = TextEditingController(
+        text: _userAge == 0 ? '' : '$_userAge');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Your Age'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: const InputDecoration(
+            hintText: 'e.g. 35',
+            prefixIcon: Icon(Icons.cake_outlined, color: AppColors.teal),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (result != null) {
+      final age = int.tryParse(result) ?? 0;
+      final p = await SharedPreferences.getInstance();
+      await p.setInt('user_age', age);
+      setState(() => _userAge = age);
+    }
+  }
+
+  // ── Edit Stone Type bottom sheet ─────────────────────────────────────────
+  Future<void> _editStoneType() async {
+    String selected = _stoneType;
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheet) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle bar
+                  Center(
+                    child: Container(
+                      width: 40, height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Select Stone Type',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Choose the type identified by your doctor, or Unknown.',
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 12),
+                  ..._stoneTypes.map((type) {
+                    final isSelected = selected == type;
+                    return InkWell(
+                      onTap: () {
+                        setSheet(() => selected = type);
+                        Navigator.pop(ctx, type);
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 13),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.teal.withValues(alpha: 0.08)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.teal.withValues(alpha: 0.35)
+                                : Colors.grey.withValues(alpha: 0.15),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isSelected
+                                  ? Icons.radio_button_checked
+                                  : Icons.radio_button_unchecked,
+                              color: isSelected
+                                  ? AppColors.teal
+                                  : Colors.grey.shade400,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              type,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: isSelected
+                                    ? AppColors.teal
+                                    : AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+    if (result != null) {
+      final p = await SharedPreferences.getInstance();
+      await p.setString('stone_type', result);
+      setState(() => _stoneType = result);
     }
   }
 
@@ -426,44 +585,74 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // ── PROFILE ──
                 const SizedBox(height: 4),
                 AppCard(
-                  onTap: _editName,
-                  child: Row(
+                  child: Column(
                     children: [
+                      // Name + avatar row
                       GestureDetector(
-                        onTap: _pickAvatar,
-                        child: CircleAvatar(
-                          radius: 26,
-                          backgroundColor: AppColors.tealLight,
-                          backgroundImage: _avatarPath.isNotEmpty
-                              ? FileImage(File(_avatarPath))
-                              : null,
-                          child: _avatarPath.isEmpty
-                              ? const Icon(Icons.person,
-                                  color: AppColors.teal, size: 28)
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        onTap: _editName,
+                        behavior: HitTestBehavior.opaque,
+                        child: Row(
                           children: [
-                            Text(
-                              _userName.isEmpty ? 'Add Your Name' : _userName,
-                              style: AppTextStyles.itemTitle,
+                            GestureDetector(
+                              onTap: _pickAvatar,
+                              child: CircleAvatar(
+                                radius: 26,
+                                backgroundColor: AppColors.tealLight,
+                                backgroundImage: _avatarPath.isNotEmpty
+                                    ? FileImage(File(_avatarPath))
+                                    : null,
+                                child: _avatarPath.isEmpty
+                                    ? const Icon(Icons.person,
+                                        color: AppColors.teal, size: 28)
+                                    : null,
+                              ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _userName.isEmpty
-                                  ? 'Tap to personalise your experience'
-                                  : 'Tap avatar to change photo',
-                              style: AppTextStyles.body,
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _userName.isEmpty ? 'Add Your Name' : _userName,
+                                    style: AppTextStyles.itemTitle,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _userName.isEmpty
+                                        ? 'Tap to personalise your experience'
+                                        : 'Tap avatar to change photo',
+                                    style: AppTextStyles.body,
+                                  ),
+                                ],
+                              ),
                             ),
+                            const Icon(Icons.chevron_right,
+                                color: AppColors.textHint, size: 20),
                           ],
                         ),
                       ),
-                      const Icon(Icons.chevron_right,
-                          color: AppColors.textHint, size: 20),
+
+                      const Divider(height: 24),
+
+                      // Age row
+                      _row(
+                        Icons.cake_outlined,
+                        AppColors.teal,
+                        'Age',
+                        _userAge == 0 ? 'Tap to set your age' : '$_userAge years old',
+                        onTap: _editAge,
+                      ),
+
+                      const Divider(height: 24),
+
+                      // Stone Type row
+                      _row(
+                        Icons.science_outlined,
+                        const Color(0xFF7B1FA2),
+                        'Stone Type',
+                        _stoneType,
+                        onTap: _editStoneType,
+                      ),
                     ],
                   ),
                 ),
@@ -495,7 +684,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
 
-                      // ── Water Reminders toggle ──
+                      // Water Reminders toggle
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -523,7 +712,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
 
-                      // ── Interval + Quiet Hours (only when reminders on) ──
+                      // Interval + Quiet Hours (only when reminders on)
                       if (_notificationsEnabled) ...[
                         const Divider(height: 24),
                         Row(
@@ -552,10 +741,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ],
                         ),
 
-                        // ── Quiet Hours toggle row ──
                         const Divider(height: 24),
-                        // FIX: outer Row uses Expanded on the label side
-                        // so the Switch always has room and never overflows.
                         Row(
                           children: [
                             const AppIconBadge(
@@ -563,7 +749,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               color: Color(0xFF3949AB),
                             ),
                             const SizedBox(width: 14),
-                            // ← KEY FIX: Expanded here prevents overflow
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -586,7 +771,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ],
                         ),
 
-                        // ── Time picker card (only when quiet hours on) ──
                         if (_quietHoursEnabled) ...[
                           const SizedBox(height: 14),
                           Container(
@@ -620,7 +804,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 12),
-                                // From → Until in a Row
                                 Row(
                                   children: [
                                     Column(
