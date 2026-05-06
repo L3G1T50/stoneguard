@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:confetti/confetti.dart';
 import 'dart:convert';
-import 'dart:math';
 
 // ── Timeframe enum ────────────────────────────────────────────────────────────
 enum ChartTimeframe { d7, d30, m6, y1, y2 }

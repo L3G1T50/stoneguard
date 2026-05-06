@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
@@ -98,7 +97,12 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
       if (ox > 0 && ox <= _oxalateGoal && wat >= _waterGoal) {
         streak++;
         cursor = cursor.subtract(const Duration(days: 1));
-      } else break;
+      } else {
+        break;
+      }
+      if (cursor.isBefore(now.subtract(const Duration(days: 730)))) {
+        break;
+      }
       if (cursor.isBefore(now.subtract(const Duration(days: 730)))) break;
     }
 

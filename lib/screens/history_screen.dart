@@ -206,7 +206,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               isStrokeCapRound: true,
               dotData: FlDotData(
                 show: true,
-                getDotPainter: (spot, _, __, ___) => FlDotCirclePainter(
+                getDotPainter: (spot, p, pct, idx) => FlDotCirclePainter(
                   radius: 4,
                   color: _painColor(spot.y.toInt()),
                   strokeColor: Colors.white,
@@ -311,7 +311,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           }).toList(),
           barTouchData: BarTouchData(
             touchTooltipData: BarTouchTooltipData(
-              getTooltipItem: (group, _, rod, __) => BarTooltipItem(
+              getTooltipItem: (group, gi, rod, ri) => BarTooltipItem(
                 '${rod.toY.toInt()} entries',
                 const TextStyle(
                     color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),

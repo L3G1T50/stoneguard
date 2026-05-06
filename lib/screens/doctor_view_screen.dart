@@ -193,9 +193,13 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
       final prior  = _entries.sublist(n - 14, n - 7);
       final rAvg = recent.fold(0.0, (s, e) => s + (e['water_oz'] as double)) / 7;
       final pAvg = prior.fold(0.0, (s, e) => s + (e['water_oz'] as double)) / 7;
-      if (rAvg > pAvg + 5) trend = '📈 Improving (water intake up)';
-      else if (rAvg < pAvg - 5) trend = '📉 Declining (water intake down)';
-      else trend = '➡️ Stable';
+      if (rAvg > pAvg + 5) {
+        trend = '📈 Improving (water intake up)';
+      } else if (rAvg < pAvg - 5) {
+        trend = '📉 Declining (water intake down)';
+      } else {
+        trend = '➡️ Stable';
+      }
     }
 
     int streak = 0;

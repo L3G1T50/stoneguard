@@ -9,7 +9,6 @@ import '../widgets/banner_ad_widget.dart';
 import '../main.dart';
 import 'settings_screen.dart';
 import 'history_progress_screen.dart';
-import 'shop_screen.dart';
 
 // ─── WAVE PAINTER ────────────────────────────────────────────────────────────────
 class _WavePainter extends CustomPainter {
@@ -618,7 +617,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: _kAllBadges.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 6),
+                separatorBuilder: (context, i) => const SizedBox(width: 6),
                 itemBuilder: (_, i) {
                   final badge       = _kAllBadges[i];
                   final isUnlocked  = _celebratedBadges.contains(badge['id']);
