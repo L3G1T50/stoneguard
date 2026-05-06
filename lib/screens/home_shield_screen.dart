@@ -8,6 +8,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../widgets/banner_ad_widget.dart';
 import '../main.dart';
 import 'settings_screen.dart';
+import 'history_progress_screen.dart';
 
 // ─── WAVE PAINTER ────────────────────────────────────────────────────
 class _WavePainter extends CustomPainter {
@@ -157,6 +158,23 @@ class _GlowRingPainter extends CustomPainter {
       old.progress != progress || old.color != color;
 }
 
+// ─── ALL BADGE DEFINITIONS (must match progress_screen.dart) ─────────
+const List<Map<String, dynamic>> _kAllBadges = [
+  {'id': 'first_log',    'icon': '🥇', 'milestone': false},
+  {'id': 'streak_3',     'icon': '🔥', 'milestone': false},
+  {'id': 'hydration_hero','icon': '💧', 'milestone': false},
+  {'id': 'stone_guardian','icon': '🛡️', 'milestone': false},
+  {'id': 'champ_7',      'icon': '🏆', 'milestone': true},
+  {'id': 'logger_14',    'icon': '📅', 'milestone': false},
+  {'id': 'habit_21',     'icon': '🌟', 'milestone': false},
+  {'id': 'warrior_30',   'icon': '🥈', 'milestone': true},
+  {'id': 'streak_30',    'icon': '⚡', 'milestone': true},
+  {'id': 'guardian_90',  'icon': '🎖️', 'milestone': true},
+  {'id': 'defender_180', 'icon': '🥉', 'milestone': true},
+  {'id': 'legend_365',   'icon': '👑', 'milestone': true},
+  {'id': 'diamond_730',  'icon': '💎', 'milestone': true},
+];
+
 // ─── MAIN SCREEN ─────────────────────────────────────────────────────
 class HomeShieldScreen extends StatefulWidget {
   const HomeShieldScreen({super.key});
@@ -170,6 +188,12 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   double oxalateMg = 0;
   double goalOz = 80;
   double goalMg = 200;
+
+  // Achievement card data
+  Set<String> _celebratedBadges = {};
+  int get _unlockedCount => _kAllBadges
+      .where((b) => _celebratedBadges.contains(b['id']))
+      .length;
 
   late AnimationController _fillController;
   late Animation<double> _fillAnimation;
@@ -264,6 +288,8 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     final savedOxalate = prefs.getDouble('oxalate_$_todayKey') ?? 0;
     final savedGoalOz = prefs.getDouble('goal_water') ?? 80;
     final savedGoalMg = prefs.getDouble('goal_oxalate') ?? 200;
+    final celebratedList = prefs.getStringList('celebrated_badges') ?? [];
+
     if (!mounted) return;
     setState(() {
       waterOz = savedWater;
@@ -272,6 +298,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
       goalMg = savedGoalMg;
       _userName = prefs.getString('user_name') ?? '';
       _avatarPath = prefs.getString('avatar_path') ?? '';
+      _celebratedBadges = celebratedList.toSet();
       _fillAnimation =
           Tween<double>(begin: savedWater / goalOz, end: savedWater / goalOz)
               .animate(CurvedAnimation(
@@ -490,6 +517,155 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     );
   }
 
+  // ─── ACHIEVEMENTS TROPHY CARD ───────────────────────────────────────
+  Widget _buildAchievementsCard() {
+    final total      = _kAllBadges.length;
+    final unlocked   = _unlockedCount;
+    final progress   = total > 0 ? unlocked / total : 0.0;
+    final pct        = (progress * 100).round();
+
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const HistoryProgressScreen()),
+      ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFFD4A020).withValues(alpha: 0.10),
+              const Color(0xFF01696F).withValues(alpha: 0.06),
+            ],
+          ),
+          border: Border.all(
+            color: const Color(0xFFD4A020).withValues(alpha: 0.35),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFD4A020).withValues(alpha: 0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header row ──
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD4A020).withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text('🏅', style: TextStyle(fontSize: 18)),
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Achievements',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2C2C2C),
+                        ),
+                      ),
+                      Text(
+                        '$unlocked of $total unlocked · $pct%',
+                        style: const TextStyle(
+                            fontSize: 11, color: Color(0xFF888888)),
+                      ),
+                    ],
+                  ),
+                ]),
+                const Icon(Icons.chevron_right,
+                    color: Color(0xFF888888), size: 20),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // ── Progress bar ──
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 7,
+                backgroundColor: Colors.grey.shade200,
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                    Color(0xFFD4A020)),
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
+            // ── Badge icon strip ──
+            SizedBox(
+              height: 44,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _kAllBadges.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 6),
+                itemBuilder: (_, i) {
+                  final badge      = _kAllBadges[i];
+                  final isUnlocked = _celebratedBadges.contains(badge['id']);
+                  final isMilestone = badge['milestone'] as bool;
+
+                  return Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isUnlocked
+                          ? (isMilestone
+                              ? const Color(0xFFD4A020).withValues(alpha: 0.15)
+                              : const Color(0xFF2A9A5A).withValues(alpha: 0.12))
+                          : Colors.grey.shade100,
+                      border: Border.all(
+                        color: isUnlocked
+                            ? (isMilestone
+                                ? const Color(0xFFD4A020).withValues(alpha: 0.5)
+                                : const Color(0xFF2A9A5A).withValues(alpha: 0.4))
+                            : Colors.grey.shade300,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Center(
+                      child: isUnlocked
+                          ? Text(badge['icon'] as String,
+                              style: const TextStyle(fontSize: 20))
+                          : Icon(Icons.lock_outline,
+                              size: 16,
+                              color: Colors.grey.shade400),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            const SizedBox(height: 6),
+            const Text(
+              'Tap to view all achievements →',
+              style: TextStyle(fontSize: 11, color: Color(0xFF888888)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final double waterProgress = (waterOz / goalOz).clamp(0.0, 1.0);
@@ -670,6 +846,11 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
               ],
             ),
           ),
+
+          const SizedBox(height: 16),
+
+          // ── ACHIEVEMENTS TROPHY CARD ──
+          _buildAchievementsCard(),
 
           const SizedBox(height: 24),
 
