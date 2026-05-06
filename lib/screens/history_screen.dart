@@ -1,8 +1,9 @@
-// ─── HISTORY SCREEN ───────────────────────────────────────────────────────────
+// ─── HISTORY SCREEN ─────────────────────────────────────────────────────────────────────────
+class _HistoryScreenState extends State<HistoryScreen> {
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../database_helper.dart';
-import '../app_theme.dart';
+import '../theme/app_theme.dart';   // ✔ correct path — AppDynamic lives here
 import 'dart:math' as math;
 
 class HistoryScreen extends StatefulWidget {
@@ -128,7 +129,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }).toList();
   }
 
-  // ── CHARTS ──────────────────────────────────────────────────────────────────
+  // ── CHARTS ───────────────────────────────────────────────────────────────────────
 
   Widget _buildPainLineChart(Color mutedColor, Color borderCol) {
     final data = _lastN(10);
@@ -329,7 +330,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  // ── STAT CARDS ──────────────────────────────────────────────────────────────
+  // ── STAT CARDS ──────────────────────────────────────────────────────────────────
 
   Widget _buildStatCard(BuildContext context, String label, String value, IconData icon, Color color) {
     final surfaceCol = AppDynamic.surface(context);
@@ -387,7 +388,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  // ── FILTER BAR ──────────────────────────────────────────────────────────────
+  // ── FILTER BAR ───────────────────────────────────────────────────────────────────
 
   Widget _buildFilterBar(BuildContext context) {
     final filters = ['All', 'Mild', 'Moderate', 'Severe', 'Stone'];
@@ -456,7 +457,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  // ── ENTRY CARD ──────────────────────────────────────────────────────────────
+  // ── ENTRY CARD ───────────────────────────────────────────────────────────────────
 
   Widget _buildEntryCard(BuildContext context, Map<String, dynamic> e) {
     final surfaceCol = AppDynamic.surface(context);
@@ -798,7 +799,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  // ── BUILD ────────────────────────────────────────────────────────────────────
+  // ── BUILD ───────────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
