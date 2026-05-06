@@ -137,16 +137,18 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
   // ── PDF Generation ─────────────────────────────────────────────────────
   Future<Uint8List> _buildPdf() async {
     final pdf = pw.Document();
-
-    // Collect last N days of data for the table
     final now  = DateTime.now();
-    final rows = <Map<String, dynamic>>[];
+
+    // Build all rows for the period, then drop days with zero oxalate AND zero water
+    final allRows = <Map<String, dynamic>>[];
     for (int i = _selectedDays - 1; i >= 0; i--) {
-      final day  = now.subtract(Duration(days: i));
-      final k    = _dateKey(day);
-      final ox   = _dailyOxalate[k]  ?? 0.0;
-      final wat  = _dailyWater[k]    ?? 0.0;
-      rows.add({
+      final day = now.subtract(Duration(days: i));
+      final k   = _dateKey(day);
+      final ox  = _dailyOxalate[k] ?? 0.0;
+      final wat = _dailyWater[k]   ?? 0.0;
+      // Skip completely empty days
+      if (ox == 0 && wat == 0) continue;
+      allRows.add({
         'date':  '${day.month}/${day.day}/${day.year}',
         'ox':    ox,
         'wat':   wat,
@@ -169,6 +171,12 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
         : _selectedDays == 30
             ? 'Last 30 Days'
             : 'Last 90 Days';
+
+    // Label for the daily log section header
+    final loggedCount = allRows.length;
+    final logLabel = loggedCount == 0
+        ? 'Daily Log (no entries in this period)'
+        : 'Daily Log ($loggedCount day${loggedCount == 1 ? '' : 's'} logged)';
 
     pdf.addPage(
       pw.MultiPage(
@@ -347,87 +355,88 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
           ),
           pw.SizedBox(height: 20),
 
-          // ── Daily log table ───────────────────────────────────────────
-          pw.Text('Daily Log',
+          // ── Daily log table (logged days only) ───────────────────────────
+          pw.Text(logLabel,
               style: pw.TextStyle(
                   fontSize: 13,
                   fontWeight: pw.FontWeight.bold,
                   color: pdfTeal)),
+          pw.SizedBox(height: 4),
+          pw.Text('Only days with at least one entry are shown.',
+              style: pw.TextStyle(fontSize: 8, color: pdfGray)),
           pw.SizedBox(height: 8),
-          pw.Table(
-            border: pw.TableBorder.all(
-                color: PdfColor.fromInt(0xFFD0D0D8), width: 0.5),
-            columnWidths: {
-              0: const pw.FlexColumnWidth(2),
-              1: const pw.FlexColumnWidth(2.5),
-              2: const pw.FlexColumnWidth(1.5),
-              3: const pw.FlexColumnWidth(2.5),
-              4: const pw.FlexColumnWidth(1.5),
-            },
-            children: [
-              // Header row
-              pw.TableRow(
-                decoration: pw.BoxDecoration(color: pdfTeal),
-                children: [
-                  _tableCell('Date', isHeader: true,
-                      textColor: pdfWhite),
-                  _tableCell('Oxalate (mg)', isHeader: true,
-                      textColor: pdfWhite),
-                  _tableCell('Status', isHeader: true,
-                      textColor: pdfWhite),
-                  _tableCell('Water (oz)', isHeader: true,
-                      textColor: pdfWhite),
-                  _tableCell('Status', isHeader: true,
-                      textColor: pdfWhite),
-                ],
-              ),
-              // Data rows
-              ...rows.asMap().entries.map((entry) {
-                final i   = entry.key;
-                final row = entry.value;
-                final ox    = row['ox']    as double;
-                final wat   = row['wat']   as double;
-                final oxOk  = row['oxOk']  as bool?;
-                final watOk = row['watOk'] as bool;
-                final bg = i % 2 == 0 ? pdfWhite : pdfLight;
 
-                return pw.TableRow(
-                  decoration: pw.BoxDecoration(color: bg),
+          if (loggedCount == 0)
+            pw.Container(
+              padding: const pw.EdgeInsets.all(16),
+              decoration: pw.BoxDecoration(
+                  color: pdfLight,
+                  borderRadius: pw.BorderRadius.circular(6)),
+              child: pw.Center(
+                child: pw.Text(
+                  'No entries recorded in this period.',
+                  style: pw.TextStyle(fontSize: 10, color: pdfGray),
+                ),
+              ),
+            )
+          else
+            pw.Table(
+              border: pw.TableBorder.all(
+                  color: PdfColor.fromInt(0xFFD0D0D8), width: 0.5),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(2),
+                1: const pw.FlexColumnWidth(2.5),
+                2: const pw.FlexColumnWidth(1.5),
+                3: const pw.FlexColumnWidth(2.5),
+                4: const pw.FlexColumnWidth(1.5),
+              },
+              children: [
+                // Header row
+                pw.TableRow(
+                  decoration: pw.BoxDecoration(color: pdfTeal),
                   children: [
-                    _tableCell(row['date'] as String),
-                    _tableCell(
-                      ox == 0 ? '—' : '${ox.toStringAsFixed(0)} mg',
-                      textColor: oxOk == null
-                          ? pdfGray
-                          : oxOk
-                              ? pdfGreen
-                              : pdfRed,
-                    ),
-                    _tableCell(
-                      oxOk == null
-                          ? 'No data'
-                          : oxOk
-                              ? 'Under'
-                              : 'Over',
-                      textColor: oxOk == null
-                          ? pdfGray
-                          : oxOk
-                              ? pdfGreen
-                              : pdfRed,
-                    ),
-                    _tableCell(
-                      wat == 0 ? '—' : '${wat.toStringAsFixed(0)} oz',
-                      textColor: watOk ? pdfGreen : pdfRed,
-                    ),
-                    _tableCell(
-                      watOk ? 'Met' : 'Low',
-                      textColor: watOk ? pdfGreen : pdfRed,
-                    ),
+                    _tableCell('Date',         isHeader: true, textColor: pdfWhite),
+                    _tableCell('Oxalate (mg)', isHeader: true, textColor: pdfWhite),
+                    _tableCell('Status',       isHeader: true, textColor: pdfWhite),
+                    _tableCell('Water (oz)',   isHeader: true, textColor: pdfWhite),
+                    _tableCell('Status',       isHeader: true, textColor: pdfWhite),
                   ],
-                );
-              }),
-            ],
-          ),
+                ),
+                // Data rows — no-data days already removed
+                ...allRows.asMap().entries.map((entry) {
+                  final i   = entry.key;
+                  final row = entry.value;
+                  final ox    = row['ox']    as double;
+                  final wat   = row['wat']   as double;
+                  final oxOk  = row['oxOk']  as bool?;
+                  final watOk = row['watOk'] as bool;
+                  final bg = i % 2 == 0 ? pdfWhite : pdfLight;
+
+                  return pw.TableRow(
+                    decoration: pw.BoxDecoration(color: bg),
+                    children: [
+                      _tableCell(row['date'] as String),
+                      _tableCell(
+                        ox == 0 ? '—' : '${ox.toStringAsFixed(0)} mg',
+                        textColor: oxOk == null ? pdfGray : oxOk ? pdfGreen : pdfRed,
+                      ),
+                      _tableCell(
+                        oxOk == null ? '—' : oxOk ? 'Under' : 'Over',
+                        textColor: oxOk == null ? pdfGray : oxOk ? pdfGreen : pdfRed,
+                      ),
+                      _tableCell(
+                        wat == 0 ? '—' : '${wat.toStringAsFixed(0)} oz',
+                        textColor: watOk ? pdfGreen : pdfRed,
+                      ),
+                      _tableCell(
+                        watOk ? 'Met' : 'Low',
+                        textColor: watOk ? pdfGreen : pdfRed,
+                      ),
+                    ],
+                  );
+                }),
+              ],
+            ),
           pw.SizedBox(height: 24),
 
           // ── Recommendations ───────────────────────────────────────────
@@ -440,21 +449,11 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
           pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              _pdfBullet(
-                  'Drink at least 2.5–3 liters of water per day (approximately 85–100 oz).',
-                  pdfGray),
-              _pdfBullet(
-                  'Limit dietary oxalate to under 200 mg per day unless otherwise directed.',
-                  pdfGray),
-              _pdfBullet(
-                  'Consume adequate dietary calcium (do not restrict calcium) to bind oxalate in the gut.',
-                  pdfGray),
-              _pdfBullet(
-                  'Limit sodium and animal protein, which can increase urinary calcium and oxalate.',
-                  pdfGray),
-              _pdfBullet(
-                  'Maintain a healthy body weight and avoid high-dose vitamin C supplements.',
-                  pdfGray),
+              _pdfBullet('Drink at least 2.5–3 liters of water per day (approximately 85–100 oz).', pdfGray),
+              _pdfBullet('Limit dietary oxalate to under 200 mg per day unless otherwise directed.', pdfGray),
+              _pdfBullet('Consume adequate dietary calcium (do not restrict calcium) to bind oxalate in the gut.', pdfGray),
+              _pdfBullet('Limit sodium and animal protein, which can increase urinary calcium and oxalate.', pdfGray),
+              _pdfBullet('Maintain a healthy body weight and avoid high-dose vitamin C supplements.', pdfGray),
             ],
           ),
           pw.SizedBox(height: 16),
@@ -801,7 +800,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                         const SizedBox(height: 10),
                         _includedItem('📄', 'Patient info & stone type'),
                         _includedItem('📊', 'Summary stats (averages, goals met)'),
-                        _includedItem('📅', 'Full daily log table'),
+                        _includedItem('📅', 'Daily log (logged days only, no blank rows)'),
                         _includedItem('💧', 'Hydration tracking per day'),
                         _includedItem('👨‍⚕️', 'Note for your physician'),
                         _includedItem('✅', 'Prevention reminders'),
