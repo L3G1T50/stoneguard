@@ -35,7 +35,6 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
   ];
 
   List<Map<String, dynamic>> _entries = [];
-  // Food log entries: list of {date, food, oxalate_mg}
   List<Map<String, dynamic>> _foodEntries = [];
 
   static const Color _bg = Color(0xFFF8F8F8);
@@ -53,7 +52,6 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     _loadData();
   }
 
-  // ── Parses all oxalate_log_YYYY_M_D keys within the window ────────────
   List<Map<String, dynamic>> _parseFoodLog(
       SharedPreferences prefs, DateTime cutoff) {
     final result = <Map<String, dynamic>>[];
@@ -188,7 +186,6 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     final n = _entries.length;
     final avgW = tw / n;
 
-    // Simple 7-day trend: compare last 7 days avg water vs prior 7 days
     String trend = 'Stable';
     if (n >= 14) {
       final recent = _entries.sublist(n - 7);
@@ -200,7 +197,6 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
       else trend = '➡️ Stable';
     }
 
-    // Current streak: consecutive days from today meeting both goals
     int streak = 0;
     for (int i = _entries.length - 1; i >= 0; i--) {
       final e = _entries[i];
@@ -318,7 +314,6 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     const pdfLight  = PdfColor.fromInt(0xFFF0F4F5);
     const pdfBorder = PdfColor.fromInt(0xFFD0D0D8);
     const pdfBlack  = PdfColor.fromInt(0xFF2C2C2C);
-    const pdfGold   = PdfColor.fromInt(0xFFD4A020);
     const pdfWhite  = PdfColors.white;
 
     pw.Widget sectionHeader(String title) => pw.Container(
@@ -415,7 +410,6 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     final waterValues = _entries.map((e) => e['water_oz'] as double).toList();
     final oxalateValues = _entries.map((e) => e['oxalate_mg'] as double).toList();
 
-    // Top 15 food log items by oxalate for PDF
     final topFoods = List.of(_foodEntries)
       ..sort((a, b) =>
           (b['oxalate_mg'] as double).compareTo(a['oxalate_mg'] as double));
@@ -465,7 +459,6 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
           ],
         ),
         build: (ctx) => [
-          // ── Goals banner ──
           pw.Container(
             padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: pw.BoxDecoration(
@@ -509,7 +502,6 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
             ),
           ),
 
-          // ── Summary table ──
           sectionHeader('Summary ($_daysBack-Day Window)'),
           pw.Table(
             border: pw.TableBorder.all(color: pdfBorder, width: 0.5),
@@ -577,7 +569,6 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
             ],
           ),
 
-          // ── Water chart ──
           sectionHeader('Daily Water Intake (oz)'),
           pw.Text(
             'Teal = goal met (≥ ${_waterGoal.toStringAsFixed(0)} oz)  •  Red = below goal',
@@ -587,7 +578,6 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
           barChart(values: waterValues, goal: _waterGoal,
               barColor: pdfTeal, unit: 'oz', goalIsMax: true),
 
-          // ── Oxalate chart ──
           sectionHeader('Daily Oxalate Load (mg)'),
           pw.Text(
             'Teal = goal met (≤ ${_oxGoal.toStringAsFixed(0)} mg)  •  Red = over limit',
@@ -597,7 +587,6 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
           barChart(values: oxalateValues, goal: _oxGoal,
               barColor: pdfTeal, unit: 'mg', goalIsMax: false),
 
-          // ── Food log (top 15 by oxalate) ──
           if (top15.isNotEmpty) ...[
             sectionHeader('Top Foods by Oxalate (up to 15 items)'),
             pw.Text(
@@ -635,7 +624,6 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
             ),
           ],
 
-          // ── Daily log ──
           sectionHeader('Daily Log'),
           pw.Table(
             border: pw.TableBorder.all(color: pdfBorder, width: 0.5),
@@ -674,7 +662,6 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
             ],
           ),
 
-          // ── Disclaimer ──
           pw.SizedBox(height: 16),
           pw.Container(
             padding: const pw.EdgeInsets.all(10),
@@ -775,15 +762,32 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
               const Text('Choose a format to share with your doctor.',
                   style: TextStyle(fontSize: 13, color: _textMuted)),
               const SizedBox(height: 20),
+              // ── NEW: Enhanced PDF Report option ──────────────────────
               _exportOption(
                 icon: Icons.picture_as_pdf_rounded,
-                iconColor: Color(0xFFD32F2F),
-                title: 'PDF Report',
+                iconColor: const Color(0xFF1A8A9A),
+                title: 'Enhanced PDF Report',
                 subtitle:
-                    'Charts, streak, food log & full daily table — best for printing or emailing',
+                    'Full report with period selector, live preview & share — recommended',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const ExportReportScreen()),
+                  );
+                },
+              ),
+              const SizedBox(height: 10),
+              _exportOption(
+                icon: Icons.picture_as_pdf_outlined,
+                iconColor: const Color(0xFFD32F2F),
+                title: 'Quick PDF',
+                subtitle:
+                    'Charts, streak, food log & full daily table — instant share',
                 onTap: () { Navigator.pop(context); _sharePdf(); },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               _exportOption(
                 icon: Icons.text_snippet_outlined,
                 iconColor: _teal,
@@ -975,7 +979,6 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
                   ),
                 ]),
                 const SizedBox(height: 10),
-                // ── NEW: Streak + trend row ──
                 Row(children: [
                   _statCard('🔥 Streak',
                       '${stats['currentStreak']} days', _teal),
@@ -1028,9 +1031,11 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
                   goalIsMax: false,
                 ),
                 const SizedBox(height: 20),
+
+                // ── Export button ────────────────────────────────────────
                 ElevatedButton.icon(
                   onPressed: _showExportSheet,
-                  icon: const Icon(Icons.ios_share, size: 18),
+                  icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
                   label: const Text('Export Report for Doctor'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _teal,
