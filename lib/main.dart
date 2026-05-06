@@ -1,4 +1,4 @@
-// ─── MAIN ENTRY POINT ──────────────────────────────────────────────────────────────────────────────────────
+// ─── MAIN ENTRY POINT ─────────────────────────────────────────────────────────
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -20,8 +20,16 @@ import 'widgets/gradient_scaffold.dart';
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
+// Global ThemeNotifier — created once in main, accessed via ThemeNotifier.of(context)
+final ThemeNotifier themeNotifier = ThemeNotifier(ThemeMode.light);
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load saved theme preference
+  final prefs = await SharedPreferences.getInstance();
+  final savedDark = prefs.getBool('dark_mode') ?? false;
+  themeNotifier.setMode(savedDark ? ThemeMode.dark : ThemeMode.light);
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
@@ -49,21 +57,45 @@ Future<void> requestExactAlarmPermission() async {
   }
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    themeNotifier.addListener(_onThemeChange);
+  }
+
+  @override
+  void dispose() {
+    themeNotifier.removeListener(_onThemeChange);
+    super.dispose();
+  }
+
+  void _onThemeChange() => setState(() {});
+
+  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'StoneGuard',
-      debugShowCheckedModeBanner: false,
-      theme: buildAppTheme(),
-      home: const SplashScreen(),
+    return ThemeNotifierProvider(
+      notifier: themeNotifier,
+      child: MaterialApp(
+        title: 'StoneGuard',
+        debugShowCheckedModeBanner: false,
+        theme: buildAppTheme(),
+        darkTheme: buildDarkTheme(),
+        themeMode: themeNotifier.mode,
+        home: const SplashScreen(),
+      ),
     );
   }
 }
 
-// ─── MAIN SHELL ─────────────────────────────────────────────────────────────────────────────────────
+// ─── MAIN SHELL ───────────────────────────────────────────────────────────────
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -74,50 +106,39 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
-  // GlobalKey lets us call loadData() on the shield screen from here
   final GlobalKey<HomeShieldScreenState> _shieldKey =
       GlobalKey<HomeShieldScreenState>();
 
   void _onTabSelected(int index) {
-    // Refresh shield data whenever the user returns to tab 0
     if (index == 0) {
       _shieldKey.currentState?.loadData();
     }
     setState(() => _currentIndex = index);
   }
 
-  // Called by FoodGuideScreen when the user logs a food item.
-  // Saves entry to SharedPreferences, refreshes the shield, and
-  // rebuilds the shell so the log-button badge count updates.
   void _onLogFood(double mg, String name) async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now();
     final logKey = 'oxalate_log_${now.year}_${now.month}_${now.day}';
     final oxKey  = 'oxalate_${now.year}_${now.month}_${now.day}';
 
-    // Append the new food entry to today’s log list
     final log = List<String>.from(prefs.getStringList(logKey) ?? []);
     log.add('$name|$mg');
     await prefs.setStringList(logKey, log);
 
-    // Add to today’s running oxalate total
     final current = prefs.getDouble(oxKey) ?? 0.0;
     await prefs.setDouble(oxKey, current + mg);
 
-    // Refresh home shield oxalate display
     _shieldKey.currentState?.loadData();
-
-    // Rebuild shell so the FutureBuilder log-badge re-reads the updated count
     if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> screens = [
-      // ── 0: Shield ──
-      HomeShieldScreen(key: _shieldKey),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-      // ── 1: Food Guide ──
+    final List<Widget> screens = [
+      HomeShieldScreen(key: _shieldKey),
       GradientScaffold(
         title: 'Food Guide',
         actions: [
@@ -132,22 +153,13 @@ class _MainShellState extends State<MainShell> {
         ],
         body: FoodGuideScreen(onLogFood: _onLogFood),
       ),
-
-      // ── 2: History ──
       const HistoryProgressScreen(),
-
-      // ── 3: Journal ──
       const JournalScreen(),
-
-      // ── 4: Shop ──
       const ShopScreen(),
-
-      // ── 5: Education ──
       const EducationScreen(),
     ];
 
     return Scaffold(
-      // Transparent so each tab’s GradientScaffold background shows through
       backgroundColor: Colors.transparent,
       body: IndexedStack(
         index: _currentIndex,
@@ -155,8 +167,10 @@ class _MainShellState extends State<MainShell> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
-        backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFF01696F).withValues(alpha: 0.12),
+        backgroundColor: isDark ? AppColors.darkNavBg : Colors.white,
+        indicatorColor: isDark
+            ? AppColors.darkNavIndicator
+            : const Color(0xFF01696F).withValues(alpha: 0.12),
         onDestinationSelected: _onTabSelected,
         destinations: const [
           NavigationDestination(
@@ -166,8 +180,7 @@ class _MainShellState extends State<MainShell> {
           ),
           NavigationDestination(
             icon: Icon(Icons.restaurant_menu_outlined),
-            selectedIcon:
-                Icon(Icons.restaurant_menu, color: Color(0xFF01696F)),
+            selectedIcon: Icon(Icons.restaurant_menu, color: Color(0xFF01696F)),
             label: 'Food',
           ),
           NavigationDestination(

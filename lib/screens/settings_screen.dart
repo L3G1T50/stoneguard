@@ -29,6 +29,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   int    _reminderInterval = 2;
   int    _userAge      = 0;
   String _stoneType    = 'Unknown / Not diagnosed';
+  bool   _darkMode     = false;
 
   // ── Quiet Hours ──
   bool _quietHoursEnabled = false;
@@ -63,6 +64,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _quietHoursEnabled    = prefs.getBool('quiet_hours_enabled')   ?? false;
       _userAge              = prefs.getInt('user_age')               ?? 0;
       _stoneType            = prefs.getString('stone_type')          ?? 'Unknown / Not diagnosed';
+      _darkMode             = prefs.getBool('dark_mode')             ?? false;
       _quietStart = TimeOfDay(
         hour:   prefs.getInt('quiet_start_hour')   ?? 22,
         minute: prefs.getInt('quiet_start_minute') ?? 0,
@@ -127,6 +129,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Future<void> _toggleDarkMode(bool val) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setBool('dark_mode', val);
+    setState(() => _darkMode = val);
+    themeNotifier.setMode(val ? ThemeMode.dark : ThemeMode.light);
+  }
+
   Future<void> _openPaywall() async {
     final result = await Navigator.push(
       context,
@@ -182,7 +191,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ── Edit Age dialog ──────────────────────────────────────────────────────
   Future<void> _editAge() async {
     final controller = TextEditingController(
         text: _userAge == 0 ? '' : '$_userAge');
@@ -220,7 +228,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ── Edit Stone Type bottom sheet ─────────────────────────────────────────
   Future<void> _editStoneType() async {
     String selected = _stoneType;
     final result = await showModalBottomSheet<String>(
@@ -237,7 +244,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Handle bar
                   Center(
                     child: Container(
                       width: 40, height: 4,
@@ -415,12 +421,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ─── PLUS CARD ───────────────────────────────────────────────────────────────
+  // ─── PLUS CARD ────────────────────────────────────────────────────────────────
   Widget _plusCard() {
     return AppCard(
       onTap: _isPremium ? null : _openPaywall,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-      color: _isPremium ? AppColors.tealDark : AppColors.surface,
+      color: _isPremium ? AppColors.tealDark : null,
       child: Row(
         children: [
           Container(
@@ -448,7 +454,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ? 'StoneGuard Plus — Active'
                       : 'Upgrade to StoneGuard Plus',
                   style: AppTextStyles.itemTitle.copyWith(
-                    color: _isPremium ? Colors.white : AppColors.textPrimary,
+                    color: _isPremium ? Colors.white : null,
                   ),
                 ),
                 const SizedBox(height: 3),
@@ -459,7 +465,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: AppTextStyles.body.copyWith(
                     color: _isPremium
                         ? Colors.white.withValues(alpha: 0.80)
-                        : AppColors.textSecond,
+                        : null,
                   ),
                 ),
               ],
@@ -468,8 +474,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(width: 8),
           if (_isPremium)
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(999),
@@ -482,8 +487,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             )
           else
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: AppColors.teal,
                 borderRadius: BorderRadius.circular(999),
@@ -499,7 +503,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ─── ROW ITEM ─────────────────────────────────────────────────────────────
   Widget _row(IconData icon, Color color, String title, String sub,
       {VoidCallback? onTap}) {
     return GestureDetector(
@@ -530,7 +533,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ─── VALUE BADGE ────────────────────────────────────────────────────────────
   Widget _valueBadge(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -544,7 +546,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ─── TIME BADGE (tappable) ───────────────────────────────────────────────
   Widget _timeBadge(TimeOfDay time, {required VoidCallback onTap}) {
     final hour   = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
     final minute = time.minute.toString().padLeft(2, '0');
@@ -587,7 +588,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 AppCard(
                   child: Column(
                     children: [
-                      // Name + avatar row
                       GestureDetector(
                         onTap: _editName,
                         behavior: HitTestBehavior.opaque,
@@ -631,10 +631,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ],
                         ),
                       ),
-
                       const Divider(height: 24),
-
-                      // Age row
                       _row(
                         Icons.cake_outlined,
                         AppColors.teal,
@@ -642,10 +639,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         _userAge == 0 ? 'Tap to set your age' : '$_userAge years old',
                         onTap: _editAge,
                       ),
-
                       const Divider(height: 24),
-
-                      // Stone Type row
                       _row(
                         Icons.science_outlined,
                         const Color(0xFF7B1FA2),
@@ -677,14 +671,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
 
+                // ── APPEARANCE ──
+                const AppSectionHeader('Appearance'),
+                AppCard(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(children: [
+                        AppIconBadge(
+                          icon: _darkMode
+                              ? Icons.dark_mode_outlined
+                              : Icons.light_mode_outlined,
+                          color: _darkMode
+                              ? const Color(0xFF5C6BC0)
+                              : const Color(0xFFF9A825),
+                        ),
+                        const SizedBox(width: 14),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Dark Mode', style: AppTextStyles.itemTitle),
+                            Text(
+                              _darkMode ? 'Dark theme active' : 'Light theme active',
+                              style: AppTextStyles.body,
+                            ),
+                          ],
+                        ),
+                      ]),
+                      Switch(
+                        value: _darkMode,
+                        onChanged: _toggleDarkMode,
+                      ),
+                    ],
+                  ),
+                ),
+
                 // ── NOTIFICATIONS ──
                 const AppSectionHeader('Notifications'),
                 AppCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-
-                      // Water Reminders toggle
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -712,7 +739,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
 
-                      // Interval + Quiet Hours (only when reminders on)
                       if (_notificationsEnabled) ...[
                         const Divider(height: 24),
                         Row(
@@ -864,7 +890,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Water
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -893,7 +918,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
                       const Divider(height: 32),
-                      // Oxalate
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [

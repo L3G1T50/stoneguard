@@ -3,53 +3,147 @@
 // Single source of truth for all colors, text styles, card styles,
 // spacing, and the root ThemeData used in main.dart.
 //
-// HOW TO USE IN ANY SCREEN:
-//   import '../theme/app_theme.dart';
-//
-//   Color primary = AppColors.teal;          // accent color
-//   TextStyle t   = AppTextStyles.title;     // screen title
-//   Widget card   = AppCard(child: ...);     // consistent card
+// DARK MODE:
+//   Wrap your widget tree with ThemeNotifier (done in main.dart).
+//   Read the current mode anywhere via:
+//     ThemeNotifier.of(context).isDark
+//     ThemeNotifier.of(context).toggle()
 // ─────────────────────────────────────────────────────────────────────────────
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+// ─── THEME NOTIFIER ───────────────────────────────────────────────────────────
+/// Holds the current ThemeMode and notifies listeners on change.
+/// Access anywhere: ThemeNotifier.of(context)
+class ThemeNotifier extends ChangeNotifier {
+  ThemeMode _mode;
+
+  ThemeNotifier(this._mode);
+
+  ThemeMode get mode => _mode;
+  bool get isDark => _mode == ThemeMode.dark;
+
+  void toggle() {
+    _mode = isDark ? ThemeMode.light : ThemeMode.dark;
+    notifyListeners();
+  }
+
+  void setMode(ThemeMode mode) {
+    if (_mode == mode) return;
+    _mode = mode;
+    notifyListeners();
+  }
+
+  /// Convenience accessor — call from any widget with a BuildContext.
+  static ThemeNotifier of(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<_ThemeNotifierScope>()!
+        .notifier;
+  }
+}
+
+/// InheritedWidget wrapper so ThemeNotifier.of(context) works anywhere.
+class ThemeNotifierProvider extends StatefulWidget {
+  final ThemeNotifier notifier;
+  final Widget child;
+
+  const ThemeNotifierProvider({
+    super.key,
+    required this.notifier,
+    required this.child,
+  });
+
+  @override
+  State<ThemeNotifierProvider> createState() => _ThemeNotifierProviderState();
+}
+
+class _ThemeNotifierProviderState extends State<ThemeNotifierProvider> {
+  @override
+  void initState() {
+    super.initState();
+    widget.notifier.addListener(_onThemeChange);
+  }
+
+  @override
+  void dispose() {
+    widget.notifier.removeListener(_onThemeChange);
+    super.dispose();
+  }
+
+  void _onThemeChange() => setState(() {});
+
+  @override
+  Widget build(BuildContext context) {
+    return _ThemeNotifierScope(
+      notifier: widget.notifier,
+      child: widget.child,
+    );
+  }
+}
+
+class _ThemeNotifierScope extends InheritedWidget {
+  final ThemeNotifier notifier;
+
+  const _ThemeNotifierScope({
+    required this.notifier,
+    required super.child,
+  });
+
+  @override
+  bool updateShouldNotify(_ThemeNotifierScope old) => true;
+}
+
 // ─── COLOR PALETTE ────────────────────────────────────────────────────────────
 abstract class AppColors {
-  // Primary accent – teal used for all positive/interactive elements
+  // Primary accent
   static const Color teal        = Color(0xFF00897B);
   static const Color tealLight   = Color(0xFFE0F2F1);
   static const Color tealDark    = Color(0xFF00695C);
 
-  // Semantic roles  (each color used ONLY for its stated role)
-  static const Color warning     = Color(0xFFF57C00);  // amber  – "pay attention"
+  // Semantic roles
+  static const Color warning     = Color(0xFFF57C00);
   static const Color warningBg   = Color(0xFFFFF3E0);
-  static const Color danger      = Color(0xFFD32F2F);  // red    – destructive only
+  static const Color danger      = Color(0xFFD32F2F);
   static const Color dangerBg    = Color(0xFFFFEBEE);
-  static const Color success     = Color(0xFF2E7D32);  // green  – "all good"
+  static const Color success     = Color(0xFF2E7D32);
   static const Color successBg   = Color(0xFFE8F5E9);
 
-  // Oxalate context – used ONLY on oxalate-related widgets
+  // Oxalate context
   static const Color oxalate     = Color(0xFF6A1B9A);
   static const Color oxalateBg   = Color(0xFFF3E5F5);
 
-  // Surfaces & backgrounds
-  static const Color background  = Color(0xFFF4F6F8);  // scaffold bg
-  static const Color surface     = Color(0xFFFFFFFF);  // card / sheet bg
+  // Surfaces & backgrounds (LIGHT)
+  static const Color background  = Color(0xFFF4F6F8);
+  static const Color surface     = Color(0xFFFFFFFF);
   static const Color divider     = Color(0xFFECEFF1);
-  static const Color border      = Color(0xFFDDE3E7);  // subtle card border
+  static const Color border      = Color(0xFFDDE3E7);
 
-  // Text
-  static const Color textPrimary = Color(0xFF1A2530);  // near-black, warmer
-  static const Color textSecond  = Color(0xFF546E7A);  // medium gray
-  static const Color textHint    = Color(0xFF90A4AE);  // light placeholder
+  // Text (LIGHT)
+  static const Color textPrimary = Color(0xFF1A2530);
+  static const Color textSecond  = Color(0xFF546E7A);
+  static const Color textHint    = Color(0xFF90A4AE);
 
-  // Nav bar
+  // Nav bar (LIGHT)
   static const Color navBg       = Color(0xFFFFFFFF);
-  static const Color navIndicator= Color(0xFFB2DFDB);  // teal 100
+  static const Color navIndicator= Color(0xFFB2DFDB);
 
-  // ── Aliases kept for backward compat with older screen imports ──
+  // ── DARK MODE COLORS ──
+  static const Color darkBackground  = Color(0xFF0F1419);
+  static const Color darkSurface     = Color(0xFF1A2332);
+  static const Color darkSurface2    = Color(0xFF243040);
+  static const Color darkDivider     = Color(0xFF2A3A4A);
+  static const Color darkBorder      = Color(0xFF2E4055);
+  static const Color darkTextPrimary = Color(0xFFE8EDF2);
+  static const Color darkTextSecond  = Color(0xFF8FA8BE);
+  static const Color darkTextHint    = Color(0xFF4A6478);
+  static const Color darkNavBg       = Color(0xFF1A2332);
+  static const Color darkNavIndicator= Color(0xFF1A4A44);
+  // Teal stays the same in dark mode — it pops nicely on dark surfaces
+  static const Color darkTealLight   = Color(0xFF0D2B28);
+
+  // ── Aliases kept for backward compat ──
   static const Color primary      = teal;
   static const Color primaryLight = tealLight;
   static const Color primaryMuted = tealDark;
@@ -58,12 +152,37 @@ abstract class AppColors {
   static const Color appBar       = surface;
 }
 
+// ─── CONTEXT-AWARE COLOR HELPER ───────────────────────────────────────────────
+/// Use these anywhere you need a color that responds to dark/light mode.
+/// Example:  color: AppDynamic.surface(context)
+abstract class AppDynamic {
+  static bool _dark(BuildContext ctx) =>
+      Theme.of(ctx).brightness == Brightness.dark;
+
+  static Color background(BuildContext ctx) =>
+      _dark(ctx) ? AppColors.darkBackground  : AppColors.background;
+  static Color surface(BuildContext ctx) =>
+      _dark(ctx) ? AppColors.darkSurface      : AppColors.surface;
+  static Color surface2(BuildContext ctx) =>
+      _dark(ctx) ? AppColors.darkSurface2     : AppColors.surface;
+  static Color border(BuildContext ctx) =>
+      _dark(ctx) ? AppColors.darkBorder       : AppColors.border;
+  static Color divider(BuildContext ctx) =>
+      _dark(ctx) ? AppColors.darkDivider      : AppColors.divider;
+  static Color textPrimary(BuildContext ctx) =>
+      _dark(ctx) ? AppColors.darkTextPrimary  : AppColors.textPrimary;
+  static Color textSecond(BuildContext ctx) =>
+      _dark(ctx) ? AppColors.darkTextSecond   : AppColors.textSecond;
+  static Color textHint(BuildContext ctx) =>
+      _dark(ctx) ? AppColors.darkTextHint     : AppColors.textHint;
+  static Color tealLight(BuildContext ctx) =>
+      _dark(ctx) ? AppColors.darkTealLight    : AppColors.tealLight;
+  static Color navBg(BuildContext ctx) =>
+      _dark(ctx) ? AppColors.darkNavBg        : AppColors.navBg;
+}
+
 // ─── TEXT STYLES ──────────────────────────────────────────────────────────────
-// NOTE: These are base styles. GoogleFonts.interTextTheme() applied in
-// buildAppTheme() means ALL Text widgets automatically use Inter.
-// These constants are used where an explicit TextStyle is needed.
 abstract class AppTextStyles {
-  // Screen / tab title  (e.g. "Settings", "Shield")
   static TextStyle get screenTitle => GoogleFonts.inter(
     fontSize: 26,
     fontWeight: FontWeight.w700,
@@ -72,7 +191,6 @@ abstract class AppTextStyles {
     height: 1.2,
   );
 
-  // AppBar title – used in appBarTheme titleTextStyle
   static TextStyle get appBarTitle => GoogleFonts.inter(
     fontSize: 18,
     fontWeight: FontWeight.w700,
@@ -80,7 +198,6 @@ abstract class AppTextStyles {
     letterSpacing: -0.3,
   );
 
-  // Section header label  (e.g. "DAILY GOALS", "NOTIFICATIONS")
   static TextStyle get sectionLabel => GoogleFonts.inter(
     fontSize: 11,
     fontWeight: FontWeight.w700,
@@ -88,7 +205,6 @@ abstract class AppTextStyles {
     letterSpacing: 1.4,
   );
 
-  // Card / list item title
   static TextStyle get itemTitle => GoogleFonts.inter(
     fontSize: 15,
     fontWeight: FontWeight.w600,
@@ -96,7 +212,6 @@ abstract class AppTextStyles {
     height: 1.3,
   );
 
-  // Body copy and subtitles inside cards
   static TextStyle get body => GoogleFonts.inter(
     fontSize: 13,
     fontWeight: FontWeight.w400,
@@ -104,7 +219,6 @@ abstract class AppTextStyles {
     height: 1.45,
   );
 
-  // Small metadata / badges
   static TextStyle get micro => GoogleFonts.inter(
     fontSize: 11,
     fontWeight: FontWeight.w500,
@@ -112,7 +226,6 @@ abstract class AppTextStyles {
     letterSpacing: 0.3,
   );
 
-  // Primary button label
   static TextStyle get button => GoogleFonts.inter(
     fontSize: 14,
     fontWeight: FontWeight.w600,
@@ -120,7 +233,7 @@ abstract class AppTextStyles {
     letterSpacing: 0.2,
   );
 
-  // ── Aliases kept for backward compat ──
+  // ── Aliases ──
   static TextStyle get sectionHeader => sectionLabel;
   static TextStyle get cardTitle     => itemTitle;
   static TextStyle get label         => GoogleFonts.inter(
@@ -128,7 +241,9 @@ abstract class AppTextStyles {
     fontWeight: FontWeight.w600,
     fontSize: 13,
   );
-  static TextStyle get meta          => micro;
+  static TextStyle get meta => micro;
+  // Alias used in older screens that import 'title'
+  static TextStyle get title => screenTitle;
 }
 
 // ─── SPACING ──────────────────────────────────────────────────────────────────
@@ -140,14 +255,9 @@ abstract class AppSpacing {
   static const double xl  = 32;
   static const double xxl = 48;
 
-  /// Standard horizontal page padding
   static const EdgeInsets pagePadding =
       EdgeInsets.symmetric(horizontal: 18);
-
-  /// Padding between sections on a scrollable screen
   static const double sectionGap = 28;
-
-  /// Inner padding for cards
   static const EdgeInsets cardPadding = EdgeInsets.all(18);
 }
 
@@ -162,7 +272,7 @@ BoxDecoration appCardDecoration({
     border: Border.all(color: AppColors.border),
     boxShadow: const [
       BoxShadow(
-        color: Color(0x08000000),  // 3% black – barely visible, just depth
+        color: Color(0x08000000),
         blurRadius: 12,
         spreadRadius: 0,
         offset: Offset(0, 4),
@@ -172,10 +282,6 @@ BoxDecoration appCardDecoration({
 }
 
 // ─── APP CARD WIDGET ─────────────────────────────────────────────────────────
-/// Drop-in replacement for the ad-hoc Container cards scattered across screens.
-/// Usage:
-///   AppCard(child: Column(...))
-///   AppCard(onTap: () {}, child: ListTile(...))
 class AppCard extends StatelessWidget {
   final Widget child;
   final VoidCallback? onTap;
@@ -194,10 +300,18 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = color ??
+        (isDark ? AppColors.darkSurface : AppColors.surface);
+    final borderColor =
+        isDark ? AppColors.darkBorder : AppColors.border;
+    final shadowColor =
+        isDark ? const Color(0x40000000) : const Color(0x08000000);
+
     return Semantics(
       container: true,
       child: Material(
-        color: color ?? AppColors.surface,
+        color: cardColor,
         borderRadius: BorderRadius.circular(radius),
         clipBehavior: Clip.antiAlias,
         elevation: 0,
@@ -209,12 +323,12 @@ class AppCard extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(radius),
-              border: Border.all(color: AppColors.border),
-              boxShadow: const [
+              border: Border.all(color: borderColor),
+              boxShadow: [
                 BoxShadow(
-                  color: Color(0x08000000),
+                  color: shadowColor,
                   blurRadius: 12,
-                  offset: Offset(0, 4),
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
@@ -228,8 +342,6 @@ class AppCard extends StatelessWidget {
 }
 
 // ─── SECTION HEADER WIDGET ───────────────────────────────────────────────────
-/// Standardised section header used in every scrollable screen.
-/// Usage:  AppSectionHeader('DAILY GOALS')
 class AppSectionHeader extends StatelessWidget {
   final String title;
   final EdgeInsetsGeometry? padding;
@@ -246,8 +358,6 @@ class AppSectionHeader extends StatelessWidget {
 }
 
 // ─── SCREEN TITLE WIDGET ─────────────────────────────────────────────────────
-/// Large title shown at the top of each tab screen.
-/// Usage:  AppScreenTitle('Settings')
 class AppScreenTitle extends StatelessWidget {
   final String title;
   final String? subtitle;
@@ -273,8 +383,6 @@ class AppScreenTitle extends StatelessWidget {
 }
 
 // ─── PRIMARY BUTTON ───────────────────────────────────────────────────────────
-/// Consistent teal primary button.
-/// Usage:  AppButton(label: 'Save', onPressed: () {})
 class AppButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -331,8 +439,6 @@ class AppButton extends StatelessWidget {
 }
 
 // ─── ICON BADGE ───────────────────────────────────────────────────────────────
-/// Rounded square icon with a tinted background. Used in list rows & cards.
-/// Usage:  AppIconBadge(icon: Icons.water_drop, color: AppColors.teal)
 class AppIconBadge extends StatelessWidget {
   final IconData icon;
   final Color color;
@@ -359,9 +465,6 @@ class AppIconBadge extends StatelessWidget {
 }
 
 // ─── STANDARD APP BAR ─────────────────────────────────────────────────────────
-/// Use this instead of a raw AppBar in every screen for consistency.
-/// White background, dark title, subtle bottom divider – matches Settings style.
-/// Usage:  StoneGuardAppBar(title: 'Pain Journal')
 class StoneGuardAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final List<Widget>? actions;
@@ -381,9 +484,10 @@ class StoneGuardAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return AppBar(
-      backgroundColor: AppColors.surface,
-      foregroundColor: AppColors.textPrimary,
+      backgroundColor: isDark ? AppColors.darkSurface : AppColors.surface,
+      foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
       elevation: 0,
       scrolledUnderElevation: 1,
       centerTitle: centerTitle,
@@ -395,7 +499,7 @@ class StoneGuardAppBar extends StatelessWidget implements PreferredSizeWidget {
         child: Divider(
           height: 1,
           thickness: 1,
-          color: AppColors.divider,
+          color: isDark ? AppColors.darkDivider : AppColors.divider,
         ),
       ),
     );
@@ -403,16 +507,13 @@ class StoneGuardAppBar extends StatelessWidget implements PreferredSizeWidget {
 }
 
 // ─── ROOT THEME DATA ─────────────────────────────────────────────────────────
-/// Pass this to MaterialApp's `theme:` parameter in main.dart.
 ThemeData buildAppTheme() {
   const seed = AppColors.teal;
-
-  // Inter applied as the base text theme for the entire app.
-  // Every Text widget will use Inter automatically – no per-widget font needed.
   final interTextTheme = GoogleFonts.interTextTheme();
 
   return ThemeData(
     useMaterial3: true,
+    brightness: Brightness.light,
     colorScheme: ColorScheme.fromSeed(
       seedColor: seed,
       primary: AppColors.teal,
@@ -421,16 +522,9 @@ ThemeData buildAppTheme() {
       error: AppColors.danger,
       brightness: Brightness.light,
     ),
-
-    // Inter as the app-wide font
     textTheme: interTextTheme,
     primaryTextTheme: interTextTheme,
-
-    // Scaffold background
     scaffoldBackgroundColor: AppColors.background,
-
-    // AppBar – flat white, dark title, subtle bottom divider
-    // All screens should use StoneGuardAppBar for full consistency.
     appBarTheme: AppBarTheme(
       backgroundColor: AppColors.surface,
       foregroundColor: AppColors.textPrimary,
@@ -445,24 +539,14 @@ ThemeData buildAppTheme() {
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
     ),
-
-    // Bottom NavigationBar
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: AppColors.navBg,
       indicatorColor: AppColors.navIndicator,
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
-          return GoogleFonts.inter(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: AppColors.tealDark,
-          );
+          return GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.tealDark);
         }
-        return GoogleFonts.inter(
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-          color: AppColors.textHint,
-        );
+        return GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textHint);
       }),
       iconTheme: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
@@ -471,70 +555,40 @@ ThemeData buildAppTheme() {
         return const IconThemeData(color: AppColors.textHint, size: 22);
       }),
     ),
-
-    // ElevatedButton defaults
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.teal,
         foregroundColor: Colors.white,
         elevation: 0,
         textStyle: AppTextStyles.button,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         minimumSize: const Size(double.infinity, 48),
       ),
     ),
-
-    // OutlinedButton defaults
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.teal,
         side: const BorderSide(color: AppColors.teal),
-        textStyle: GoogleFonts.inter(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        textStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         minimumSize: const Size(double.infinity, 48),
       ),
     ),
-
-    // TextButton defaults
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: AppColors.teal,
-        textStyle: GoogleFonts.inter(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
+        textStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
       ),
     ),
-
-    // Input decoration (text fields, search bars)
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: AppColors.background,
       hintStyle: GoogleFonts.inter(color: AppColors.textHint, fontSize: 14),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.teal, width: 1.5),
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.teal, width: 1.5)),
     ),
-
-    // Slider
     sliderTheme: SliderThemeData(
       activeTrackColor: AppColors.teal,
       thumbColor: AppColors.teal,
@@ -542,8 +596,6 @@ ThemeData buildAppTheme() {
       overlayColor: AppColors.teal.withValues(alpha: 0.12),
       trackHeight: 3,
     ),
-
-    // Switch
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) return AppColors.teal;
@@ -554,57 +606,169 @@ ThemeData buildAppTheme() {
         return const Color(0xFFCFD8DC);
       }),
     ),
-
-    // Divider
-    dividerTheme: const DividerThemeData(
-      color: AppColors.divider,
-      thickness: 1,
-      space: 1,
-    ),
-
-    // Dialog
+    dividerTheme: const DividerThemeData(color: AppColors.divider, thickness: 1, space: 1),
     dialogTheme: DialogThemeData(
       backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      titleTextStyle: GoogleFonts.inter(
-        fontSize: 17,
-        fontWeight: FontWeight.w700,
-        color: AppColors.textPrimary,
-      ),
-      contentTextStyle: GoogleFonts.inter(
-        fontSize: 14,
-        color: AppColors.textSecond,
-        height: 1.5,
-      ),
+      titleTextStyle: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+      contentTextStyle: GoogleFonts.inter(fontSize: 14, color: AppColors.textSecond, height: 1.5),
     ),
-
-    // SnackBar
     snackBarTheme: SnackBarThemeData(
       backgroundColor: AppColors.textPrimary,
-      contentTextStyle:
-          GoogleFonts.inter(color: Colors.white, fontSize: 13),
+      contentTextStyle: GoogleFonts.inter(color: Colors.white, fontSize: 13),
       behavior: SnackBarBehavior.floating,
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
-
-    // Chip
     chipTheme: ChipThemeData(
       backgroundColor: AppColors.background,
-      labelStyle:
-          GoogleFonts.inter(fontSize: 12, color: AppColors.textSecond),
+      labelStyle: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecond),
       side: const BorderSide(color: AppColors.border),
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     ),
-
-    // Card
     cardTheme: CardThemeData(
       color: AppColors.surface,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: AppColors.border),
+      ),
+      margin: EdgeInsets.zero,
+    ),
+  );
+}
+
+// ─── DARK THEME DATA ─────────────────────────────────────────────────────────
+ThemeData buildDarkTheme() {
+  const seed = AppColors.teal;
+  final interTextTheme = GoogleFonts.interTextTheme(
+    ThemeData(brightness: Brightness.dark).textTheme,
+  );
+
+  return ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.dark,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: seed,
+      primary: AppColors.teal,
+      secondary: AppColors.tealDark,
+      surface: AppColors.darkSurface,
+      error: const Color(0xFFEF5350),
+      brightness: Brightness.dark,
+    ),
+    textTheme: interTextTheme,
+    primaryTextTheme: interTextTheme,
+    scaffoldBackgroundColor: AppColors.darkBackground,
+    appBarTheme: AppBarTheme(
+      backgroundColor: AppColors.darkSurface,
+      foregroundColor: AppColors.darkTextPrimary,
+      elevation: 0,
+      scrolledUnderElevation: 1,
+      centerTitle: false,
+      titleTextStyle: GoogleFonts.inter(
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        color: AppColors.darkTextPrimary,
+        letterSpacing: -0.3,
+      ),
+      systemOverlayStyle: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: AppColors.darkNavBg,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: AppColors.darkNavBg,
+      indicatorColor: AppColors.darkNavIndicator,
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.teal);
+        }
+        return GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.darkTextHint);
+      }),
+      iconTheme: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return const IconThemeData(color: AppColors.teal, size: 24);
+        }
+        return const IconThemeData(color: AppColors.darkTextHint, size: 22);
+      }),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.teal,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        textStyle: AppTextStyles.button,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        minimumSize: const Size(double.infinity, 48),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.teal,
+        side: const BorderSide(color: AppColors.teal),
+        textStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        minimumSize: const Size(double.infinity, 48),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: AppColors.teal,
+        textStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: AppColors.darkSurface2,
+      hintStyle: GoogleFonts.inter(color: AppColors.darkTextHint, fontSize: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.teal, width: 1.5)),
+    ),
+    sliderTheme: SliderThemeData(
+      activeTrackColor: AppColors.teal,
+      thumbColor: AppColors.teal,
+      inactiveTrackColor: AppColors.darkTealLight,
+      overlayColor: AppColors.teal.withValues(alpha: 0.16),
+      trackHeight: 3,
+    ),
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) return AppColors.teal;
+        return AppColors.darkTextSecond;
+      }),
+      trackColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) return AppColors.darkTealLight;
+        return AppColors.darkSurface2;
+      }),
+    ),
+    dividerTheme: const DividerThemeData(color: AppColors.darkDivider, thickness: 1, space: 1),
+    dialogTheme: DialogThemeData(
+      backgroundColor: AppColors.darkSurface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      titleTextStyle: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.darkTextPrimary),
+      contentTextStyle: GoogleFonts.inter(fontSize: 14, color: AppColors.darkTextSecond, height: 1.5),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: AppColors.darkSurface2,
+      contentTextStyle: GoogleFonts.inter(color: AppColors.darkTextPrimary, fontSize: 13),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: AppColors.darkSurface2,
+      labelStyle: GoogleFonts.inter(fontSize: 12, color: AppColors.darkTextSecond),
+      side: BorderSide(color: AppColors.darkBorder),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    ),
+    cardTheme: CardThemeData(
+      color: AppColors.darkSurface,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: AppColors.darkBorder),
       ),
       margin: EdgeInsets.zero,
     ),
