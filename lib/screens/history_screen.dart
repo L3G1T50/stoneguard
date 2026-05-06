@@ -457,12 +457,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   // ── ENTRY CARD ───────────────────────────────────────────────────────────────────
+  // FIX: Use Material as root with the correct cardColor so that InkWell's
+  // splash paints on top of the right background. The previous version wrapped
+  // a Container (correct color) with a Material(color: transparent) child, but
+  // Flutter's paint order means the Material background (transparent → white in
+  // light mode default) rendered on top of the Container color in some
+  // configurations. Now Material owns the color directly.
 
   Widget _buildEntryCard(BuildContext context, Map<String, dynamic> e) {
-    final surfaceCol = AppDynamic.surface(context);
-    final borderCol  = AppDynamic.border(context);
-    final textPri    = AppDynamic.textPrimary(context);
-    final mutedColor = AppDynamic.textSecond(context);
+    final isDark      = Theme.of(context).brightness == Brightness.dark;
+    final cardColor   = isDark ? AppColors.darkSurface : AppColors.surface;
+    final borderCol   = AppDynamic.border(context);
+    final textPri     = AppDynamic.textPrimary(context);
+    final mutedColor  = AppDynamic.textSecond(context);
+    final shadowColor = isDark
+        ? const Color(0x40000000)
+        : const Color(0x0A000000);
 
     final pain        = e['pain'] as int;
     final note        = e['note'] as String;
@@ -471,22 +481,25 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final symptoms    = List<String>.from((e['symptoms'] as List<dynamic>?) ?? []);
     final side        = (e['side'] as String?) ?? 'None';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: surfaceCol,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderCol),
-        boxShadow: [BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))],
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
       child: Material(
-        color: Colors.transparent,
+        color: cardColor,
         borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        elevation: 0,
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
           onTap: () => _showEntryDetail(context, e),
-          child: Padding(
+          splashColor: AppColors.teal.withValues(alpha: 0.06),
+          highlightColor: AppColors.teal.withValues(alpha: 0.04),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: borderCol),
+              boxShadow: [BoxShadow(
+                  color: shadowColor, blurRadius: 6, offset: const Offset(0, 2))],
+            ),
             padding: const EdgeInsets.all(14),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
