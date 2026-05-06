@@ -1,16 +1,16 @@
-// ─── SHOP SCREEN ─────────────────────────────────────────────────────────────
+// ─── SHOP SCREEN ───────────────────────────────────────────────────────────────────────────
 // Amazon Associates affiliate tag: stoneguard-20
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../app_theme.dart';
+import '../theme/app_theme.dart';
 import '../widgets/gradient_scaffold.dart';
 
-// ─── Product Model ────────────────────────────────────────────────────────────
+// ─── Product Model ────────────────────────────────────────────────────────────────────
 class _Product {
   final String title;
   final String subtitle;
   final String why;
-  final String asin;        // Amazon product ID
+  final String asin;
   final IconData icon;
   final Color color;
   final String category;
@@ -29,10 +29,8 @@ class _Product {
       'https://www.amazon.com/dp/$asin?tag=stoneguard-20';
 }
 
-// ─── Product Catalog ──────────────────────────────────────────────────────────
+// ─── Product Catalog ──────────────────────────────────────────────────────────────────
 const List<_Product> _products = [
-
-  // ── pH Test Strips ────────────────────────────────────────────────────────
   _Product(
     category: 'Urine pH',
     title: 'pH Test Strips (200ct)',
@@ -51,8 +49,6 @@ const List<_Product> _products = [
     icon: Icons.science_outlined,
     color: Color(0xFF2196F3),
   ),
-
-  // ── Hydration ─────────────────────────────────────────────────────────────
   _Product(
     category: 'Hydration',
     title: 'Half Gallon Water Bottle',
@@ -71,8 +67,6 @@ const List<_Product> _products = [
     icon: Icons.water_drop_outlined,
     color: Color(0xFF00BCD4),
   ),
-
-  // ── Supplements ───────────────────────────────────────────────────────────
   _Product(
     category: 'Supplements',
     title: 'Magnesium Citrate 400mg',
@@ -100,8 +94,6 @@ const List<_Product> _products = [
     icon: Icons.medication_outlined,
     color: Color(0xFF9C27B0),
   ),
-
-  // ── Diet & Kitchen ────────────────────────────────────────────────────────
   _Product(
     category: 'Diet & Kitchen',
     title: 'The Kidney Stone Diet Book',
@@ -120,8 +112,6 @@ const List<_Product> _products = [
     icon: Icons.lunch_dining_outlined,
     color: Color(0xFF4CAF50),
   ),
-
-  // ── Strainers ─────────────────────────────────────────────────────────────
   _Product(
     category: 'Stone Strainers',
     title: 'Kidney Stone Strainer Kit',
@@ -131,8 +121,6 @@ const List<_Product> _products = [
     icon: Icons.filter_alt_outlined,
     color: Color(0xFFFF9800),
   ),
-
-  // ── Heating Pads ──────────────────────────────────────────────────────────
   _Product(
     category: 'Pain Relief',
     title: 'Electric Heating Pad',
@@ -144,7 +132,7 @@ const List<_Product> _products = [
   ),
 ];
 
-// ─── Screen ───────────────────────────────────────────────────────────────────
+// ─── Screen ─────────────────────────────────────────────────────────────────────────────
 class ShopScreen extends StatefulWidget {
   const ShopScreen({super.key});
 
@@ -177,14 +165,20 @@ class _ShopScreenState extends State<ShopScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _filtered;
+    final isDark     = Theme.of(context).brightness == Brightness.dark;
+    final surfaceCol = isDark ? AppColors.darkSurface    : AppColors.surface;
+    final borderCol  = isDark ? AppColors.darkBorder     : AppColors.border;
+    final bgCol      = isDark ? AppColors.darkBackground : AppColors.background;
+    final textMut    = isDark ? AppColors.darkTextSecond : AppColors.textSecond;
+    final textFaint  = isDark ? AppColors.darkTextHint   : AppColors.textHint;
+    final filtered   = _filtered;
 
     return GradientScaffold(
       title: 'Stone Guard Shop',
       body: CustomScrollView(
         slivers: [
 
-          // ── Disclaimer banner ──────────────────────────────────────────
+          // ── Disclaimer banner ────────────────────────────────────────────
           SliverToBoxAdapter(
             child: Container(
               margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -199,15 +193,11 @@ class _ShopScreenState extends State<ShopScreen> {
                 children: [
                   const Icon(Icons.info_outline, color: AppColors.primary, size: 18),
                   const SizedBox(width: 10),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'StoneGuard recommends these kidney stone tools based on urological best practices. '
                       'As an Amazon Associate we earn from qualifying purchases.',
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 12,
-                        height: 1.5,
-                      ),
+                      style: TextStyle(color: textMut, fontSize: 12, height: 1.5),
                     ),
                   ),
                 ],
@@ -215,7 +205,7 @@ class _ShopScreenState extends State<ShopScreen> {
             ),
           ),
 
-          // ── Category filter chips ──────────────────────────────────────
+          // ── Category filter chips ─────────────────────────────────────────
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
@@ -234,10 +224,10 @@ class _ShopScreenState extends State<ShopScreen> {
                         decoration: BoxDecoration(
                           color: active
                               ? AppColors.primary.withValues(alpha: 0.12)
-                              : AppColors.surface,
+                              : surfaceCol,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: active ? AppColors.primary : AppColors.border,
+                            color: active ? AppColors.primary : borderCol,
                             width: 1.5,
                           ),
                         ),
@@ -246,9 +236,7 @@ class _ShopScreenState extends State<ShopScreen> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: active
-                                ? AppColors.primary
-                                : AppColors.textMuted,
+                            color: active ? AppColors.primary : textMut,
                           ),
                         ),
                       ),
@@ -259,27 +247,29 @@ class _ShopScreenState extends State<ShopScreen> {
             ),
           ),
 
-          // ── Product count ───────────────────────────────────────────────
+          // ── Product count ─────────────────────────────────────────────────
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
               child: Text(
                 '${filtered.length} product${filtered.length == 1 ? '' : 's'}',
-                style: const TextStyle(
-                  color: AppColors.textFaint,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: textFaint, fontSize: 12),
               ),
             ),
           ),
 
-          // ── Product grid ────────────────────────────────────────────────
+          // ── Product list ──────────────────────────────────────────────────
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
             sliver: SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, i) => _ProductCard(
                   product: filtered[i],
+                  isDark: isDark,
+                  surfaceCol: surfaceCol,
+                  borderCol: borderCol,
+                  bgCol: bgCol,
+                  textMut: textMut,
                   onTap: () => _openProduct(filtered[i]),
                 ),
                 childCount: filtered.length,
@@ -292,27 +282,42 @@ class _ShopScreenState extends State<ShopScreen> {
   }
 }
 
-// ─── Product Card ─────────────────────────────────────────────────────────────
+// ─── Product Card ────────────────────────────────────────────────────────────────────
 class _ProductCard extends StatelessWidget {
   final _Product product;
+  final bool isDark;
+  final Color surfaceCol;
+  final Color borderCol;
+  final Color bgCol;
+  final Color textMut;
   final VoidCallback onTap;
 
-  const _ProductCard({required this.product, required this.onTap});
+  const _ProductCard({
+    required this.product,
+    required this.isDark,
+    required this.surfaceCol,
+    required this.borderCol,
+    required this.bgCol,
+    required this.textMut,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final textPri = isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: surfaceCol,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: borderCol),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -341,8 +346,7 @@ class _ProductCard extends StatelessWidget {
                 children: [
                   // Category badge
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: product.color.withValues(alpha: 0.10),
                       borderRadius: BorderRadius.circular(8),
@@ -362,8 +366,8 @@ class _ProductCard extends StatelessWidget {
                   // Title
                   Text(
                     product.title,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
+                    style: TextStyle(
+                      color: textPri,
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
@@ -373,10 +377,7 @@ class _ProductCard extends StatelessWidget {
                   // Subtitle
                   Text(
                     product.subtitle,
-                    style: const TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: textMut, fontSize: 12),
                   ),
                   const SizedBox(height: 8),
 
@@ -384,9 +385,9 @@ class _ProductCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppColors.background,
+                      color: bgCol,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: borderCol),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -397,8 +398,8 @@ class _ProductCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             product.why,
-                            style: const TextStyle(
-                              color: AppColors.textMuted,
+                            style: TextStyle(
+                              color: textMut,
                               fontSize: 11,
                               height: 1.4,
                             ),
@@ -417,11 +418,10 @@ class _ProductCard extends StatelessWidget {
                       icon: const Icon(Icons.open_in_new, size: 15),
                       label: const Text(
                         'View on Amazon',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 13),
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF9900), // Amazon orange
+                        backgroundColor: const Color(0xFFFF9900),
                         foregroundColor: Colors.black,
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         elevation: 0,
