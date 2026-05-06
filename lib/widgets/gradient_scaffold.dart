@@ -35,8 +35,8 @@ class GradientScaffold extends StatelessWidget {
         ? [
             const Color(0xFF01696F),
             const Color(0xFF025A60),
-            AppColors.darkBg,
-            AppColors.darkBg,
+            AppColors.darkBackground,
+            AppColors.darkBackground,
           ]
         : [
             const Color(0xFF01696F),
@@ -52,7 +52,7 @@ class GradientScaffold extends StatelessWidget {
         statusBarColor: Colors.transparent,
       ),
       child: Scaffold(
-        backgroundColor: isDark ? AppColors.darkBg : Colors.white,
+        backgroundColor: isDark ? AppColors.darkBackground : Colors.white,
         resizeToAvoidBottomInset: resizeToAvoidBottomInset,
         floatingActionButton: floatingActionButton,
         bottomSheet: bottomSheet,
