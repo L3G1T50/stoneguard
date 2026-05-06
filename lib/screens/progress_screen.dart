@@ -52,7 +52,7 @@ class _ProgressScreenState extends State<ProgressScreen>
   List<_ChartBar> _chartBars = [];
 
   // ── Stats ─────────────────────────────────────────────────────────────────
-  List<Map<String, dynamic>> _weeklyData = []; // always 7-day for breakdown rows
+  List<Map<String, dynamic>> _weeklyData = [];
   int    _currentStreak            = 0;
   int    _bestStreak               = 0;
   double _avgDailyOxalate          = 0;
@@ -249,7 +249,6 @@ class _ProgressScreenState extends State<ProgressScreen>
     final celebratedList = prefs.getStringList('celebrated_badges') ?? [];
     _celebratedBadges = celebratedList.toSet();
 
-    // ── Build full date→value maps ────────────────────────────────────────
     final dailyHistoryRaw = prefs.getStringList('daily_history') ?? [];
     final Map<String, double> dailyOxalate = {};
     final Map<String, double> dailyWater   = {};
@@ -264,7 +263,6 @@ class _ProgressScreenState extends State<ProgressScreen>
       } catch (_) {}
     }
 
-    // Merge today's live prefs
     final now      = DateTime.now();
     final todayKey = '${now.year}_${now.month}_${now.day}';
     final todayStr =
@@ -272,10 +270,8 @@ class _ProgressScreenState extends State<ProgressScreen>
     dailyOxalate[todayStr] = prefs.getDouble('oxalate_$todayKey') ?? 0.0;
     dailyWater[todayStr]   = prefs.getDouble('water_$todayKey')   ?? 0.0;
 
-    // ── Total days logged ─────────────────────────────────────────────────
     final totalDaysLogged = dailyOxalate.values.where((v) => v > 0).length;
 
-    // ── Current streak ────────────────────────────────────────────────────
     int currentStreak = 0;
     DateTime cursor = now;
     while (true) {
@@ -292,7 +288,6 @@ class _ProgressScreenState extends State<ProgressScreen>
       if (cursor.isBefore(now.subtract(const Duration(days: 730)))) break;
     }
 
-    // ── Longest consecutive streak ────────────────────────────────────────
     int longestStreak  = 0;
     int runningStreak  = 0;
     final allDates = dailyOxalate.keys
@@ -320,7 +315,6 @@ class _ProgressScreenState extends State<ProgressScreen>
       }
     }
 
-    // ── Best streak ───────────────────────────────────────────────────────
     int best = prefs.getInt('best_streak') ?? 0;
     if (currentStreak > best) {
       best = currentStreak;
@@ -331,7 +325,6 @@ class _ProgressScreenState extends State<ProgressScreen>
       await prefs.setInt('best_streak', best);
     }
 
-    // ── 7-day window for breakdown rows ──────────────────────────────────
     const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     final List<Map<String, dynamic>> weeklyData = [];
     for (int i = 6; i >= 0; i--) {
@@ -380,10 +373,6 @@ class _ProgressScreenState extends State<ProgressScreen>
   }
 
   // ── Chart bar builder ─────────────────────────────────────────────────────
-  // Aggregates raw daily data into display bars based on the selected timeframe.
-  // 7D/30D → one bar per day
-  // 6M     → one bar per week (average of logged days)
-  // 1Y/2Y  → one bar per month (average of logged days)
   void _rebuildChartBars() {
     final now        = DateTime.now();
     final totalDays  = _selectedTimeframe.days;
@@ -395,7 +384,6 @@ class _ProgressScreenState extends State<ProgressScreen>
 
     if (_selectedTimeframe == ChartTimeframe.d7 ||
         _selectedTimeframe == ChartTimeframe.d30) {
-      // ── Daily bars ──────────────────────────────────────────────────────
       const dayAbbr = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
       for (int i = totalDays - 1; i >= 0; i--) {
         final day    = now.subtract(Duration(days: i));
@@ -408,7 +396,6 @@ class _ProgressScreenState extends State<ProgressScreen>
         bars.add(_ChartBar(label: label, value: value, goal: goal));
       }
     } else if (_selectedTimeframe == ChartTimeframe.m6) {
-      // ── Weekly bars (last 26 weeks) ──────────────────────────────────
       for (int w = 25; w >= 0; w--) {
         final weekStart = now.subtract(Duration(days: (w + 1) * 7 - 1));
         double total = 0;
@@ -428,14 +415,12 @@ class _ProgressScreenState extends State<ProgressScreen>
         bars.add(_ChartBar(label: label, value: avg, goal: goal));
       }
     } else {
-      // ── Monthly bars (1Y = 12 months, 2Y = 24 months) ────────────────
       final months = _selectedTimeframe == ChartTimeframe.y1 ? 12 : 24;
       for (int m = months - 1; m >= 0; m--) {
         final targetMonth = DateTime(now.year, now.month - m, 1);
         final yr  = targetMonth.year;
         final mo  = targetMonth.month;
-        final daysInMonth =
-            DateUtils.getDaysInMonth(yr, mo);
+        final daysInMonth = DateUtils.getDaysInMonth(yr, mo);
         double total = 0;
         int    count = 0;
         for (int d = 1; d <= daysInMonth; d++) {
@@ -457,7 +442,6 @@ class _ProgressScreenState extends State<ProgressScreen>
       }
     }
 
-    // ── Recompute range stats ─────────────────────────────────────────────
     final logged = bars.where((b) => b.value > 0).toList();
     final avgInRange = logged.isEmpty
         ? 0.0
@@ -474,19 +458,16 @@ class _ProgressScreenState extends State<ProgressScreen>
     });
   }
 
-  // ── Switch timeframe ──────────────────────────────────────────────────────
   void _onTimeframeChanged(ChartTimeframe tf) {
     setState(() => _selectedTimeframe = tf);
     _rebuildChartBars();
   }
 
-  // ── Switch metric ─────────────────────────────────────────────────────────
   void _onMetricChanged(ChartMetric m) {
     setState(() => _selectedMetric = m);
     _rebuildChartBars();
   }
 
-  // ── Badge unlock detection ────────────────────────────────────────────────
   Future<void> _checkForNewUnlocks(SharedPreferences prefs) async {
     for (final badge in _achievements) {
       final id          = badge['id']       as String;
@@ -510,7 +491,6 @@ class _ProgressScreenState extends State<ProgressScreen>
     }
   }
 
-  // ── Badge pop animation ───────────────────────────────────────────────────
   void _triggerBadgePop(String id) {
     final ctrl = AnimationController(
       vsync: this,
@@ -528,7 +508,6 @@ class _ProgressScreenState extends State<ProgressScreen>
     setState(() {});
   }
 
-  // ── Achievement modal ─────────────────────────────────────────────────────
   void _showAchievementModal(Map<String, dynamic> badge) {
     showModalBottomSheet(
       context: context,
@@ -560,7 +539,6 @@ class _ProgressScreenState extends State<ProgressScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Streak / stat cards ─────────────────────────────────
                 Row(children: [
                   Expanded(
                       child: _buildStreakCard('🔥 Current Streak',
@@ -596,29 +574,17 @@ class _ProgressScreenState extends State<ProgressScreen>
                 ]),
 
                 const SizedBox(height: 20),
-
-                // ── Chart header ────────────────────────────────────────
                 _buildChartHeader(),
                 const SizedBox(height: 10),
-
-                // ── Timeframe selector ──────────────────────────────────
                 _buildTimeframeSelector(),
                 const SizedBox(height: 10),
-
-                // ── Metric toggle ───────────────────────────────────────
                 _buildMetricToggle(),
                 const SizedBox(height: 10),
-
-                // ── Chart ───────────────────────────────────────────────
                 _buildBarChart(),
-
-                // ── Days logged badge ───────────────────────────────────
                 const SizedBox(height: 8),
                 _buildDaysLoggedBadge(),
-
                 const SizedBox(height: 20),
 
-                // ── Daily breakdown (always 7-day) ──────────────────────
                 const Text('Daily Breakdown',
                     style: TextStyle(
                         color: textColor,
@@ -628,8 +594,6 @@ class _ProgressScreenState extends State<ProgressScreen>
                 ..._weeklyData.map((day) => _buildDayRow(day)),
 
                 const SizedBox(height: 20),
-
-                // ── Achievements ────────────────────────────────────────
                 const Text('Achievements',
                     style: TextStyle(
                         color: textColor,
@@ -641,8 +605,6 @@ class _ProgressScreenState extends State<ProgressScreen>
             ),
           ),
         ),
-
-        // Confetti
         Align(
           alignment: Alignment.topCenter,
           child: ConfettiWidget(
@@ -663,7 +625,6 @@ class _ProgressScreenState extends State<ProgressScreen>
     );
   }
 
-  // ── Chart header ──────────────────────────────────────────────────────────
   Widget _buildChartHeader() {
     final isOxalate = _selectedMetric == ChartMetric.oxalate;
     final String title = isOxalate
@@ -693,20 +654,14 @@ class _ProgressScreenState extends State<ProgressScreen>
 
   String _getTimeframeSubtitle() {
     switch (_selectedTimeframe) {
-      case ChartTimeframe.d7:
-        return 'Daily values — last 7 days';
-      case ChartTimeframe.d30:
-        return 'Daily values — last 30 days';
-      case ChartTimeframe.m6:
-        return 'Weekly averages — last 6 months';
-      case ChartTimeframe.y1:
-        return 'Monthly averages — last 12 months';
-      case ChartTimeframe.y2:
-        return 'Monthly averages — last 2 years';
+      case ChartTimeframe.d7:  return 'Daily values — last 7 days';
+      case ChartTimeframe.d30: return 'Daily values — last 30 days';
+      case ChartTimeframe.m6:  return 'Weekly averages — last 6 months';
+      case ChartTimeframe.y1:  return 'Monthly averages — last 12 months';
+      case ChartTimeframe.y2:  return 'Monthly averages — last 2 years';
     }
   }
 
-  // ── Timeframe selector ────────────────────────────────────────────────────
   Widget _buildTimeframeSelector() {
     return Container(
       decoration: BoxDecoration(
@@ -753,7 +708,6 @@ class _ProgressScreenState extends State<ProgressScreen>
     );
   }
 
-  // ── Metric toggle ─────────────────────────────────────────────────────────
   Widget _buildMetricToggle() {
     return Row(
       children: [
@@ -806,17 +760,24 @@ class _ProgressScreenState extends State<ProgressScreen>
   }
 
   // ── Bar chart ─────────────────────────────────────────────────────────────
+  // FIX: Each bar column is a fully-constrained SizedBox(height: _kTotalH).
+  // The three layers (value label / bar area / x-axis label) are all fixed
+  // SizedBoxes so Flutter never needs to measure unbounded children, which
+  // was what caused the black-and-yellow overflow stripes.
+  static const double _kBarAreaH    = 110.0; // usable drawing area for bars
+  static const double _kValueLabelH =  14.0; // top slot for the value text
+  static const double _kXLabelH     =  14.0; // bottom slot for the x-axis text
+  static const double _kTotalH =
+      _kValueLabelH + _kBarAreaH + _kXLabelH;      // 138 px total, never exceeded
+
   Widget _buildBarChart() {
-    if (_chartBars.isEmpty) {
-      return _buildEmptyChart();
-    }
+    if (_chartBars.isEmpty) return _buildEmptyChart();
 
     final isOxalate = _selectedMetric == ChartMetric.oxalate;
     final goal      = isOxalate ? _oxalateGoal : _waterGoal;
     final maxValue  = _chartBars.fold(0.0, (m, b) => b.value > m ? b.value : m);
     final chartMax  = maxValue < goal ? goal * 1.2 : maxValue * 1.2;
 
-    // For longer timeframes, show fewer x-axis labels to avoid crowding
     final showEveryN = _selectedTimeframe == ChartTimeframe.d30
         ? 5
         : _selectedTimeframe == ChartTimeframe.m6
@@ -840,8 +801,9 @@ class _ProgressScreenState extends State<ProgressScreen>
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Legend
+          // Legend row
           Row(children: [
             _legendDot(
                 isOxalate ? barOk : barWater,
@@ -853,104 +815,149 @@ class _ProgressScreenState extends State<ProgressScreen>
           ]),
           const SizedBox(height: 10),
 
-          // Bars
-          SizedBox(
-            height: 140,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: List.generate(_chartBars.length, (idx) {
-                final bar       = _chartBars[idx];
-                final barH      = chartMax > 0
-                    ? (bar.value / chartMax) * 110
-                    : 0.0;
-                final goalLineH = chartMax > 0
-                    ? (goal / chartMax) * 110
-                    : 0.0;
-                Color barColor;
-                if (bar.value == 0) {
-                  barColor = barEmpty;
-                } else if (isOxalate) {
-                  barColor = bar.value > goal ? barOver : barOk;
-                } else {
-                  barColor = bar.value >= goal ? barWater : barWaterLow;
-                }
+          // ── Fixed-height chart area ───────────────────────────────────────
+          // ClipRect prevents any child from painting outside _kTotalH.
+          ClipRect(
+            child: SizedBox(
+              height: _kTotalH,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: List.generate(_chartBars.length, (idx) {
+                  final bar   = _chartBars[idx];
+                  // Clamp bar height strictly inside [2, _kBarAreaH]
+                  final barH  = chartMax > 0
+                      ? (bar.value / chartMax * _kBarAreaH)
+                          .clamp(2.0, _kBarAreaH)
+                      : 2.0;
+                  // Goal-line position from bottom of bar area
+                  final goalH = chartMax > 0
+                      ? (goal / chartMax * _kBarAreaH)
+                          .clamp(0.0, _kBarAreaH)
+                      : 0.0;
 
-                final showLabel = idx % showEveryN == 0;
+                  Color barColor;
+                  if (bar.value == 0) {
+                    barColor = barEmpty;
+                  } else if (isOxalate) {
+                    barColor = bar.value > goal ? barOver : barOk;
+                  } else {
+                    barColor = bar.value >= goal ? barWater : barWaterLow;
+                  }
 
-                return Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      // Value label (only on short timeframes)
-                      if (bar.value > 0 &&
-                          (_selectedTimeframe == ChartTimeframe.d7 ||
-                              _selectedTimeframe == ChartTimeframe.d30))
-                        Text(
-                          bar.value >= 1000
-                              ? '${(bar.value / 1000).toStringAsFixed(1)}k'
-                              : bar.value.toStringAsFixed(0),
-                          style: const TextStyle(
-                              color: mutedColor, fontSize: 7),
-                        ),
-                      const SizedBox(height: 2),
-                      Stack(
-                        alignment: Alignment.bottomCenter,
+                  final showLabel = idx % showEveryN == 0;
+                  final showValue = bar.value > 0 &&
+                      (_selectedTimeframe == ChartTimeframe.d7 ||
+                          _selectedTimeframe == ChartTimeframe.d30);
+
+                  final barWidth = _selectedTimeframe == ChartTimeframe.d7
+                      ? 22.0
+                      : _selectedTimeframe == ChartTimeframe.d30
+                          ? 8.0
+                          : _selectedTimeframe == ChartTimeframe.m6
+                              ? 8.0
+                              : 12.0;
+
+                  return Expanded(
+                    child: SizedBox(
+                      height: _kTotalH,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.max,
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
+                          // ① Value label — fixed height slot
                           SizedBox(
-                            height: 115,
-                            child: Align(
+                            height: _kValueLabelH,
+                            child: showValue
+                                ? Align(
+                                    alignment: Alignment.bottomCenter,
+                                    child: Text(
+                                      bar.value >= 1000
+                                          ? '${(bar.value / 1000).toStringAsFixed(1)}k'
+                                          : bar.value.toStringAsFixed(0),
+                                      style: const TextStyle(
+                                          color: mutedColor, fontSize: 7),
+                                      overflow: TextOverflow.visible,
+                                      softWrap: false,
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+
+                          // ② Bar + goal line — fixed height slot
+                          SizedBox(
+                            height: _kBarAreaH,
+                            child: Stack(
                               alignment: Alignment.bottomCenter,
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 350),
-                                curve: Curves.easeOut,
-                                width: _selectedTimeframe == ChartTimeframe.d7
-                                    ? 22
-                                    : _selectedTimeframe ==
-                                            ChartTimeframe.d30
-                                        ? 8
-                                        : _selectedTimeframe ==
-                                                ChartTimeframe.m6
-                                            ? 8
-                                            : 12,
-                                height: barH.clamp(2.0, 110.0),
-                                decoration: BoxDecoration(
-                                  color: barColor,
-                                  borderRadius: BorderRadius.circular(3),
+                              clipBehavior: Clip.hardEdge,
+                              children: [
+                                // Bar
+                                Align(
+                                  alignment: Alignment.bottomCenter,
+                                  child: AnimatedContainer(
+                                    duration:
+                                        const Duration(milliseconds: 350),
+                                    curve: Curves.easeOut,
+                                    width: barWidth,
+                                    height: barH,
+                                    decoration: BoxDecoration(
+                                      color: barColor,
+                                      borderRadius:
+                                          BorderRadius.circular(3),
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                // Goal dashed line
+                                Positioned(
+                                  bottom: goalH,
+                                  child: Container(
+                                    width: _selectedTimeframe ==
+                                            ChartTimeframe.d7
+                                        ? 26.0
+                                        : barWidth + 2,
+                                    height: 1.5,
+                                    color: goalLine.withValues(alpha: 0.45),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          // Goal line
-                          Positioned(
-                            bottom: goalLineH.clamp(0.0, 110.0),
-                            child: Container(
-                              width: _selectedTimeframe == ChartTimeframe.d7
-                                  ? 26
-                                  : 10,
-                              height: 1.5,
-                              color: goalLine.withValues(alpha: 0.45),
-                            ),
+
+                          // ③ X-axis label — fixed height slot
+                          SizedBox(
+                            height: _kXLabelH,
+                            child: showLabel
+                                ? Align(
+                                    alignment: Alignment.topCenter,
+                                    child: Padding(
+                                      padding:
+                                          const EdgeInsets.only(top: 3),
+                                      child: Text(
+                                        bar.label,
+                                        style: const TextStyle(
+                                            color: mutedColor,
+                                            fontSize: 9),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      if (showLabel)
-                        Text(bar.label,
-                            style: const TextStyle(
-                                color: mutedColor, fontSize: 9))
-                      else
-                        const SizedBox(height: 11),
-                    ],
-                  ),
-                );
-              }),
+                    ),
+                  );
+                }),
+              ),
             ),
           ),
 
-          // Goal line legend
+          // Goal line key
           const SizedBox(height: 6),
           Row(children: [
-            Container(width: 18, height: 2, color: goalLine.withValues(alpha: 0.45)),
+            Container(
+                width: 18,
+                height: 2,
+                color: goalLine.withValues(alpha: 0.45)),
             const SizedBox(width: 4),
             Text(
               isOxalate
@@ -1001,7 +1008,6 @@ class _ProgressScreenState extends State<ProgressScreen>
     );
   }
 
-  // ── Days logged badge ─────────────────────────────────────────────────────
   Widget _buildDaysLoggedBadge() {
     final totalBars = _chartBars.length;
     if (totalBars == 0) return const SizedBox.shrink();
@@ -1010,7 +1016,6 @@ class _ProgressScreenState extends State<ProgressScreen>
         ? (_daysLoggedInRange / totalBars * 100).clamp(0, 100).toInt()
         : 0;
 
-    // Label adjusts for aggregated views
     final unitLabel = (_selectedTimeframe == ChartTimeframe.m6)
         ? 'weeks'
         : (_selectedTimeframe == ChartTimeframe.y1 ||
@@ -1040,7 +1045,6 @@ class _ProgressScreenState extends State<ProgressScreen>
     );
   }
 
-  // ── Streak card ───────────────────────────────────────────────────────────
   Widget _buildStreakCard(String title, String value, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1065,7 +1069,6 @@ class _ProgressScreenState extends State<ProgressScreen>
     );
   }
 
-  // ── Stat card ─────────────────────────────────────────────────────────────
   Widget _buildStatCard(String title, String value, Color color,
       {String? subtitle}) {
     return Container(
@@ -1096,10 +1099,9 @@ class _ProgressScreenState extends State<ProgressScreen>
     );
   }
 
-  // ── Day row ───────────────────────────────────────────────────────────────
   Widget _buildDayRow(Map<String, dynamic> day) {
-    final oxalate      = day['oxalate']       as double;
-    final water        = day['water']         as double;
+    final oxalate      = day['oxalate']        as double;
+    final water        = day['water']          as double;
     final oxGoalMet    = day['oxalateGoalMet'] as bool;
     final waterGoalMet = day['waterGoalMet']   as bool;
     final bothMet      = oxGoalMet && waterGoalMet;
@@ -1195,11 +1197,14 @@ class _ProgressScreenState extends State<ProgressScreen>
                             ClipRRect(
                               borderRadius: BorderRadius.circular(4),
                               child: LinearProgressIndicator(
-                                value: (oxalate / _oxalateGoal).clamp(0.0, 1.0),
+                                value:
+                                    (oxalate / _oxalateGoal).clamp(0.0, 1.0),
                                 minHeight: 4,
                                 backgroundColor: borderColor,
                                 valueColor: AlwaysStoppedAnimation<Color>(
-                                    oxGoalMet ? accentGreen : Colors.redAccent),
+                                    oxGoalMet
+                                        ? accentGreen
+                                        : Colors.redAccent),
                               ),
                             ),
                           ],
@@ -1208,7 +1213,8 @@ class _ProgressScreenState extends State<ProgressScreen>
                       Container(
                           width: 1,
                           height: 40,
-                          margin: const EdgeInsets.symmetric(horizontal: 12),
+                          margin:
+                              const EdgeInsets.symmetric(horizontal: 12),
                           color: borderColor),
                       Expanded(
                         child: Column(
@@ -1224,7 +1230,9 @@ class _ProgressScreenState extends State<ProgressScreen>
                             Text(
                               '${water.toStringAsFixed(0)} oz',
                               style: TextStyle(
-                                  color: waterGoalMet ? accentTeal : Colors.orange,
+                                  color: waterGoalMet
+                                      ? accentTeal
+                                      : Colors.orange,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold),
                             ),
@@ -1232,11 +1240,14 @@ class _ProgressScreenState extends State<ProgressScreen>
                             ClipRRect(
                               borderRadius: BorderRadius.circular(4),
                               child: LinearProgressIndicator(
-                                value: (water / _waterGoal).clamp(0.0, 1.0),
+                                value:
+                                    (water / _waterGoal).clamp(0.0, 1.0),
                                 minHeight: 4,
                                 backgroundColor: borderColor,
                                 valueColor: AlwaysStoppedAnimation<Color>(
-                                    waterGoalMet ? accentTeal : Colors.orange),
+                                    waterGoalMet
+                                        ? accentTeal
+                                        : Colors.orange),
                               ),
                             ),
                           ],
@@ -1268,7 +1279,6 @@ class _ProgressScreenState extends State<ProgressScreen>
     );
   }
 
-  // ── Achievements list ─────────────────────────────────────────────────────
   Widget _buildAchievements() {
     return Column(
       children: _achievements.map((a) {
