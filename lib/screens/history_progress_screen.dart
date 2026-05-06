@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 import 'history_screen.dart';
 import 'progress_screen.dart';
@@ -6,7 +7,7 @@ import 'settings_screen.dart';
 
 // ─── MERGED HISTORY + PROGRESS SCREEN ────────────────────────────────────────
 // Shows Progress charts (default tab) and History entries (second tab).
-// Settings gear in the AppBar navigates to SettingsScreen.
+// Teal-fade gradient header matches the rest of the app (GradientScaffold).
 
 class HistoryProgressScreen extends StatefulWidget {
   const HistoryProgressScreen({super.key});
@@ -33,80 +34,144 @@ class _HistoryProgressScreenState extends State<HistoryProgressScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark       = Theme.of(context).brightness == Brightness.dark;
-    final appBarBg     = isDark ? AppColors.darkSurface    : const Color(0xFFE8E8EC);
-    final titleColor   = isDark ? AppColors.darkTextPrimary : const Color(0xFF2C2C2C);
-    final mutedColor   = isDark ? AppColors.darkTextSecond  : const Color(0xFF888888);
-    final segmentBg    = isDark ? AppColors.darkBackground  : const Color(0xFFD0D0D8);
-    final accentTeal   = AppColors.primary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBackground : const Color(0xFFF8F8F8),
-      appBar: AppBar(
-        backgroundColor: appBarBg,
-        elevation: 0,
-        centerTitle: true,
-        title: Text(
-          'History & Progress',
-          style: TextStyle(
-            color: titleColor,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.settings_outlined, color: titleColor),
-            tooltip: 'Settings',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            ),
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            child: Container(
-              height: 36,
-              decoration: BoxDecoration(
-                color: segmentBg.withValues(alpha: isDark ? 0.5 : 0.35),
-                borderRadius: BorderRadius.circular(20),
+    // Same gradient as GradientScaffold — teal fade on light, dark on dark
+    final List<Color> gradientColors = isDark
+        ? [
+            const Color(0xFF01696F),
+            const Color(0xFF025A60),
+            AppColors.darkBackground,
+            AppColors.darkBackground,
+          ]
+        : [
+            const Color(0xFF01696F),
+            const Color(0xFF2A9DA5),
+            const Color(0xFFE0F4F5),
+            Colors.white,
+          ];
+    const gradientStops = [0.0, 0.18, 0.42, 0.62];
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+      ),
+      child: Scaffold(
+        backgroundColor: isDark ? AppColors.darkBackground : Colors.white,
+        body: Stack(
+          children: [
+            // ── Teal gradient background (same as every other tab) ──
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: const Alignment(0, 0.55),
+                    colors: gradientColors,
+                    stops: gradientStops,
+                  ),
+                ),
               ),
-              child: TabBar(
-                controller: _tabController,
-                labelColor: Colors.white,
-                unselectedLabelColor: mutedColor,
-                labelStyle: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-                unselectedLabelStyle: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-                indicator: BoxDecoration(
-                  color: accentTeal,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                indicatorSize: TabBarIndicatorSize.tab,
-                dividerColor: Colors.transparent,
-                tabs: const [
-                  Tab(text: 'Charts'),
-                  Tab(text: 'Entries'),
+            ),
+
+            // ── SafeArea with custom header + tabs + content ──
+            SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ── Header row: title + settings gear ──
+                  SizedBox(
+                    height: 52,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 56),
+                          child: Text(
+                            'History & Progress',
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          right: 0,
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.settings_outlined,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                            tooltip: 'Settings',
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const SettingsScreen()),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ── Segmented tab bar ──
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                    child: Container(
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: TabBar(
+                        controller: _tabController,
+                        labelColor: isDark
+                            ? AppColors.darkBackground
+                            : const Color(0xFF01696F),
+                        unselectedLabelColor:
+                            Colors.white.withValues(alpha: 0.85),
+                        labelStyle: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        unselectedLabelStyle: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        indicator: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        dividerColor: Colors.transparent,
+                        tabs: const [
+                          Tab(text: 'Charts'),
+                          Tab(text: 'Entries'),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // ── Tab content ──
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: const [
+                        _ProgressTab(),
+                        _HistoryTab(),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
-          ),
+          ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: const [
-          _ProgressTab(),
-          _HistoryTab(),
-        ],
       ),
     );
   }
