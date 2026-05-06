@@ -189,7 +189,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   double goalOz = 80;
   double goalMg = 200;
 
-  // Achievement card data
   Set<String> _celebratedBadges = {};
   int get _unlockedCount => _kAllBadges
       .where((b) => _celebratedBadges.contains(b['id']))
@@ -197,9 +196,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
 
   late AnimationController _fillController;
   late Animation<double> _fillAnimation;
-
   late AnimationController _waveController;
-
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
@@ -309,21 +306,15 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   Future<void> _addWater(double oz) async {
     final prefs = await SharedPreferences.getInstance();
     final newOz = (waterOz + oz).clamp(0.0, goalOz);
-
     final currentAnimProg = _fillAnimation.value;
-
     _fillAnimation =
         Tween<double>(begin: currentAnimProg, end: newOz / goalOz).animate(
             CurvedAnimation(
                 parent: _fillController, curve: Curves.easeInOutCubic));
     _fillController.forward(from: 0);
-
-    setState(() {
-      waterOz = newOz;
-    });
+    setState(() { waterOz = newOz; });
     await prefs.setDouble('water_$_todayKey', newOz);
     await _saveTodayToHistory();
-
     if (newOz >= goalOz) {
       _pulseController.forward(from: 0).then((_) => _pulseController.reverse());
     }
@@ -408,8 +399,8 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
         final fillProg = _fillAnimation.value.clamp(0.0, 1.0);
         final ringColor = _lerpShieldColor(fillProg);
         final wavePhase = _waveController.value * 2 * pi;
-        final displayOz =
-            (_fillAnimation.value * goalOz).clamp(0.0, goalOz);
+        final displayOz = (_fillAnimation.value * goalOz).clamp(0.0, goalOz);
+        final isDark = Theme.of(context).brightness == Brightness.dark;
 
         return ScaleTransition(
           scale: _pulseAnimation,
@@ -446,7 +437,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                   width: 170,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFFF0F4F8),
+                    color: isDark ? const Color(0xFF1A2730) : const Color(0xFFF0F4F8),
                     boxShadow: [
                       BoxShadow(
                           color: Colors.black.withValues(alpha: 0.12),
@@ -484,13 +475,9 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                               fontWeight: FontWeight.bold,
                               color: fillProg > 0.45
                                   ? Colors.white
-                                  : const Color(0xFF2E3A45),
+                                  : (isDark ? Colors.white70 : const Color(0xFF2E3A45)),
                               shadows: fillProg > 0.45
-                                  ? [
-                                      const Shadow(
-                                          color: Colors.black26,
-                                          blurRadius: 4)
-                                    ]
+                                  ? [const Shadow(color: Colors.black26, blurRadius: 4)]
                                   : null,
                             ),
                           ),
@@ -501,7 +488,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                               fontWeight: FontWeight.w500,
                               color: fillProg > 0.45
                                   ? Colors.white.withValues(alpha: 0.85)
-                                  : Colors.grey.shade500,
+                                  : (isDark ? Colors.white38 : Colors.grey.shade500),
                             ),
                           ),
                         ],
@@ -518,7 +505,15 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   }
 
   // ─── ACHIEVEMENTS TROPHY CARD ──────────────────────────────────────────────────────────
-  Widget _buildAchievementsCard() {
+  Widget _buildAchievementsCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E2530) : Colors.white;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF2C2C2C);
+    final textMuted = isDark ? Colors.white54 : const Color(0xFF888888);
+    final dividerColor = isDark ? Colors.white12 : Colors.grey.shade200;
+    final lockedBadgeBg = isDark ? Colors.white10 : Colors.grey.shade100;
+    final lockedBadgeBorder = isDark ? Colors.white24 : Colors.grey.shade300;
+    final lockedIconColor = isDark ? Colors.white38 : Colors.grey.shade400;
     final total    = _kAllBadges.length;
     final unlocked = _unlockedCount;
     final progress = total > 0 ? unlocked / total : 0.0;
@@ -533,22 +528,15 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
         width: double.infinity,
         padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
         decoration: BoxDecoration(
+          color: cardBg,
           borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFFD4A020).withValues(alpha: 0.10),
-              const Color(0xFF01696F).withValues(alpha: 0.06),
-            ],
-          ),
           border: Border.all(
             color: const Color(0xFFD4A020).withValues(alpha: 0.35),
             width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFD4A020).withValues(alpha: 0.08),
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.07),
               blurRadius: 16,
               offset: const Offset(0, 4),
             ),
@@ -557,7 +545,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header row ──
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -565,7 +552,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFD4A020).withValues(alpha: 0.14),
+                      color: const Color(0xFFD4A020).withValues(alpha: isDark ? 0.22 : 0.14),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Text('🎅', style: TextStyle(fontSize: 18)),
@@ -574,44 +561,39 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Achievements',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF2C2C2C),
+                          color: textPrimary,
                         ),
                       ),
                       Text(
                         '$unlocked of $total unlocked · $pct%',
-                        style: const TextStyle(
-                            fontSize: 11, color: Color(0xFF888888)),
+                        style: TextStyle(fontSize: 11, color: textMuted),
                       ),
                     ],
                   ),
                 ]),
-                const Icon(Icons.chevron_right,
-                    color: Color(0xFF888888), size: 20),
+                Icon(Icons.chevron_right, color: textMuted, size: 20),
               ],
             ),
 
             const SizedBox(height: 12),
 
-            // ── Progress bar ──
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 7,
-                backgroundColor: Colors.grey.shade200,
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFFD4A020)),
+                backgroundColor: dividerColor,
+                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFD4A020)),
               ),
             ),
 
             const SizedBox(height: 14),
 
-            // ── Badge icon strip ──
             SizedBox(
               height: 44,
               child: ListView.separated(
@@ -630,15 +612,15 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                       shape: BoxShape.circle,
                       color: isUnlocked
                           ? (isMilestone
-                              ? const Color(0xFFD4A020).withValues(alpha: 0.15)
-                              : const Color(0xFF2A9A5A).withValues(alpha: 0.12))
-                          : Colors.grey.shade100,
+                              ? const Color(0xFFD4A020).withValues(alpha: isDark ? 0.25 : 0.15)
+                              : const Color(0xFF2A9A5A).withValues(alpha: isDark ? 0.22 : 0.12))
+                          : lockedBadgeBg,
                       border: Border.all(
                         color: isUnlocked
                             ? (isMilestone
                                 ? const Color(0xFFD4A020).withValues(alpha: 0.5)
                                 : const Color(0xFF2A9A5A).withValues(alpha: 0.4))
-                            : Colors.grey.shade300,
+                            : lockedBadgeBorder,
                         width: 1.5,
                       ),
                     ),
@@ -647,8 +629,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                           ? Text(badge['icon'] as String,
                               style: const TextStyle(fontSize: 20))
                           : Icon(Icons.lock_outline,
-                              size: 16,
-                              color: Colors.grey.shade400),
+                              size: 16, color: lockedIconColor),
                     ),
                   );
                 },
@@ -656,9 +637,9 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
             ),
 
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'Tap to view all achievements →',
-              style: TextStyle(fontSize: 11, color: Color(0xFF888888)),
+              style: TextStyle(fontSize: 11, color: textMuted),
             ),
           ],
         ),
@@ -668,10 +649,19 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final double waterProgress = (waterOz / goalOz).clamp(0.0, 1.0);
     final double remaining = (goalOz - waterOz).clamp(0.0, goalOz);
     final Color oxColor = _oxalateColor(oxalateMg);
     final double oxProgress = (oxalateMg / goalMg).clamp(0.0, 1.0);
+
+    // ── Theme-aware color shorthands ──
+    final cardBg       = isDark ? const Color(0xFF1E2530) : Colors.white;
+    final textPrimary  = isDark ? Colors.white           : const Color(0xFF1A1A1A);
+    final textMuted    = isDark ? Colors.white54         : Colors.grey.shade600;
+    final textSubtle   = isDark ? Colors.white38         : Colors.grey.shade500;
+    final dividerColor = isDark ? Colors.white12         : Colors.grey.shade200;
+    final chipBg       = isDark ? Colors.white10         : Colors.grey.shade100;
 
     final Widget scrollContent = SafeArea(
       child: SingleChildScrollView(
@@ -690,8 +680,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                       ? FileImage(File(_avatarPath))
                       : null,
                   child: _avatarPath.isEmpty
-                      ? const Icon(Icons.person,
-                          color: Colors.white, size: 22)
+                      ? const Icon(Icons.person, color: Colors.white, size: 22)
                       : null,
                 ),
                 const SizedBox(width: 10),
@@ -699,9 +688,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _userName.isEmpty
-                          ? 'Today\'s Shield'
-                          : 'Hey, $_userName! 👋',
+                      _userName.isEmpty ? 'Today\'s Shield' : 'Hey, $_userName! 👋',
                       style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -720,8 +707,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                 tooltip: 'Settings',
                 onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => const SettingsScreen()),
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
                 ),
               ),
             ],
@@ -737,20 +723,18 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
           // ── MOTIVATIONAL TEXT ──
           Text(_motivationalText(waterProgress),
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+              style: TextStyle(fontSize: 13, color: textMuted)),
 
           if (waterOz < goalOz) ...[
             const SizedBox(height: 6),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
               decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
+                  color: chipBg,
                   borderRadius: BorderRadius.circular(20)),
               child: Text(
                 '${remaining.toStringAsFixed(0)} oz remaining',
-                style:
-                    TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                style: TextStyle(fontSize: 12, color: textMuted),
               ),
             ),
           ],
@@ -764,7 +748,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                   style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: Colors.black87))),
+                      color: textPrimary))),
           const SizedBox(height: 12),
           Row(children: [
             Expanded(child: _waterButton(8)),
@@ -781,20 +765,13 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
+              color: cardBg,
               borderRadius: BorderRadius.circular(20),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  oxColor.withValues(alpha: 0.08),
-                  oxColor.withValues(alpha: 0.03),
-                ],
-              ),
               border: Border.all(
-                  color: oxColor.withValues(alpha: 0.25), width: 1.5),
+                  color: oxColor.withValues(alpha: 0.35), width: 1.5),
               boxShadow: [
                 BoxShadow(
-                    color: oxColor.withValues(alpha: 0.08),
+                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.07),
                     blurRadius: 16,
                     offset: const Offset(0, 4)),
               ],
@@ -809,7 +786,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: oxColor.withValues(alpha: 0.12),
+                          color: oxColor.withValues(alpha: isDark ? 0.22 : 0.12),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(Icons.science_outlined,
@@ -820,13 +797,13 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                           style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: Colors.grey.shade800)),
+                              color: textPrimary)),
                     ]),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: oxColor.withValues(alpha: 0.12),
+                        color: oxColor.withValues(alpha: isDark ? 0.22 : 0.12),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: RichText(
@@ -841,7 +818,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                             text: ' / ${goalMg.toInt()} mg',
                             style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey.shade500)),
+                                color: textSubtle)),
                       ])),
                     ),
                   ],
@@ -852,7 +829,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                   child: LinearProgressIndicator(
                     value: oxProgress,
                     minHeight: 10,
-                    backgroundColor: Colors.grey.shade200,
+                    backgroundColor: dividerColor,
                     valueColor: AlwaysStoppedAnimation<Color>(oxColor),
                   ),
                 ),
@@ -860,7 +837,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                 Text(_oxalateStatus(oxalateMg),
                     style: TextStyle(
                         fontSize: 13,
-                        color: Colors.grey.shade600,
+                        color: textMuted,
                         height: 1.4)),
               ],
             ),
@@ -869,7 +846,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
           const SizedBox(height: 16),
 
           // ── ACHIEVEMENTS TROPHY CARD ──
-          _buildAchievementsCard(),
+          _buildAchievementsCard(context),
 
           const SizedBox(height: 14),
           TextButton.icon(
@@ -887,18 +864,30 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment(0, 0.55),
-            colors: [
-              Color(0xFF01696F),
-              Color(0xFF2A9DA5),
-              Color(0xFFE0F4F5),
-              Colors.white,
-            ],
-            stops: [0.0, 0.18, 0.42, 0.62],
-          ),
+        decoration: BoxDecoration(
+          gradient: isDark
+              ? LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: const Alignment(0, 0.55),
+                  colors: [
+                    const Color(0xFF01494E),
+                    const Color(0xFF0F2A2C),
+                    const Color(0xFF0F1419),
+                    const Color(0xFF0F1419),
+                  ],
+                  stops: const [0.0, 0.18, 0.42, 0.62],
+                )
+              : const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment(0, 0.55),
+                  colors: [
+                    Color(0xFF01696F),
+                    Color(0xFF2A9DA5),
+                    Color(0xFFE0F4F5),
+                    Colors.white,
+                  ],
+                  stops: [0.0, 0.18, 0.42, 0.62],
+                ),
         ),
         child: scrollContent,
       ),
