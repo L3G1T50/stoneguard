@@ -17,11 +17,11 @@ class EducationScreen extends StatelessWidget {
             children: [
               const Icon(Icons.school_outlined, size: 64, color: AppColors.teal),
               const SizedBox(height: 16),
-              Text('Education Hub', style: AppTextStyles.heading),
+              Text('Education Hub', style: AppTextStyles.screenTitleOf(context)),
               const SizedBox(height: 8),
               Text(
                 'Articles and guides about kidney stone prevention are coming soon.',
-                style: AppTextStyles.body,
+                style: AppTextStyles.bodyOf(context),
                 textAlign: TextAlign.center,
               ),
             ],

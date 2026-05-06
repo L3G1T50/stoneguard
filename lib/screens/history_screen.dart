@@ -17,11 +17,11 @@ class HistoryScreen extends StatelessWidget {
             children: [
               const Icon(Icons.history_outlined, size: 64, color: AppColors.teal),
               const SizedBox(height: 16),
-              Text('Full History', style: AppTextStyles.heading),
+              Text('Full History', style: AppTextStyles.screenTitleOf(context)),
               const SizedBox(height: 8),
               Text(
                 'Your complete log history will appear here.',
-                style: AppTextStyles.body,
+                style: AppTextStyles.bodyOf(context),
                 textAlign: TextAlign.center,
               ),
             ],
