@@ -421,6 +421,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // ─── PLUS CARD ────────────────────────────────────────────────────────────────
   Widget _plusCard() {
     return AppCard(
       onTap: _isPremium ? null : _openPaywall,
@@ -449,7 +450,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _isPremium ? 'StoneGuard Plus — Active' : 'Upgrade to StoneGuard Plus',
+                  _isPremium
+                      ? 'StoneGuard Plus — Active'
+                      : 'Upgrade to StoneGuard Plus',
                   style: AppTextStyles.itemTitle.copyWith(
                     color: _isPremium ? Colors.white : null,
                   ),
@@ -460,7 +463,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ? 'You have full access to all premium features.'
                       : 'Doctor reports, full history & ad-free experience.',
                   style: AppTextStyles.body.copyWith(
-                    color: _isPremium ? Colors.white.withValues(alpha: 0.80) : null,
+                    color: _isPremium
+                        ? Colors.white.withValues(alpha: 0.80)
+                        : null,
                   ),
                 ),
               ],
@@ -475,7 +480,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 borderRadius: BorderRadius.circular(999),
               ),
               child: const Text('Active ✓',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white)),
             )
           else
             Container(
@@ -485,14 +493,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 borderRadius: BorderRadius.circular(999),
               ),
               child: const Text('See Plans',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white)),
             ),
         ],
       ),
     );
   }
 
-  Widget _row(IconData icon, Color color, String title, String sub, {VoidCallback? onTap}) {
+  Widget _row(IconData icon, Color color, String title, String sub,
+      {VoidCallback? onTap}) {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -514,7 +526,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           if (onTap != null)
-            const Icon(Icons.chevron_right, color: AppColors.textHint, size: 20),
+            const Icon(Icons.chevron_right,
+                color: AppColors.textHint, size: 20),
         ],
       ),
     );
@@ -528,7 +541,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(text,
-          style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 13)),
+          style: TextStyle(
+              color: color, fontWeight: FontWeight.w700, fontSize: 13)),
     );
   }
 
@@ -547,7 +561,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         child: Text(
           '$hour:$minute $period',
-          style: const TextStyle(color: AppColors.teal, fontWeight: FontWeight.w700, fontSize: 13),
+          style: const TextStyle(
+            color: AppColors.teal,
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+          ),
         ),
       ),
     );
@@ -559,10 +577,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       slivers: [
         SliverToBoxAdapter(
           child: Padding(
-            padding: AppSpacing.pagePadding.add(const EdgeInsets.only(bottom: 32)),
+            padding: AppSpacing.pagePadding.add(
+                const EdgeInsets.only(bottom: 32)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+
+                // ── PROFILE ──
                 const SizedBox(height: 4),
                 AppCard(
                   child: Column(
@@ -577,9 +598,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               child: CircleAvatar(
                                 radius: 26,
                                 backgroundColor: AppColors.tealLight,
-                                backgroundImage: _avatarPath.isNotEmpty ? FileImage(File(_avatarPath)) : null,
+                                backgroundImage: _avatarPath.isNotEmpty
+                                    ? FileImage(File(_avatarPath))
+                                    : null,
                                 child: _avatarPath.isEmpty
-                                    ? const Icon(Icons.person, color: AppColors.teal, size: 28)
+                                    ? const Icon(Icons.person,
+                                        color: AppColors.teal, size: 28)
                                     : null,
                               ),
                             ),
@@ -602,31 +626,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ],
                               ),
                             ),
-                            const Icon(Icons.chevron_right, color: AppColors.textHint, size: 20),
+                            const Icon(Icons.chevron_right,
+                                color: AppColors.textHint, size: 20),
                           ],
                         ),
                       ),
                       const Divider(height: 24),
-                      _row(Icons.cake_outlined, AppColors.teal, 'Age',
-                          _userAge == 0 ? 'Tap to set your age' : '$_userAge years old',
-                          onTap: _editAge),
+                      _row(
+                        Icons.cake_outlined,
+                        AppColors.teal,
+                        'Age',
+                        _userAge == 0 ? 'Tap to set your age' : '$_userAge years old',
+                        onTap: _editAge,
+                      ),
                       const Divider(height: 24),
-                      _row(Icons.science_outlined, const Color(0xFF7B1FA2), 'Stone Type', _stoneType,
-                          onTap: _editStoneType),
+                      _row(
+                        Icons.science_outlined,
+                        const Color(0xFF7B1FA2),
+                        'Stone Type',
+                        _stoneType,
+                        onTap: _editStoneType,
+                      ),
                     ],
                   ),
                 ),
+
+                // ── STONEGUARD PLUS ──
                 const AppSectionHeader('StoneGuard Plus'),
                 _plusCard(),
+
+                // ── TOOLS ──
                 const AppSectionHeader('Tools'),
                 AppCard(
                   child: _row(
-                    Icons.medical_services_outlined, AppColors.teal,
-                    'Export to Doctor', 'Share your health report as PDF or text',
-                    onTap: () => Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const DoctorViewScreen())),
+                    Icons.medical_services_outlined,
+                    AppColors.teal,
+                    'Export to Doctor',
+                    'Share your health report as PDF or text',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const DoctorViewScreen()),
+                    ),
                   ),
                 ),
+
+                // ── APPEARANCE ──
                 const AppSectionHeader('Appearance'),
                 AppCard(
                   child: Row(
@@ -634,23 +679,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Row(children: [
                         AppIconBadge(
-                          icon: _darkMode ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
-                          color: _darkMode ? const Color(0xFF5C6BC0) : const Color(0xFFF9A825),
+                          icon: _darkMode
+                              ? Icons.dark_mode_outlined
+                              : Icons.light_mode_outlined,
+                          color: _darkMode
+                              ? const Color(0xFF5C6BC0)
+                              : const Color(0xFFF9A825),
                         ),
                         const SizedBox(width: 14),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('Dark Mode', style: AppTextStyles.itemTitle),
-                            Text(_darkMode ? 'Dark theme active' : 'Light theme active',
-                                style: AppTextStyles.body),
+                            Text(
+                              _darkMode ? 'Dark theme active' : 'Light theme active',
+                              style: AppTextStyles.body,
+                            ),
                           ],
                         ),
                       ]),
-                      Switch(value: _darkMode, onChanged: _toggleDarkMode),
+                      Switch(
+                        value: _darkMode,
+                        onChanged: _toggleDarkMode,
+                      ),
                     ],
                   ),
                 ),
+
+                // ── NOTIFICATIONS ──
                 const AppSectionHeader('Notifications'),
                 AppCard(
                   child: Column(
@@ -660,9 +716,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Row(children: [
-                            const AppIconBadge(icon: Icons.notifications_outlined, color: Colors.blue),
+                            const AppIconBadge(
+                                icon: Icons.notifications_outlined,
+                                color: Colors.blue),
                             const SizedBox(width: 14),
-                            Text('Water Reminders', style: AppTextStyles.itemTitle),
+                            Text('Water Reminders',
+                                style: AppTextStyles.itemTitle),
                           ]),
                           Switch(
                             value: _notificationsEnabled,
@@ -679,12 +738,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ],
                       ),
+
                       if (_notificationsEnabled) ...[
                         const Divider(height: 24),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Remind me every', style: AppTextStyles.body),
+                            Text('Remind me every',
+                                style: AppTextStyles.body),
                             DropdownButton<int>(
                               value: _reminderInterval,
                               underline: const SizedBox(),
@@ -705,70 +766,105 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                           ],
                         ),
+
                         const Divider(height: 24),
                         Row(
                           children: [
-                            const AppIconBadge(icon: Icons.bedtime_outlined, color: Color(0xFF3949AB)),
+                            const AppIconBadge(
+                              icon: Icons.bedtime_outlined,
+                              color: Color(0xFF3949AB),
+                            ),
                             const SizedBox(width: 14),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Quiet Hours', style: AppTextStyles.itemTitle),
-                                  Text('No reminders during this window',
-                                      style: AppTextStyles.body, overflow: TextOverflow.ellipsis),
+                                  Text('Quiet Hours',
+                                      style: AppTextStyles.itemTitle),
+                                  Text(
+                                    'No reminders during this window',
+                                    style: AppTextStyles.body,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ],
                               ),
                             ),
-                            Switch(value: _quietHoursEnabled,
-                                onChanged: (val) => _saveQuietTime(enabled: val)),
+                            Switch(
+                              value: _quietHoursEnabled,
+                              onChanged: (val) =>
+                                  _saveQuietTime(enabled: val),
+                            ),
                           ],
                         ),
+
                         if (_quietHoursEnabled) ...[
                           const SizedBox(height: 14),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 12),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF3949AB).withValues(alpha: 0.06),
+                              color: const Color(0xFF3949AB)
+                                  .withValues(alpha: 0.06),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                  color: const Color(0xFF3949AB).withValues(alpha: 0.15)),
+                                color: const Color(0xFF3949AB)
+                                    .withValues(alpha: 0.15),
+                              ),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Row(
                                   children: [
-                                    Icon(Icons.bedtime_outlined, color: Color(0xFF3949AB), size: 16),
+                                    Icon(Icons.bedtime_outlined,
+                                        color: Color(0xFF3949AB), size: 16),
                                     SizedBox(width: 6),
-                                    Text('No reminders sent between:',
-                                        style: TextStyle(fontSize: 12, color: Color(0xFF3949AB),
-                                            fontWeight: FontWeight.w600)),
+                                    Text(
+                                      'No reminders sent between:',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF3949AB),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
                                   ],
                                 ),
                                 const SizedBox(height: 12),
                                 Row(
                                   children: [
                                     Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Text('From', style: AppTextStyles.micro),
+                                        Text('From',
+                                            style: AppTextStyles.micro),
                                         const SizedBox(height: 4),
-                                        _timeBadge(_quietStart,
-                                            onTap: () => _pickQuietTime(isStart: true)),
+                                        _timeBadge(
+                                          _quietStart,
+                                          onTap: () => _pickQuietTime(
+                                              isStart: true),
+                                        ),
                                       ],
                                     ),
                                     const Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: 12),
-                                      child: Icon(Icons.arrow_forward, size: 16, color: AppColors.textHint),
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 12),
+                                      child: Icon(Icons.arrow_forward,
+                                          size: 16,
+                                          color: AppColors.textHint),
                                     ),
                                     Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Text('Until', style: AppTextStyles.micro),
+                                        Text('Until',
+                                            style: AppTextStyles.micro),
                                         const SizedBox(height: 4),
-                                        _timeBadge(_quietEnd,
-                                            onTap: () => _pickQuietTime(isStart: false)),
+                                        _timeBadge(
+                                          _quietEnd,
+                                          onTap: () => _pickQuietTime(
+                                              isStart: false),
+                                        ),
                                       ],
                                     ),
                                   ],
@@ -777,13 +873,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                           ),
                           const SizedBox(height: 6),
-                          Text('💡 Tap the times above to customise. Default: 10 PM – 7 AM',
-                              style: AppTextStyles.micro.copyWith(color: AppColors.textHint)),
+                          Text(
+                            '💡 Tap the times above to customise. Default: 10 PM – 7 AM',
+                            style: AppTextStyles.micro
+                                .copyWith(color: AppColors.textHint),
+                          ),
                         ],
                       ],
                     ],
                   ),
                 ),
+
+                // ── DAILY GOALS ──
                 const AppSectionHeader('Daily Goals'),
                 AppCard(
                   child: Column(
@@ -793,15 +894,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Row(children: [
-                            const Icon(Icons.water_drop, color: AppColors.teal, size: 20),
+                            const Icon(Icons.water_drop,
+                                color: AppColors.teal, size: 20),
                             const SizedBox(width: 8),
                             Text('Water Goal', style: AppTextStyles.itemTitle),
                           ]),
-                          _valueBadge('${_waterGoal.toInt()} oz', AppColors.teal),
+                          _valueBadge(
+                              '${_waterGoal.toInt()} oz', AppColors.teal),
                         ],
                       ),
                       Slider(
-                        value: _waterGoal, min: 32, max: 160, divisions: 16,
+                        value: _waterGoal,
+                        min: 32,
+                        max: 160,
+                        divisions: 16,
                         onChanged: (v) => _saveWaterGoal(v.roundToDouble()),
                       ),
                       Row(
@@ -816,24 +922,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Row(children: [
-                            const Icon(Icons.science_outlined, color: AppColors.oxalate, size: 20),
+                            const Icon(Icons.science_outlined,
+                                color: AppColors.oxalate, size: 20),
                             const SizedBox(width: 8),
-                            Text('Oxalate Limit', style: AppTextStyles.itemTitle),
+                            Text('Oxalate Limit',
+                                style: AppTextStyles.itemTitle),
                           ]),
-                          _valueBadge('${_oxalateGoal.toInt()} mg', AppColors.oxalate),
+                          _valueBadge(
+                              '${_oxalateGoal.toInt()} mg', AppColors.oxalate),
                         ],
                       ),
                       SliderTheme(
                         data: SliderThemeData(
                           activeTrackColor: AppColors.oxalate,
                           thumbColor: AppColors.oxalate,
-                          inactiveTrackColor: AppColors.oxalate.withValues(alpha: 0.18),
-                          overlayColor: AppColors.oxalate.withValues(alpha: 0.12),
+                          inactiveTrackColor:
+                              AppColors.oxalate.withValues(alpha: 0.18),
+                          overlayColor:
+                              AppColors.oxalate.withValues(alpha: 0.12),
                           trackHeight: 3,
                         ),
                         child: Slider(
-                          value: _oxalateGoal, min: 50, max: 500, divisions: 18,
-                          onChanged: (v) => _saveOxalateGoal(v.roundToDouble()),
+                          value: _oxalateGoal,
+                          min: 50,
+                          max: 500,
+                          divisions: 18,
+                          onChanged: (v) =>
+                              _saveOxalateGoal(v.roundToDouble()),
                         ),
                       ),
                       Row(
@@ -846,42 +961,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                 ),
+
+                // ── ABOUT ──
                 const AppSectionHeader('About'),
                 AppCard(
                   child: Column(
                     children: [
-                      _row(Icons.info_outline, AppColors.teal, 'About StoneGuard', 'Version 1.0.0',
-                          onTap: () => Navigator.push(context,
-                              MaterialPageRoute(builder: (_) => const AboutScreen()))),
+                      _row(
+                        Icons.info_outline,
+                        AppColors.teal,
+                        'About StoneGuard',
+                        'Version 1.0.0',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const AboutScreen()),
+                        ),
+                      ),
                       const Divider(height: 24),
-                      _row(Icons.medical_information_outlined, AppColors.warning,
-                          'Medical Disclaimer', 'This app is not medical advice',
-                          onTap: () => showDialog(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: const Text('Medical Disclaimer'),
-                              content: const Text(
-                                'StoneGuard is intended for informational purposes only and is not a substitute for professional medical advice, diagnosis, or treatment.\n\nAlways consult your physician or a qualified healthcare provider regarding your kidney stone condition and dietary needs.',
-                              ),
-                              actions: [
-                                ElevatedButton(
-                                  onPressed: () => Navigator.pop(ctx),
-                                  child: const Text('I Understand'),
-                                ),
-                              ],
+                      _row(
+                        Icons.medical_information_outlined,
+                        AppColors.warning,
+                        'Medical Disclaimer',
+                        'This app is not medical advice',
+                        onTap: () => showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Medical Disclaimer'),
+                            content: const Text(
+                              'StoneGuard is intended for informational purposes only and is not a substitute for professional medical advice, diagnosis, or treatment.\n\nAlways consult your physician or a qualified healthcare provider regarding your kidney stone condition and dietary needs.',
                             ),
-                          )),
+                            actions: [
+                              ElevatedButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                child: const Text('I Understand'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
+
+                // ── DANGER ZONE ──
                 const AppSectionHeader('Danger Zone'),
                 AppCard(
-                  child: _row(Icons.delete_forever_outlined, AppColors.danger,
-                      'Clear All Data', 'Permanently delete all logs and favourites',
-                      onTap: _clearAllData),
+                  child: _row(
+                    Icons.delete_forever_outlined,
+                    AppColors.danger,
+                    'Clear All Data',
+                    'Permanently delete all logs and favourites',
+                    onTap: _clearAllData,
+                  ),
                 ),
+
                 const SizedBox(height: 32),
-                Center(child: Text('StoneGuard v1.0.0', style: AppTextStyles.micro)),
+                Center(
+                  child: Text('StoneGuard v1.0.0',
+                      style: AppTextStyles.micro),
+                ),
                 const SizedBox(height: 16),
               ],
             ),
@@ -889,6 +1028,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ],
     );
-    return GradientScaffold(title: 'Settings', body: body);
+
+    return GradientScaffold(
+      title: 'Settings',
+      body: body,
+    );
   }
 }

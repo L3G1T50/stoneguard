@@ -1,369 +1,290 @@
-// ─── SHOP SCREEN ──────────────────────────────────────────────────────────────
-// Displays kidney stone prevention supplements and hydration products.
-// All surface/text colors resolved dynamically via isDark ternaries.
-// ──────────────────────────────────────────────────────────────────────────────
-
+// ─── SHOP SCREEN ─────────────────────────────────────────────────────────────
+// Amazon Associates affiliate tag: stoneguard-20
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../theme/app_theme.dart';
+import '../app_theme.dart';
 import '../widgets/gradient_scaffold.dart';
 
-class ShopProduct {
-  final String id;
-  final String name;
-  final String brand;
+// ─── Product Model ────────────────────────────────────────────────────────────
+class _Product {
+  final String title;
+  final String subtitle;
+  final String why;
+  final String asin;        // Amazon product ID
+  final IconData icon;
+  final Color color;
   final String category;
-  final String description;
-  final String benefit;
-  final String dosage;
-  final String price;
-  final String rating;
-  final String reviewCount;
-  final String emoji;
-  final String affiliateUrl;
-  final bool isFeatured;
-  final List<String> tags;
 
-  const ShopProduct({
-    required this.id,
-    required this.name,
-    required this.brand,
+  const _Product({
+    required this.title,
+    required this.subtitle,
+    required this.why,
+    required this.asin,
+    required this.icon,
+    required this.color,
     required this.category,
-    required this.description,
-    required this.benefit,
-    required this.dosage,
-    required this.price,
-    required this.rating,
-    required this.reviewCount,
-    required this.emoji,
-    required this.affiliateUrl,
-    this.isFeatured = false,
-    this.tags = const [],
   });
+
+  String get affiliateUrl =>
+      'https://www.amazon.com/dp/$asin?tag=stoneguard-20';
 }
 
-const List<ShopProduct> _products = [
-  ShopProduct(
-    id: 'potassium_citrate',
-    name: 'Potassium Citrate',
-    brand: 'Now Foods',
-    category: 'Supplements',
-    description: 'Helps alkalinize urine and prevent calcium oxalate and uric acid stones.',
-    benefit: 'Raises urine pH and binds oxalate',
-    dosage: '99 mg, 1–3x daily with meals',
-    price: '\$12–\$18',
-    rating: '4.6',
-    reviewCount: '2.4k',
-    emoji: '🧪',
-    affiliateUrl: 'https://www.amazon.com/s?k=potassium+citrate+supplement',
-    isFeatured: true,
-    tags: ['oxalate', 'uric acid', 'alkaline'],
+// ─── Product Catalog ──────────────────────────────────────────────────────────
+const List<_Product> _products = [
+
+  // ── pH Test Strips ────────────────────────────────────────────────────────
+  _Product(
+    category: 'Urine pH',
+    title: 'pH Test Strips (200ct)',
+    subtitle: 'Urine & Saliva — 4.5 to 9.0',
+    why: 'Track urine pH daily. Ideal range for stone prevention is 6.0–7.0.',
+    asin: 'B00OBZPDCA',
+    icon: Icons.science_outlined,
+    color: Color(0xFF2196F3),
   ),
-  ShopProduct(
-    id: 'magnesium_citrate',
-    name: 'Magnesium Citrate',
-    brand: 'Doctor\'s Best',
-    category: 'Supplements',
-    description: 'Binds oxalate in the gut, reducing absorption and urinary oxalate levels.',
-    benefit: 'Reduces oxalate absorption',
-    dosage: '200–400 mg daily with meals',
-    price: '\$10–\$20',
-    rating: '4.5',
-    reviewCount: '5.1k',
-    emoji: '💊',
-    affiliateUrl: 'https://www.amazon.com/s?k=magnesium+citrate+supplement',
-    isFeatured: true,
-    tags: ['oxalate', 'magnesium'],
+  _Product(
+    category: 'Urine pH',
+    title: 'Hydrion pH Strips',
+    subtitle: 'Clinical-grade accuracy',
+    why: 'Used by urologists. Color-coded for quick, accurate pH readings.',
+    asin: 'B00XVGN3EG',
+    icon: Icons.science_outlined,
+    color: Color(0xFF2196F3),
   ),
-  ShopProduct(
-    id: 'vitamin_b6',
-    name: 'Vitamin B6 (P-5-P)',
-    brand: 'Solgar',
-    category: 'Supplements',
-    description: 'Reduces endogenous oxalate production in the liver.',
-    benefit: 'Lowers internal oxalate production',
-    dosage: '25–50 mg daily',
-    price: '\$8–\$16',
-    rating: '4.4',
-    reviewCount: '890',
-    emoji: '🌿',
-    affiliateUrl: 'https://www.amazon.com/s?k=vitamin+b6+p5p+supplement',
-    tags: ['oxalate', 'liver'],
-  ),
-  ShopProduct(
-    id: 'chanca_piedra',
-    name: 'Chanca Piedra Extract',
-    brand: 'Stone Breaker',
-    category: 'Herbal',
-    description: 'Traditional herb shown to help break down and prevent kidney stones.',
-    benefit: 'May reduce stone formation',
-    dosage: '500 mg, 2x daily',
-    price: '\$15–\$25',
-    rating: '4.3',
-    reviewCount: '3.2k',
-    emoji: '🌱',
-    affiliateUrl: 'https://www.amazon.com/s?k=chanca+piedra+kidney+stone',
-    isFeatured: false,
-    tags: ['herbal', 'traditional'],
-  ),
-  ShopProduct(
-    id: 'water_bottle_large',
-    name: '64oz Motivational Water Bottle',
-    brand: 'HydroJug',
+
+  // ── Hydration ─────────────────────────────────────────────────────────────
+  _Product(
     category: 'Hydration',
-    description: 'Time-marked bottle to hit your daily 2.5L hydration target easily.',
-    benefit: 'Tracks daily water intake',
-    dosage: 'Aim for 2–3 full bottles per day',
-    price: '\$20–\$35',
-    rating: '4.7',
-    reviewCount: '12k',
-    emoji: '💧',
-    affiliateUrl: 'https://www.amazon.com/s?k=64oz+motivational+water+bottle',
-    isFeatured: true,
-    tags: ['hydration', 'daily use'],
+    title: 'Half Gallon Water Bottle',
+    subtitle: '64 oz with time marker',
+    why: 'Drinking 2–3L/day is the #1 way to prevent calcium oxalate stones.',
+    asin: 'B08QS5G7MP',
+    icon: Icons.water_drop_outlined,
+    color: Color(0xFF00BCD4),
   ),
-  ShopProduct(
-    id: 'electrolyte_powder',
-    name: 'Sugar-Free Electrolyte Powder',
-    brand: 'LMNT',
+  _Product(
     category: 'Hydration',
-    description: 'Sodium, potassium, and magnesium blend — no sugar, no oxalate concerns.',
-    benefit: 'Supports hydration without citric acid',
-    dosage: '1 packet per 16 oz water',
-    price: '\$25–\$40',
-    rating: '4.8',
-    reviewCount: '28k',
-    emoji: '⚡',
-    affiliateUrl: 'https://www.amazon.com/s?k=LMNT+electrolyte+powder',
-    isFeatured: false,
-    tags: ['hydration', 'electrolytes'],
+    title: 'Hydration Tracker Bottle',
+    subtitle: 'Smart LED reminder cap',
+    why: 'Glows to remind you to drink every hour. Perfect for stone prevention.',
+    asin: 'B09BNZ7VWP',
+    icon: Icons.water_drop_outlined,
+    color: Color(0xFF00BCD4),
   ),
-  ShopProduct(
-    id: 'kidney_stone_strainer',
-    name: 'Kidney Stone Urine Strainer',
-    brand: 'QCP',
-    category: 'Monitoring',
-    description: 'Catch passed stones for lab analysis to identify stone type.',
-    benefit: 'Identifies stone composition',
-    dosage: 'Use during active stone passage',
-    price: '\$8–\$15',
-    rating: '4.2',
-    reviewCount: '1.8k',
-    emoji: '🔬',
-    affiliateUrl: 'https://www.amazon.com/s?k=kidney+stone+urine+strainer',
-    tags: ['monitoring', 'analysis'],
+
+  // ── Supplements ───────────────────────────────────────────────────────────
+  _Product(
+    category: 'Supplements',
+    title: 'Magnesium Citrate 400mg',
+    subtitle: 'Reduces oxalate absorption',
+    why: 'Magnesium binds to oxalate in the gut, reducing kidney stone risk.',
+    asin: 'B000BD0RT0',
+    icon: Icons.medication_outlined,
+    color: Color(0xFF9C27B0),
   ),
-  ShopProduct(
-    id: 'ph_test_strips',
-    name: 'Urine pH Test Strips',
-    brand: 'HealthyWiser',
-    category: 'Monitoring',
-    description: 'Monitor urine pH daily — optimal range for stone prevention is 6.5–7.5.',
-    benefit: 'Track urine alkalinity',
-    dosage: 'Test first morning urine daily',
-    price: '\$8–\$12',
-    rating: '4.4',
-    reviewCount: '4.6k',
-    emoji: '📊',
-    affiliateUrl: 'https://www.amazon.com/s?k=urine+pH+test+strips',
-    isFeatured: false,
-    tags: ['monitoring', 'pH'],
+  _Product(
+    category: 'Supplements',
+    title: 'Potassium Citrate',
+    subtitle: 'Urine alkalizer',
+    why: 'Raises urine pH and citrate levels — a key stone prevention strategy.',
+    asin: 'B00CAZAU62',
+    icon: Icons.medication_outlined,
+    color: Color(0xFF9C27B0),
   ),
-  ShopProduct(
-    id: 'lemon_juice',
-    name: 'Organic Lemon Juice Concentrate',
-    brand: 'Santa Cruz',
-    category: 'Food & Drink',
-    description: 'High citrate content helps prevent calcium stone formation in the kidneys.',
-    benefit: 'Raises urinary citrate naturally',
-    dosage: '4 oz daily diluted in water',
-    price: '\$6–\$10',
-    rating: '4.5',
-    reviewCount: '7.2k',
-    emoji: '🍋',
-    affiliateUrl: 'https://www.amazon.com/s?k=organic+lemon+juice+concentrate',
-    isFeatured: true,
-    tags: ['citrate', 'natural', 'food'],
+  _Product(
+    category: 'Supplements',
+    title: 'Vitamin B6 (P-5-P)',
+    subtitle: 'Reduces oxalate production',
+    why: 'B6 helps the body convert oxalate before it reaches the kidneys.',
+    asin: 'B0019GW3G8',
+    icon: Icons.medication_outlined,
+    color: Color(0xFF9C27B0),
   ),
-  ShopProduct(
-    id: 'oxalate_food_guide',
-    name: 'The Kidney Stone Diet Book',
-    brand: 'Jill Harris RN',
-    category: 'Education',
-    description: 'Comprehensive guide to low-oxalate eating, meal planning, and stone prevention.',
-    benefit: 'Complete diet & lifestyle guide',
-    dosage: 'Read and apply daily',
-    price: '\$15–\$25',
-    rating: '4.9',
-    reviewCount: '890',
-    emoji: '📚',
-    affiliateUrl: 'https://www.amazon.com/s?k=kidney+stone+diet+book',
-    tags: ['education', 'diet'],
+
+  // ── Diet & Kitchen ────────────────────────────────────────────────────────
+  _Product(
+    category: 'Diet & Kitchen',
+    title: 'The Kidney Stone Diet Book',
+    subtitle: 'By Jill Harris RN',
+    why: 'The go-to guide by the nation\'s top kidney stone dietitian.',
+    asin: '1736242504',
+    icon: Icons.menu_book_outlined,
+    color: Color(0xFF4CAF50),
+  ),
+  _Product(
+    category: 'Diet & Kitchen',
+    title: 'Lemon Juice Concentrate',
+    subtitle: '32 oz — daily citrate boost',
+    why: 'Lemon juice raises urinary citrate, which inhibits stone formation.',
+    asin: 'B00LIFCKCK',
+    icon: Icons.lunch_dining_outlined,
+    color: Color(0xFF4CAF50),
+  ),
+
+  // ── Strainers ─────────────────────────────────────────────────────────────
+  _Product(
+    category: 'Stone Strainers',
+    title: 'Kidney Stone Strainer Kit',
+    subtitle: '3-pack urine strainers',
+    why: 'Catch passed stones for lab analysis — critical for identifying stone type.',
+    asin: 'B01N4G2CXX',
+    icon: Icons.filter_alt_outlined,
+    color: Color(0xFFFF9800),
+  ),
+
+  // ── Heating Pads ──────────────────────────────────────────────────────────
+  _Product(
+    category: 'Pain Relief',
+    title: 'Electric Heating Pad',
+    subtitle: 'XL fast-heating, auto shutoff',
+    why: 'Heat applied to the flank reduces kidney stone pain during an episode.',
+    asin: 'B077GPPFXT',
+    icon: Icons.thermostat_outlined,
+    color: Color(0xFFF44336),
   ),
 ];
 
-const List<String> _categories = [
-  'All', 'Supplements', 'Hydration', 'Monitoring', 'Food & Drink', 'Herbal', 'Education'
-];
-
+// ─── Screen ───────────────────────────────────────────────────────────────────
 class ShopScreen extends StatefulWidget {
   const ShopScreen({super.key});
+
   @override
   State<ShopScreen> createState() => _ShopScreenState();
 }
 
 class _ShopScreenState extends State<ShopScreen> {
   String _selectedCategory = 'All';
-  final Set<String> _wishlist = {};
-  bool _showFeaturedOnly = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadWishlist();
+  List<String> get _categories {
+    final cats = _products.map((p) => p.category).toSet().toList();
+    cats.sort();
+    return ['All', ...cats];
   }
 
-  Future<void> _loadWishlist() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getStringList('shop_wishlist') ?? [];
-    setState(() => _wishlist.addAll(saved));
-  }
+  List<_Product> get _filtered => _selectedCategory == 'All'
+      ? _products
+      : _products.where((p) => p.category == _selectedCategory).toList();
 
-  Future<void> _toggleWishlist(String id) async {
-    setState(() {
-      if (_wishlist.contains(id)) {
-        _wishlist.remove(id);
-      } else {
-        _wishlist.add(id);
-      }
-    });
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('shop_wishlist', _wishlist.toList());
-  }
-
-  List<ShopProduct> get _filtered {
-    return _products.where((p) {
-      final catMatch = _selectedCategory == 'All' || p.category == _selectedCategory;
-      final featMatch = !_showFeaturedOnly || p.isFeatured;
-      return catMatch && featMatch;
-    }).toList();
+  Future<void> _openProduct(_Product product) async {
+    final uri = Uri.parse(product.affiliateUrl);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open Amazon. Check your connection.')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark  = Theme.of(context).brightness == Brightness.dark;
-    final cardBg  = isDark ? const Color(0xFF1A2332) : Colors.white;
-    final borderC = isDark ? const Color(0xFF2E4055) : const Color(0xFFD0D0D8);
-    final mutedC  = isDark ? const Color(0xFF8FA8BE) : const Color(0xFF888888);
+    final filtered = _filtered;
+
     return GradientScaffold(
-      title: 'Stone Prevention Shop',
-      body: Column(
-        children: [
-          Container(
-            margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.info_outline, color: AppColors.primary, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'These are affiliate links. Always consult your doctor before starting supplements.',
-                    style: TextStyle(fontSize: 11.5, color: mutedC),
+      title: 'Stone Guard Shop',
+      body: CustomScrollView(
+        slivers: [
+
+          // ── Disclaimer banner ──────────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.info_outline, color: AppColors.primary, size: 18),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'StoneGuard recommends these kidney stone tools based on urological best practices. '
+                      'As an Amazon Associate we earn from qualifying purchases.',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 12,
+                        height: 1.5,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 34,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _categories.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                      itemBuilder: (context, i) {
-                        final cat = _categories[i];
-                        final selected = cat == _selectedCategory;
-                        return GestureDetector(
-                          onTap: () => setState(() => _selectedCategory = cat),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: selected ? AppColors.primary : cardBg,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: selected ? AppColors.primary : borderC),
-                            ),
-                            child: Text(
-                              cat,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-                                color: selected ? Colors.white : mutedC,
-                              ),
-                            ),
+
+          // ── Category filter chips ──────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: _categories.map((cat) {
+                    final active = _selectedCategory == cat;
+                    return GestureDetector(
+                      onTap: () => setState(() => _selectedCategory = cat),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 160),
+                        margin: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: active
+                              ? AppColors.primary.withValues(alpha: 0.12)
+                              : AppColors.surface,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: active ? AppColors.primary : AppColors.border,
+                            width: 1.5,
                           ),
-                        );
-                      },
-                    ),
-                  ),
+                        ),
+                        child: Text(
+                          cat,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: active
+                                ? AppColors.primary
+                                : AppColors.textMuted,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () => setState(() => _showFeaturedOnly = !_showFeaturedOnly),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: _showFeaturedOnly ? AppColors.primary.withValues(alpha: 0.12) : cardBg,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: _showFeaturedOnly ? AppColors.primary : borderC),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.star_rounded, size: 14,
-                            color: _showFeaturedOnly ? AppColors.primary : mutedC),
-                        const SizedBox(width: 4),
-                        Text('Top Picks',
-                            style: TextStyle(fontSize: 12,
-                                color: _showFeaturedOnly ? AppColors.primary : mutedC)),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-          Expanded(
-            child: _filtered.isEmpty
-                ? Center(child: Text('No products in this category',
-                    style: TextStyle(color: mutedC)))
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-                    itemCount: _filtered.length,
-                    itemBuilder: (context, index) {
-                      final product = _filtered[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _ProductCard(
-                          product: product,
-                          isWishlisted: _wishlist.contains(product.id),
-                          onWishlist: () => _toggleWishlist(product.id),
-                        ),
-                      );
-                    },
-                  ),
+
+          // ── Product count ───────────────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+              child: Text(
+                '${filtered.length} product${filtered.length == 1 ? '' : 's'}',
+                style: const TextStyle(
+                  color: AppColors.textFaint,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ),
+
+          // ── Product grid ────────────────────────────────────────────────
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, i) => _ProductCard(
+                  product: filtered[i],
+                  onTap: () => _openProduct(filtered[i]),
+                ),
+                childCount: filtered.length,
+              ),
+            ),
           ),
         ],
       ),
@@ -371,186 +292,145 @@ class _ShopScreenState extends State<ShopScreen> {
   }
 }
 
+// ─── Product Card ─────────────────────────────────────────────────────────────
 class _ProductCard extends StatelessWidget {
-  final ShopProduct product;
-  final bool isWishlisted;
-  final VoidCallback onWishlist;
+  final _Product product;
+  final VoidCallback onTap;
 
-  const _ProductCard({
-    required this.product,
-    required this.isWishlisted,
-    required this.onWishlist,
-  });
-
-  Future<void> _launch(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
+  const _ProductCard({required this.product, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final isDark  = Theme.of(context).brightness == Brightness.dark;
-    final cardBg  = isDark ? const Color(0xFF1A2332) : Colors.white;
-    final borderC = isDark ? const Color(0xFF2E4055) : const Color(0xFFD0D0D8);
-    final bgC     = isDark ? const Color(0xFF0F1419) : const Color(0xFFF4F6F8);
-    final textC   = isDark ? const Color(0xFFE8EDF2) : const Color(0xFF2C2C2C);
-    final mutedC  = isDark ? const Color(0xFF8FA8BE) : const Color(0xFF888888);
     return GestureDetector(
-      onTap: () => _launch(product.affiliateUrl),
+      onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: borderC),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
           ],
         ),
-        child: Column(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: bgC,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: borderC),
+
+            // Icon box
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: product.color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(product.icon, color: product.color, size: 26),
+            ),
+            const SizedBox(width: 14),
+
+            // Text content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Category badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: product.color.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      product.category.toUpperCase(),
+                      style: TextStyle(
+                        color: product.color,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                   ),
-                  child: Center(
-                    child: Text(product.emoji, style: const TextStyle(fontSize: 24)),
+                  const SizedBox(height: 6),
+
+                  // Title
+                  Text(
+                    product.title,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(product.name,
-                                style: TextStyle(fontSize: 14,
-                                    fontWeight: FontWeight.w600, color: textC)),
-                          ),
-                          if (product.isFeatured)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Text('Top Pick',
-                                  style: TextStyle(fontSize: 10,
-                                      color: AppColors.primary, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 2),
+
+                  // Subtitle
+                  Text(
+                    product.subtitle,
+                    style: const TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Why it helps
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.shield_outlined,
+                            color: AppColors.primary, size: 14),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            product.why,
+                            style: const TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 11,
+                              height: 1.4,
                             ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(product.brand, style: TextStyle(fontSize: 12, color: mutedC)),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.star_rounded, size: 13, color: Color(0xFFFFB300)),
-                          const SizedBox(width: 3),
-                          Text(product.rating,
-                              style: TextStyle(fontSize: 12,
-                                  fontWeight: FontWeight.w600, color: textC)),
-                          const SizedBox(width: 4),
-                          Text('(${product.reviewCount})',
-                              style: TextStyle(fontSize: 11, color: mutedC)),
-                          const Spacer(),
-                          Text(product.price,
-                              style: const TextStyle(fontSize: 13,
-                                  fontWeight: FontWeight.w600, color: AppColors.primary)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                GestureDetector(
-                  onTap: onWishlist,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: Icon(
-                      isWishlisted ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                      size: 22,
-                      color: isWishlisted ? const Color(0xFFE07070) : mutedC,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(product.description, style: TextStyle(fontSize: 13, color: textC, height: 1.4)),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: bgC,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: borderC),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Benefit', style: TextStyle(fontSize: 10, color: mutedC,
-                            fontWeight: FontWeight.w500)),
-                        const SizedBox(height: 2),
-                        Text(product.benefit, style: TextStyle(fontSize: 11, color: textC,
-                            fontWeight: FontWeight.w600)),
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: bgC,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: borderC),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Dosage', style: TextStyle(fontSize: 10, color: mutedC,
-                            fontWeight: FontWeight.w500)),
-                        const SizedBox(height: 2),
-                        Text(product.dosage, style: TextStyle(fontSize: 11, color: textC,
-                            fontWeight: FontWeight.w600)),
-                      ],
+                  const SizedBox(height: 10),
+
+                  // View on Amazon button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: onTap,
+                      icon: const Icon(Icons.open_in_new, size: 15),
+                      label: const Text(
+                        'View on Amazon',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF9900), // Amazon orange
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _launch(product.affiliateUrl),
-                icon: const Icon(Icons.open_in_new_rounded, size: 15),
-                label: const Text('View on Amazon'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                ),
+                ],
               ),
             ),
           ],
