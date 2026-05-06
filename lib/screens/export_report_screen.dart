@@ -407,8 +407,8 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                       oxOk == null
                           ? 'No data'
                           : oxOk
-                              ? '✓ Under'
-                              : '✗ Over',
+                              ? 'Under'
+                              : 'Over',
                       textColor: oxOk == null
                           ? pdfGray
                           : oxOk
@@ -420,7 +420,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                       textColor: watOk ? pdfGreen : pdfRed,
                     ),
                     _tableCell(
-                      watOk ? '✓ Met' : '✗ Low',
+                      watOk ? 'Met' : 'Low',
                       textColor: watOk ? pdfGreen : pdfRed,
                     ),
                   ],
@@ -560,11 +560,11 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
       final fname  = 'stoneguard_report_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.pdf';
       final file   = File('${dir.path}/$fname');
       await file.writeAsBytes(bytes);
-      await ShareXFiles(
+      await Share.shareXFiles(
         [XFile(file.path, mimeType: 'application/pdf')],
         subject: 'StoneGuard Health Report — $_patientName',
         text: 'My StoneGuard kidney stone prevention report for doctor review.',
-      ).share();
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -631,10 +631,10 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
     final fname = 'stoneguard_report_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.pdf';
     final file  = File('${dir.path}/$fname');
     await file.writeAsBytes(bytes);
-    await ShareXFiles(
+    await Share.shareXFiles(
       [XFile(file.path, mimeType: 'application/pdf')],
       subject: 'StoneGuard Health Report — $_patientName',
-    ).share();
+    );
   }
 
   // ── UI ──────────────────────────────────────────────────────────────────
@@ -803,7 +803,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                         _includedItem('📊', 'Summary stats (averages, goals met)'),
                         _includedItem('📅', 'Full daily log table'),
                         _includedItem('💧', 'Hydration tracking per day'),
-                        _includedItem('👨\u200d👩\u200d👧', 'Note for your physician'),
+                        _includedItem('👨‍⚕️', 'Note for your physician'),
                         _includedItem('✅', 'Prevention reminders'),
                         _includedItem('⚠️', 'Medical disclaimer'),
                       ],
@@ -907,9 +907,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: selected
-                ? accentTeal
-                : cardColor,
+            color: selected ? accentTeal : cardColor,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: selected ? accentTeal : borderColor,
