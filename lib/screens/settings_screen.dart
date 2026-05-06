@@ -94,7 +94,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (start != null) _quietStart = start;
       if (end   != null) _quietEnd   = end;
     });
-    if (_notificationsEnabled) scheduleWaterReminders(_reminderInterval);
+    if (_notificationsEnabled) await scheduleWaterReminders(_reminderInterval);
   }
 
   bool _isQuietHour(int hour) {
@@ -703,9 +703,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               await p.setBool('notifications_enabled', val);
                               setState(() => _notificationsEnabled = val);
                               if (val) {
-                                scheduleWaterReminders(_reminderInterval);
+                                await scheduleWaterReminders(_reminderInterval);
                               } else {
-                                flutterLocalNotificationsPlugin.cancelAll();
+                                await flutterLocalNotificationsPlugin.cancelAll();
                               }
                             },
                           ),
@@ -735,7 +735,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 final p = await SharedPreferences.getInstance();
                                 await p.setInt('reminder_interval', val);
                                 setState(() => _reminderInterval = val);
-                                scheduleWaterReminders(val);
+                                await scheduleWaterReminders(val);
                               },
                             ),
                           ],
