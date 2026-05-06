@@ -1,8 +1,9 @@
-// ─── FOOD GUIDE SCREEN ────────────────────────────────────────
+// ─── FOOD GUIDE SCREEN ────────────────────────────────────
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/food_item.dart';
 import '../widgets/banner_ad_widget.dart';
+import '../theme/app_theme.dart';
 
 class FoodGuideScreen extends StatefulWidget {
   final void Function(double mg, String name) onLogFood;
@@ -17,8 +18,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
   OxalateLevel? _filterLevel;
   bool _showFavoritesOnly = false;
   Set<String> _favorites = {};
-
-  // Tracks today's log count so the badge rebuilds after each log
   int _todayLogCount = 0;
 
   @override
@@ -92,14 +91,20 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
     final now = DateTime.now();
     final logKey = 'oxalate_log_${now.year}_${now.month}_${now.day}';
     final oxKey = 'oxalate_${now.year}_${now.month}_${now.day}';
-
     List<String> log = prefs.getStringList(logKey) ?? [];
     double total = prefs.getDouble(oxKey) ?? 0;
 
     if (!mounted) return;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sheetBg  = AppDynamic.surface(context);
+    final textPri  = AppDynamic.textPrimary(context);
+    final textHint = AppDynamic.textHint(context);
+    final divCol   = AppDynamic.divider(context);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: sheetBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -111,28 +116,26 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
           expand: false,
           builder: (_, scrollController) => Column(
             children: [
-              // Handle bar
               Padding(
                 padding: const EdgeInsets.only(top: 12, bottom: 8),
                 child: Container(width: 40, height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
+                      color: divCol,
                       borderRadius: BorderRadius.circular(2),
                     )),
               ),
-
-              // Header
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text("Today's Food Log",
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text("Today's Food Log",
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold,
+                            color: textPri)),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.teal.withValues(alpha: 0.1),
+                        color: Colors.teal.withValues(alpha: isDark ? 0.18 : 0.1),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Text('${total.toStringAsFixed(1)} mg total',
@@ -142,97 +145,88 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                   ],
                 ),
               ),
-
-              const Divider(height: 1),
-
-              // Log list
+              Divider(height: 1, color: divCol),
               Expanded(
                 child: log.isEmpty
                     ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.restaurant_menu,
-                          size: 48, color: Colors.grey.shade300),
-                      const SizedBox(height: 12),
-                      Text('No foods logged yet today',
-                          style: TextStyle(
-                              color: Colors.grey.shade400, fontSize: 16)),
-                      const SizedBox(height: 6),
-                      Text('Tap "Log This Food" on any food item',
-                          style: TextStyle(
-                              color: Colors.grey.shade400, fontSize: 13)),
-                    ],
-                  ),
-                )
-                    : ListView.separated(
-                  controller: scrollController,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 8),
-                  itemCount: log.length,
-                  separatorBuilder: (_, _) =>
-                  const Divider(height: 1),
-                  itemBuilder: (_, index) {
-                    final parts = log[index].split('|');
-                    final foodName = parts[0];
-                    final foodMg = double.tryParse(parts[1]) ?? 0;
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      leading: Container(
-                        width: 42, height: 42,
-                        decoration: BoxDecoration(
-                          color: Colors.teal.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(10),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.restaurant_menu, size: 48, color: textHint),
+                            const SizedBox(height: 12),
+                            Text('No foods logged yet today',
+                                style: TextStyle(color: textHint, fontSize: 16)),
+                            const SizedBox(height: 6),
+                            Text('Tap "Log This Food" on any food item',
+                                style: TextStyle(color: textHint, fontSize: 13)),
+                          ],
                         ),
-                        child: const Icon(Icons.restaurant,
-                            color: Colors.teal, size: 20),
-                      ),
-                      title: Text(foodName,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 15)),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: Colors.teal.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(10),
+                      )
+                    : ListView.separated(
+                        controller: scrollController,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        itemCount: log.length,
+                        separatorBuilder: (_, _) => Divider(height: 1, color: divCol),
+                        itemBuilder: (_, index) {
+                          final parts = log[index].split('|');
+                          final foodName = parts[0];
+                          final foodMg = double.tryParse(parts[1]) ?? 0;
+                          return ListTile(
+                            contentPadding:
+                                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            leading: Container(
+                              width: 42, height: 42,
+                              decoration: BoxDecoration(
+                                color: Colors.teal.withValues(alpha: isDark ? 0.18 : 0.08),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.restaurant, color: Colors.teal, size: 20),
                             ),
-                            child: Text(
-                              '${foodMg.toStringAsFixed(1)} mg',
-                              style: const TextStyle(
-                                  color: Colors.teal,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13),
+                            title: Text(foodName,
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w600, fontSize: 15,
+                                    color: textPri)),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.teal.withValues(alpha: isDark ? 0.18 : 0.08),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '${foodMg.toStringAsFixed(1)} mg',
+                                    style: const TextStyle(
+                                        color: Colors.teal,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                GestureDetector(
+                                  onTap: () async {
+                                    final updatedLog = List<String>.from(log)
+                                      ..removeAt(index);
+                                    final updatedTotal =
+                                        (total - foodMg).clamp(0.0, double.infinity);
+                                    await prefs.setStringList(logKey, updatedLog);
+                                    await prefs.setDouble(oxKey, updatedTotal);
+                                    setSheetState(() {
+                                      log = updatedLog;
+                                      total = updatedTotal;
+                                    });
+                                    _refreshLogCount();
+                                  },
+                                  child: const Icon(Icons.delete_outline,
+                                      color: Colors.redAccent, size: 22),
+                                ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () async {
-                              final updatedLog = List<String>.from(log)
-                                ..removeAt(index);
-                              final updatedTotal =
-                              (total - foodMg).clamp(0.0, double.infinity);
-                              await prefs.setStringList(logKey, updatedLog);
-                              await prefs.setDouble(oxKey, updatedTotal);
-                              setSheetState(() {
-                                log = updatedLog;
-                                total = updatedTotal;
-                              });
-                              // Refresh badge count after deletion
-                              _refreshLogCount();
-                            },
-                            child: Icon(Icons.delete_outline,
-                                color: Colors.red.shade300, size: 22),
-                          ),
-                        ],
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
               ),
             ],
           ),
@@ -240,11 +234,19 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
       ),
     );
   }
+
   void _showFoodDetail(FoodItem food) {
     final color = levelColor[food.level]!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sheetBg  = AppDynamic.surface(context);
+    final textPri  = AppDynamic.textPrimary(context);
+    final textSec  = AppDynamic.textSecond(context);
+    final divCol   = AppDynamic.divider(context);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: sheetBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -254,18 +256,15 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Handle bar
             Center(child: Container(width: 40, height: 4,
-                decoration: BoxDecoration(color: Colors.grey.shade300,
+                decoration: BoxDecoration(color: divCol,
                     borderRadius: BorderRadius.circular(2)))),
             const SizedBox(height: 20),
-
-            // Food name + level badge
             Row(
               children: [
                 Expanded(child: Text(food.name,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold))),
-                // Heart favorite button
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold,
+                        color: textPri))),
                 GestureDetector(
                   onTap: () {
                     _toggleFavorite(food.name);
@@ -294,7 +293,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                           : Icons.favorite_border,
                       color: _favorites.contains(food.name)
                           ? Colors.redAccent
-                          : Colors.grey.shade400,
+                          : AppDynamic.textHint(context),
                       size: 28,
                     ),
                   ),
@@ -302,37 +301,39 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(color: color.withValues(alpha: 0.12),
+                  decoration: BoxDecoration(
+                      color: color.withValues(alpha: isDark ? 0.22 : 0.12),
                       borderRadius: BorderRadius.circular(20)),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     Icon(levelIcon[food.level], color: color, size: 16),
                     const SizedBox(width: 4),
                     Text(levelLabel[food.level]!,
-                        style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+                        style: TextStyle(
+                            color: color, fontWeight: FontWeight.bold, fontSize: 13)),
                   ]),
                 ),
               ],
             ),
             const SizedBox(height: 20),
-
-            // Stats row
             Row(children: [
-              _statCard('Oxalates', '${food.oxalateMg.toStringAsFixed(0)} mg', Icons.science_outlined, color),
+              _statCard(context, 'Oxalates',
+                  '${food.oxalateMg.toStringAsFixed(0)} mg', Icons.science_outlined, color),
               const SizedBox(width: 12),
-              _statCard('Serving', food.serving, Icons.restaurant_outlined, Colors.teal),
+              _statCard(context, 'Serving', food.serving,
+                  Icons.restaurant_outlined, Colors.teal),
               const SizedBox(width: 12),
-              _statCard('Category', food.category, Icons.category_outlined, Colors.blueGrey),
+              _statCard(context, 'Category', food.category,
+                  Icons.category_outlined, Colors.blueGrey),
             ]),
             const SizedBox(height: 20),
-
-            // Tip
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.teal.withValues(alpha: 0.07),
+                color: Colors.teal.withValues(alpha: isDark ? 0.14 : 0.07),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.teal.withValues(alpha: 0.2)),
+                border: Border.all(
+                    color: Colors.teal.withValues(alpha: isDark ? 0.3 : 0.2)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -340,25 +341,24 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                   const Icon(Icons.lightbulb_outline, color: Colors.teal, size: 20),
                   const SizedBox(width: 10),
                   Expanded(child: Text(food.tip,
-                      style: TextStyle(fontSize: 14, color: Colors.grey.shade700, height: 1.5))),
+                      style: TextStyle(fontSize: 14, color: textSec, height: 1.5))),
                 ],
               ),
             ),
             const SizedBox(height: 16),
-
-            // Log This Food button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () {
                   _logFood(food.oxalateMg, food.name);
                   Navigator.pop(context);
-                  // Refresh the badge count immediately after logging
-                  Future.delayed(const Duration(milliseconds: 200), _refreshLogCount);
+                  Future.delayed(
+                      const Duration(milliseconds: 200), _refreshLogCount);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Row(children: [
-                        const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                        const Icon(Icons.check_circle,
+                            color: Colors.white, size: 20),
                         const SizedBox(width: 10),
                         Expanded(child: Text(
                           '${food.name} logged — +${food.oxalateMg.toStringAsFixed(1)} mg',
@@ -394,21 +394,27 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
     );
   }
 
-  Widget _statCard(String label, String value, IconData icon, Color color) {
+  Widget _statCard(BuildContext context, String label, String value,
+      IconData icon, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textSec = AppDynamic.textSecond(context);
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.07),
+          color: color.withValues(alpha: isDark ? 0.14 : 0.07),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(children: [
           Icon(icon, color: color, size: 20),
           const SizedBox(height: 6),
-          Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: color),
+          Text(value,
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, fontSize: 13, color: color),
               textAlign: TextAlign.center),
           const SizedBox(height: 2),
-          Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+          Text(label,
+              style: TextStyle(fontSize: 11, color: textSec),
               textAlign: TextAlign.center),
         ]),
       ),
@@ -417,59 +423,72 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final foods = _filteredFoods;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg       = AppDynamic.background(context);
+    final cardBg   = AppDynamic.surface(context);
+    final textPri  = AppDynamic.textPrimary(context);
+    final textSec  = AppDynamic.textSecond(context);
+    final textHint = AppDynamic.textHint(context);
+    final divCol   = AppDynamic.divider(context);
+    final foods    = _filteredFoods;
 
     return Column(
       children: [
         // ── SEARCH + FILTER HEADER ──
         Container(
-          color: Colors.white,
+          color: cardBg,
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Column(
             children: [
-              // Search bar
               Row(
                 children: [
                   Expanded(
                     child: TextField(
                       onChanged: (v) => setState(() => _searchQuery = v),
+                      style: TextStyle(color: textPri),
                       decoration: InputDecoration(
                         hintText: 'Search foods...',
-                        prefixIcon: const Icon(Icons.search, color: Colors.teal),
+                        hintStyle: TextStyle(color: textHint),
+                        prefixIcon:
+                            const Icon(Icons.search, color: Colors.teal),
                         filled: true,
-                        fillColor: Colors.grey.shade100,
+                        fillColor: bg,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
                           borderSide: BorderSide.none,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 0),
                       ),
                     ),
                   ),
                   const SizedBox(width: 10),
-                  // Log button with live count badge
                   GestureDetector(
                     onTap: () async {
                       await _showTodaysLog();
-                      // Refresh count after the sheet closes (in case items were deleted)
                       _refreshLogCount();
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
                         color: _todayLogCount > 0
-                            ? Colors.teal.withValues(alpha: 0.1)
-                            : Colors.grey.shade100,
+                            ? Colors.teal.withValues(
+                                alpha: isDark ? 0.18 : 0.1)
+                            : bg,
                         borderRadius: BorderRadius.circular(20),
                         border: _todayLogCount > 0
-                            ? Border.all(color: Colors.teal.withValues(alpha: 0.4))
-                            : null,
+                            ? Border.all(
+                                color: Colors.teal.withValues(alpha: 0.4))
+                            : Border.all(color: divCol),
                       ),
                       child: Row(
                         children: [
                           Icon(
                             Icons.list_alt,
-                            color: _todayLogCount > 0 ? Colors.teal : Colors.grey.shade700,
+                            color: _todayLogCount > 0
+                                ? Colors.teal
+                                : textSec,
                             size: 16,
                           ),
                           const SizedBox(width: 6),
@@ -478,7 +497,9 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                                 ? '\u{1F4CB} Log ($_todayLogCount)'
                                 : '\u{1F4CB} Log',
                             style: TextStyle(
-                              color: _todayLogCount > 0 ? Colors.teal : Colors.grey.shade700,
+                              color: _todayLogCount > 0
+                                  ? Colors.teal
+                                  : textSec,
                               fontWeight: _todayLogCount > 0
                                   ? FontWeight.bold
                                   : FontWeight.normal,
@@ -491,13 +512,12 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                   ),
                 ],
               ),
-
-              // Filter chips
+              const SizedBox(height: 10),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    _filterChip('All', null),
+                    _filterChip(context, 'All', null),
                     const SizedBox(width: 8),
                     GestureDetector(
                       onTap: () => setState(() {
@@ -505,27 +525,40 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                         if (_showFavoritesOnly) _filterLevel = null;
                       }),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 8),
                         decoration: BoxDecoration(
-                          color: _showFavoritesOnly ? Colors.redAccent : Colors.grey.shade100,
+                          color: _showFavoritesOnly
+                              ? Colors.redAccent
+                              : bg,
                           borderRadius: BorderRadius.circular(20),
+                          border: _showFavoritesOnly
+                              ? null
+                              : Border.all(color: divCol),
                         ),
                         child: Text('\u2764\uFE0F Faves',
                             style: TextStyle(
-                              color: _showFavoritesOnly ? Colors.white : Colors.grey.shade700,
-                              fontWeight: _showFavoritesOnly ? FontWeight.bold : FontWeight.normal,
+                              color: _showFavoritesOnly
+                                  ? Colors.white
+                                  : textSec,
+                              fontWeight: _showFavoritesOnly
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
                               fontSize: 13,
                             )),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    _filterChip('\u2705 Low', OxalateLevel.low),
+                    _filterChip(context, '\u2705 Low', OxalateLevel.low),
                     const SizedBox(width: 8),
-                    _filterChip('\u26A0\uFE0F Moderate', OxalateLevel.moderate),
+                    _filterChip(context, '\u26A0\uFE0F Moderate',
+                        OxalateLevel.moderate),
                     const SizedBox(width: 8),
-                    _filterChip('\u{1F6AB} High', OxalateLevel.high),
+                    _filterChip(
+                        context, '\u{1F6AB} High', OxalateLevel.high),
                     const SizedBox(width: 8),
-                    _filterChip('\u{1F480} Very High', OxalateLevel.veryHigh),
+                    _filterChip(context, '\u{1F480} Very High',
+                        OxalateLevel.veryHigh),
                   ],
                 ),
               ),
@@ -540,73 +573,96 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
         // ── FOOD LIST ──
         Expanded(
           child: foods.isEmpty
-              ? Center(child: Text('No foods found.',
-              style: TextStyle(color: Colors.grey.shade400, fontSize: 16)))
+              ? Center(
+                  child: Text('No foods found.',
+                      style: TextStyle(color: textHint, fontSize: 16)))
               : ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            itemCount: foods.length,
-            itemBuilder: (context, index) {
-              final food = foods[index];
-              final color = levelColor[food.level]!;
-              return GestureDetector(
-                onTap: () => _showFoodDetail(food),
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 8, offset: const Offset(0, 2))
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      // Level dot
-                      Container(width: 12, height: 12,
-                          decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-                      const SizedBox(width: 14),
-
-                      // Food name + category
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  itemCount: foods.length,
+                  itemBuilder: (context, index) {
+                    final food = foods[index];
+                    final color = levelColor[food.level]!;
+                    return GestureDetector(
+                      onTap: () => _showFoodDetail(food),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                              color: AppDynamic.border(context), width: 1),
+                          boxShadow: [
+                            BoxShadow(
+                                color: Colors.black
+                                    .withValues(alpha: isDark ? 0.25 : 0.05),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2))
+                          ],
+                        ),
+                        child: Row(
                           children: [
-                            Text(food.name,
-                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                            const SizedBox(height: 2),
-                            Text('${food.category} \u2022 ${food.serving}',
-                                style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                            Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                    color: color,
+                                    shape: BoxShape.circle)),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(food.name,
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 15,
+                                          color: textPri)),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                      '${food.category} \u2022 ${food.serving}',
+                                      style: TextStyle(
+                                          fontSize: 12, color: textSec)),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: color.withValues(
+                                    alpha: isDark ? 0.18 : 0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                  '${food.oxalateMg.toStringAsFixed(0)} mg',
+                                  style: TextStyle(
+                                      color: color,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13)),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(Icons.chevron_right,
+                                color: textHint, size: 20),
                           ],
                         ),
                       ),
-
-                      // Oxalate mg badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text('${food.oxalateMg.toStringAsFixed(0)} mg',
-                            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
-                      ),
-                      const SizedBox(width: 8),
-                      Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 20),
-                    ],
-                  ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
         ),
       ],
     );
   }
 
-  Widget _filterChip(String label, OxalateLevel? level) {
-    final selected = _filterLevel == level;
+  Widget _filterChip(BuildContext context, String label, OxalateLevel? level) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg     = AppDynamic.background(context);
+    final textSec= AppDynamic.textSecond(context);
+    final divCol = AppDynamic.divider(context);
+    final selected = _filterLevel == level && !_showFavoritesOnly;
     return GestureDetector(
       onTap: () => setState(() {
         _filterLevel = level;
@@ -615,13 +671,15 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? Colors.teal : Colors.grey.shade100,
+          color: selected ? Colors.teal : bg,
           borderRadius: BorderRadius.circular(20),
+          border: selected ? null : Border.all(color: divCol),
         ),
         child: Text(label,
             style: TextStyle(
-              color: selected ? Colors.white : Colors.grey.shade700,
-              fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+              color: selected ? Colors.white : textSec,
+              fontWeight:
+                  selected ? FontWeight.bold : FontWeight.normal,
               fontSize: 13,
             )),
       ),
