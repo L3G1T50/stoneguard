@@ -1,4 +1,4 @@
-// ─── STONEGUARD DESIGN SYSTEM ────────────────────────────────────────────────
+// ─── STONEGUARD DESIGN SYSTEM ────────────────────────────────────────────
 //
 // Single source of truth for all colors, text styles, card styles,
 // spacing, and the root ThemeData used in main.dart.
@@ -14,7 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// ─── THEME NOTIFIER ───────────────────────────────────────────────────────────
+// ─── THEME NOTIFIER ─────────────────────────────────────────────────────────
 /// Holds the current ThemeMode and notifies listeners on change.
 /// Access anywhere: ThemeNotifier.of(context)
 class ThemeNotifier extends ChangeNotifier {
@@ -95,8 +95,8 @@ class _ThemeNotifierScope extends InheritedWidget {
   bool updateShouldNotify(_ThemeNotifierScope old) => true;
 }
 
-// ─── COLOR PALETTE ────────────────────────────────────────────────────────────
-abstract class AppColors {
+// ─── COLOR PALETTE ────────────────────────────────────────────────────────────────────
+abs class AppColors {
   // Primary accent
   static const Color teal        = Color(0xFF00897B);
   static const Color tealLight   = Color(0xFFE0F2F1);
@@ -152,7 +152,7 @@ abstract class AppColors {
   static const Color appBar       = surface;
 }
 
-// ─── CONTEXT-AWARE COLOR HELPER ───────────────────────────────────────────────
+// ─── CONTEXT-AWARE COLOR HELPER ─────────────────────────────────────────────────────
 /// Use these anywhere you need a color that responds to dark/light mode.
 /// Example:  color: AppDynamic.surface(context)
 abstract class AppDynamic {
@@ -181,7 +181,10 @@ abstract class AppDynamic {
       _dark(ctx) ? AppColors.darkNavBg        : AppColors.navBg;
 }
 
-// ─── TEXT STYLES ──────────────────────────────────────────────────────────────
+// ─── TEXT STYLES ────────────────────────────────────────────────────────────────────────────
+// NOTE: These static styles are used as a base. For context-aware
+// dark/light text, use AppDynamic.textPrimary(context) etc., or
+// let Flutter's inherited theme handle it via DefaultTextStyle.
 abstract class AppTextStyles {
   static TextStyle get screenTitle => GoogleFonts.inter(
     fontSize: 26,
@@ -233,6 +236,42 @@ abstract class AppTextStyles {
     letterSpacing: 0.2,
   );
 
+  // ── Context-aware versions (use these inside widgets for dark mode support) ──
+  static TextStyle screenTitleOf(BuildContext ctx) {
+    final isDark = Theme.of(ctx).brightness == Brightness.dark;
+    return screenTitle.copyWith(
+      color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+    );
+  }
+
+  static TextStyle itemTitleOf(BuildContext ctx) {
+    final isDark = Theme.of(ctx).brightness == Brightness.dark;
+    return itemTitle.copyWith(
+      color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+    );
+  }
+
+  static TextStyle bodyOf(BuildContext ctx) {
+    final isDark = Theme.of(ctx).brightness == Brightness.dark;
+    return body.copyWith(
+      color: isDark ? AppColors.darkTextSecond : AppColors.textSecond,
+    );
+  }
+
+  static TextStyle microOf(BuildContext ctx) {
+    final isDark = Theme.of(ctx).brightness == Brightness.dark;
+    return micro.copyWith(
+      color: isDark ? AppColors.darkTextHint : AppColors.textHint,
+    );
+  }
+
+  static TextStyle sectionLabelOf(BuildContext ctx) {
+    final isDark = Theme.of(ctx).brightness == Brightness.dark;
+    return sectionLabel.copyWith(
+      color: isDark ? AppColors.darkTextSecond : AppColors.textHint,
+    );
+  }
+
   // ── Aliases ──
   static TextStyle get sectionHeader => sectionLabel;
   static TextStyle get cardTitle     => itemTitle;
@@ -242,11 +281,10 @@ abstract class AppTextStyles {
     fontSize: 13,
   );
   static TextStyle get meta => micro;
-  // Alias used in older screens that import 'title'
   static TextStyle get title => screenTitle;
 }
 
-// ─── SPACING ──────────────────────────────────────────────────────────────────
+// ─── SPACING ────────────────────────────────────────────────────────────────────────────────
 abstract class AppSpacing {
   static const double xs  = 4;
   static const double sm  = 8;
@@ -261,7 +299,7 @@ abstract class AppSpacing {
   static const EdgeInsets cardPadding = EdgeInsets.all(18);
 }
 
-// ─── CARD DECORATION ─────────────────────────────────────────────────────────
+// ─── CARD DECORATION ───────────────────────────────────────────────────────────────────
 BoxDecoration appCardDecoration({
   Color color = AppColors.surface,
   double radius = 16,
@@ -281,7 +319,7 @@ BoxDecoration appCardDecoration({
   );
 }
 
-// ─── APP CARD WIDGET ─────────────────────────────────────────────────────────
+// ─── APP CARD WIDGET ───────────────────────────────────────────────────────────────────
 class AppCard extends StatelessWidget {
   final Widget child;
   final VoidCallback? onTap;
@@ -308,32 +346,39 @@ class AppCard extends StatelessWidget {
     final shadowColor =
         isDark ? const Color(0x40000000) : const Color(0x08000000);
 
+    // Wrap in DefaultTextStyle so all text inside the card
+    // inherits the correct color for the current theme.
+    final textColor = isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
+
     return Semantics(
       container: true,
-      child: Material(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(radius),
-        clipBehavior: Clip.antiAlias,
-        elevation: 0,
-        child: InkWell(
+      child: DefaultTextStyle.merge(
+        style: TextStyle(color: textColor),
+        child: Material(
+          color: cardColor,
           borderRadius: BorderRadius.circular(radius),
-          onTap: onTap,
-          splashColor: AppColors.teal.withValues(alpha: 0.06),
-          highlightColor: AppColors.teal.withValues(alpha: 0.04),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(radius),
-              border: Border.all(color: borderColor),
-              boxShadow: [
-                BoxShadow(
-                  color: shadowColor,
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+          clipBehavior: Clip.antiAlias,
+          elevation: 0,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(radius),
+            onTap: onTap,
+            splashColor: AppColors.teal.withValues(alpha: 0.06),
+            highlightColor: AppColors.teal.withValues(alpha: 0.04),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(radius),
+                border: Border.all(color: borderColor),
+                boxShadow: [
+                  BoxShadow(
+                    color: shadowColor,
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              padding: padding ?? AppSpacing.cardPadding,
+              child: child,
             ),
-            padding: padding ?? AppSpacing.cardPadding,
-            child: child,
           ),
         ),
       ),
@@ -341,7 +386,7 @@ class AppCard extends StatelessWidget {
   }
 }
 
-// ─── SECTION HEADER WIDGET ───────────────────────────────────────────────────
+// ─── SECTION HEADER WIDGET ─────────────────────────────────────────────────────────────────
 class AppSectionHeader extends StatelessWidget {
   final String title;
   final EdgeInsetsGeometry? padding;
@@ -352,12 +397,15 @@ class AppSectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: padding ?? const EdgeInsets.only(top: 28, bottom: 10),
-      child: Text(title.toUpperCase(), style: AppTextStyles.sectionLabel),
+      child: Text(
+        title.toUpperCase(),
+        style: AppTextStyles.sectionLabelOf(context),
+      ),
     );
   }
 }
 
-// ─── SCREEN TITLE WIDGET ─────────────────────────────────────────────────────
+// ─── SCREEN TITLE WIDGET ───────────────────────────────────────────────────────────────────
 class AppScreenTitle extends StatelessWidget {
   final String title;
   final String? subtitle;
@@ -371,10 +419,10 @@ class AppScreenTitle extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AppTextStyles.screenTitle),
+          Text(title, style: AppTextStyles.screenTitleOf(context)),
           if (subtitle != null) ...[
             const SizedBox(height: 4),
-            Text(subtitle!, style: AppTextStyles.body),
+            Text(subtitle!, style: AppTextStyles.bodyOf(context)),
           ],
         ],
       ),
@@ -382,7 +430,7 @@ class AppScreenTitle extends StatelessWidget {
   }
 }
 
-// ─── PRIMARY BUTTON ───────────────────────────────────────────────────────────
+// ─── PRIMARY BUTTON ───────────────────────────────────────────────────────────────────────────
 class AppButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -438,7 +486,7 @@ class AppButton extends StatelessWidget {
   }
 }
 
-// ─── ICON BADGE ───────────────────────────────────────────────────────────────
+// ─── ICON BADGE ─────────────────────────────────────────────────────────────────────────────────
 class AppIconBadge extends StatelessWidget {
   final IconData icon;
   final Color color;
@@ -464,7 +512,7 @@ class AppIconBadge extends StatelessWidget {
   }
 }
 
-// ─── STANDARD APP BAR ─────────────────────────────────────────────────────────
+// ─── STANDARD APP BAR ─────────────────────────────────────────────────────────────────────
 class StoneGuardAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final List<Widget>? actions;
@@ -506,7 +554,7 @@ class StoneGuardAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-// ─── ROOT THEME DATA ─────────────────────────────────────────────────────────
+// ─── ROOT THEME DATA ─────────────────────────────────────────────────────────────────────────────
 ThemeData buildAppTheme() {
   const seed = AppColors.teal;
   final interTextTheme = GoogleFonts.interTextTheme();
@@ -637,7 +685,7 @@ ThemeData buildAppTheme() {
   );
 }
 
-// ─── DARK THEME DATA ─────────────────────────────────────────────────────────
+// ─── DARK THEME DATA ─────────────────────────────────────────────────────────────────────────────
 ThemeData buildDarkTheme() {
   const seed = AppColors.teal;
   final interTextTheme = GoogleFonts.interTextTheme(
