@@ -27,6 +27,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isPremium = false;
   int _reminderInterval = 2;
 
+  // ── Quiet Hours ──
+  bool _quietHoursEnabled = false;
+  TimeOfDay _quietStart = const TimeOfDay(hour: 22, minute: 0); // 10:00 PM
+  TimeOfDay _quietEnd   = const TimeOfDay(hour: 7,  minute: 0); // 7:00 AM
+
   @override
   void initState() {
     super.initState();
@@ -36,14 +41,81 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _waterGoal = prefs.getDouble('goal_water') ?? 80;
-      _oxalateGoal = prefs.getDouble('goal_oxalate') ?? 200;
-      _userName = prefs.getString('user_name') ?? '';
-      _avatarPath = prefs.getString('avatar_path') ?? '';
+      _waterGoal            = prefs.getDouble('goal_water')          ?? 80;
+      _oxalateGoal          = prefs.getDouble('goal_oxalate')        ?? 200;
+      _userName             = prefs.getString('user_name')           ?? '';
+      _avatarPath           = prefs.getString('avatar_path')         ?? '';
       _notificationsEnabled = prefs.getBool('notifications_enabled') ?? false;
-      _reminderInterval = prefs.getInt('reminder_interval') ?? 2;
-      _isPremium = prefs.getBool('is_premium') ?? false;
+      _reminderInterval     = prefs.getInt('reminder_interval')      ?? 2;
+      _isPremium            = prefs.getBool('is_premium')            ?? false;
+      _quietHoursEnabled    = prefs.getBool('quiet_hours_enabled')   ?? false;
+      _quietStart = TimeOfDay(
+        hour:   prefs.getInt('quiet_start_hour')   ?? 22,
+        minute: prefs.getInt('quiet_start_minute') ?? 0,
+      );
+      _quietEnd = TimeOfDay(
+        hour:   prefs.getInt('quiet_end_hour')   ?? 7,
+        minute: prefs.getInt('quiet_end_minute') ?? 0,
+      );
     });
+  }
+
+  Future<void> _saveQuietTime({
+    required bool enabled,
+    TimeOfDay? start,
+    TimeOfDay? end,
+  }) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setBool('quiet_hours_enabled', enabled);
+    if (start != null) {
+      await p.setInt('quiet_start_hour',   start.hour);
+      await p.setInt('quiet_start_minute', start.minute);
+    }
+    if (end != null) {
+      await p.setInt('quiet_end_hour',   end.hour);
+      await p.setInt('quiet_end_minute', end.minute);
+    }
+    setState(() {
+      _quietHoursEnabled = enabled;
+      if (start != null) _quietStart = start;
+      if (end   != null) _quietEnd   = end;
+    });
+    // Re-schedule so quiet hours take effect immediately
+    if (_notificationsEnabled) scheduleWaterReminders(_reminderInterval);
+  }
+
+  /// Returns true if [hour] falls inside the quiet window.
+  /// Handles overnight ranges (e.g. 22:00 → 07:00).
+  bool _isQuietHour(int hour) {
+    if (!_quietHoursEnabled) return false;
+    final s = _quietStart.hour;
+    final e = _quietEnd.hour;
+    if (s < e) {
+      // Same-day window (e.g. 13:00 – 15:00)
+      return hour >= s && hour < e;
+    } else {
+      // Overnight window (e.g. 22:00 – 07:00)
+      return hour >= s || hour < e;
+    }
+  }
+
+  Future<void> _pickQuietTime({required bool isStart}) async {
+    final initial = isStart ? _quietStart : _quietEnd;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+      helpText: isStart ? 'Quiet time starts' : 'Quiet time ends',
+      builder: (ctx, child) => MediaQuery(
+        data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: false),
+        child: child!,
+      ),
+    );
+    if (picked == null) return;
+    await _saveQuietTime(
+      enabled: _quietHoursEnabled,
+      start: isStart ? picked : null,
+      end:   isStart ? null    : picked,
+    );
   }
 
   Future<void> _openPaywall() async {
@@ -159,12 +231,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       '🌊 Your kidneys need water — take a sip now!',
       '⏰ Water reminder! Small sips add up to big protection.',
     ];
+    int notifId = 0;
     for (int i = 0; i < 24; i += intervalHours) {
+      // Skip this hour if it falls inside the quiet window
+      if (_isQuietHour(i)) continue;
+
       final now = tz.TZDateTime.now(tz.local);
       var t = tz.TZDateTime(tz.local, now.year, now.month, now.day, i, 0);
       if (t.isBefore(now)) t = t.add(const Duration(days: 1));
       await flutterLocalNotificationsPlugin.zonedSchedule(
-        i,
+        notifId++,
         'StoneGuard 🛡️',
         msgs[i % msgs.length],
         t,
@@ -314,6 +390,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // ─── TIME BADGE (tappable) ───────────────────────────────────────────────
+  Widget _timeBadge(TimeOfDay time, {required VoidCallback onTap}) {
+    final hour   = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
+    final minute = time.minute.toString().padLeft(2, '0');
+    final period = time.period == DayPeriod.am ? 'AM' : 'PM';
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.teal.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.teal.withValues(alpha: 0.25)),
+        ),
+        child: Text(
+          '$hour:$minute $period',
+          style: const TextStyle(
+            color: AppColors.teal,
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final body = CustomScrollView(
@@ -395,7 +497,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const AppSectionHeader('Notifications'),
                 AppCard(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+
+                      // ── Water Reminders toggle ──
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -422,6 +527,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ],
                       ),
+
+                      // ── Interval picker (only when reminders on) ──
                       if (_notificationsEnabled) ...[
                         const Divider(height: 24),
                         Row(
@@ -449,6 +556,125 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                           ],
                         ),
+
+                        // ── Quiet Hours section ──
+                        const Divider(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(children: [
+                              const AppIconBadge(
+                                icon: Icons.bedtime_outlined,
+                                color: Color(0xFF3949AB),
+                              ),
+                              const SizedBox(width: 14),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Quiet Hours',
+                                      style: AppTextStyles.itemTitle),
+                                  Text('No reminders during this window',
+                                      style: AppTextStyles.body),
+                                ],
+                              ),
+                            ]),
+                            Switch(
+                              value: _quietHoursEnabled,
+                              onChanged: (val) => _saveQuietTime(enabled: val),
+                            ),
+                          ],
+                        ),
+
+                        // ── Start / End time pickers (only when quiet hours on) ──
+                        if (_quietHoursEnabled) ...[
+                          const SizedBox(height: 14),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF3949AB).withValues(alpha: 0.06),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFF3949AB).withValues(alpha: 0.15),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.bedtime_outlined,
+                                    color: Color(0xFF3949AB), size: 18),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'No reminders sent between:',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF3949AB),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        children: [
+                                          // Start time
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text('From',
+                                                  style: AppTextStyles.micro),
+                                              const SizedBox(height: 4),
+                                              _timeBadge(
+                                                _quietStart,
+                                                onTap: () => _pickQuietTime(
+                                                    isStart: true),
+                                              ),
+                                            ],
+                                          ),
+                                          const Padding(
+                                            padding: EdgeInsets.symmetric(
+                                                horizontal: 12),
+                                            child: Icon(Icons.arrow_forward,
+                                                size: 16,
+                                                color: AppColors.textHint),
+                                          ),
+                                          // End time
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text('Until',
+                                                  style: AppTextStyles.micro),
+                                              const SizedBox(height: 4),
+                                              _timeBadge(
+                                                _quietEnd,
+                                                onTap: () => _pickQuietTime(
+                                                    isStart: false),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 2),
+                            child: Text(
+                              '💡 Tip: Default is 10:00 PM – 7:00 AM. '
+                              'Tap the times above to customise.',
+                              style: AppTextStyles.micro.copyWith(
+                                  color: AppColors.textHint),
+                            ),
+                          ),
+                        ],
                       ],
                     ],
                   ),
