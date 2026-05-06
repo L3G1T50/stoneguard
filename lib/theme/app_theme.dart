@@ -1,4 +1,4 @@
-// ─── STONEGUARD DESIGN SYSTEM ────────────────────────────────────────────
+// ─── STONEGUARD DESIGN SYSTEM ────────────────────────────────────────────────
 //
 // Single source of truth for all colors, text styles, card styles,
 // spacing, and the root ThemeData used in main.dart.
@@ -95,8 +95,8 @@ class _ThemeNotifierScope extends InheritedWidget {
   bool updateShouldNotify(_ThemeNotifierScope old) => true;
 }
 
-// ─── COLOR PALETTE ────────────────────────────────────────────────────────────────────
-abs class AppColors {
+// ─── COLOR PALETTE ────────────────────────────────────────────────────────────
+abstract class AppColors {
   // Primary accent
   static const Color teal        = Color(0xFF00897B);
   static const Color tealLight   = Color(0xFFE0F2F1);
@@ -140,7 +140,6 @@ abs class AppColors {
   static const Color darkTextHint    = Color(0xFF4A6478);
   static const Color darkNavBg       = Color(0xFF1A2332);
   static const Color darkNavIndicator= Color(0xFF1A4A44);
-  // Teal stays the same in dark mode — it pops nicely on dark surfaces
   static const Color darkTealLight   = Color(0xFF0D2B28);
 
   // ── Aliases kept for backward compat ──
@@ -152,7 +151,7 @@ abs class AppColors {
   static const Color appBar       = surface;
 }
 
-// ─── CONTEXT-AWARE COLOR HELPER ─────────────────────────────────────────────────────
+// ─── CONTEXT-AWARE COLOR HELPER ──────────────────────────────────────────────
 /// Use these anywhere you need a color that responds to dark/light mode.
 /// Example:  color: AppDynamic.surface(context)
 abstract class AppDynamic {
@@ -181,10 +180,7 @@ abstract class AppDynamic {
       _dark(ctx) ? AppColors.darkNavBg        : AppColors.navBg;
 }
 
-// ─── TEXT STYLES ────────────────────────────────────────────────────────────────────────────
-// NOTE: These static styles are used as a base. For context-aware
-// dark/light text, use AppDynamic.textPrimary(context) etc., or
-// let Flutter's inherited theme handle it via DefaultTextStyle.
+// ─── TEXT STYLES ─────────────────────────────────────────────────────────────
 abstract class AppTextStyles {
   static TextStyle get screenTitle => GoogleFonts.inter(
     fontSize: 26,
@@ -236,7 +232,7 @@ abstract class AppTextStyles {
     letterSpacing: 0.2,
   );
 
-  // ── Context-aware versions (use these inside widgets for dark mode support) ──
+  // ── Context-aware versions ──
   static TextStyle screenTitleOf(BuildContext ctx) {
     final isDark = Theme.of(ctx).brightness == Brightness.dark;
     return screenTitle.copyWith(
@@ -280,11 +276,11 @@ abstract class AppTextStyles {
     fontWeight: FontWeight.w600,
     fontSize: 13,
   );
-  static TextStyle get meta => micro;
+  static TextStyle get meta  => micro;
   static TextStyle get title => screenTitle;
 }
 
-// ─── SPACING ────────────────────────────────────────────────────────────────────────────────
+// ─── SPACING ─────────────────────────────────────────────────────────────────
 abstract class AppSpacing {
   static const double xs  = 4;
   static const double sm  = 8;
@@ -299,7 +295,7 @@ abstract class AppSpacing {
   static const EdgeInsets cardPadding = EdgeInsets.all(18);
 }
 
-// ─── CARD DECORATION ───────────────────────────────────────────────────────────────────
+// ─── CARD DECORATION (legacy helper) ─────────────────────────────────────────
 BoxDecoration appCardDecoration({
   Color color = AppColors.surface,
   double radius = 16,
@@ -319,7 +315,7 @@ BoxDecoration appCardDecoration({
   );
 }
 
-// ─── APP CARD WIDGET ───────────────────────────────────────────────────────────────────
+// ─── APP CARD WIDGET ─────────────────────────────────────────────────────────
 class AppCard extends StatelessWidget {
   final Widget child;
   final VoidCallback? onTap;
@@ -345,10 +341,8 @@ class AppCard extends StatelessWidget {
         isDark ? AppColors.darkBorder : AppColors.border;
     final shadowColor =
         isDark ? const Color(0x40000000) : const Color(0x08000000);
-
-    // Wrap in DefaultTextStyle so all text inside the card
-    // inherits the correct color for the current theme.
-    final textColor = isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
+    final textColor =
+        isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
 
     return Semantics(
       container: true,
@@ -386,7 +380,7 @@ class AppCard extends StatelessWidget {
   }
 }
 
-// ─── SECTION HEADER WIDGET ─────────────────────────────────────────────────────────────────
+// ─── SECTION HEADER WIDGET ───────────────────────────────────────────────────
 class AppSectionHeader extends StatelessWidget {
   final String title;
   final EdgeInsetsGeometry? padding;
@@ -405,7 +399,7 @@ class AppSectionHeader extends StatelessWidget {
   }
 }
 
-// ─── SCREEN TITLE WIDGET ───────────────────────────────────────────────────────────────────
+// ─── SCREEN TITLE WIDGET ─────────────────────────────────────────────────────
 class AppScreenTitle extends StatelessWidget {
   final String title;
   final String? subtitle;
@@ -430,7 +424,7 @@ class AppScreenTitle extends StatelessWidget {
   }
 }
 
-// ─── PRIMARY BUTTON ───────────────────────────────────────────────────────────────────────────
+// ─── PRIMARY BUTTON ──────────────────────────────────────────────────────────
 class AppButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -486,7 +480,7 @@ class AppButton extends StatelessWidget {
   }
 }
 
-// ─── ICON BADGE ─────────────────────────────────────────────────────────────────────────────────
+// ─── ICON BADGE ──────────────────────────────────────────────────────────────
 class AppIconBadge extends StatelessWidget {
   final IconData icon;
   final Color color;
@@ -512,7 +506,7 @@ class AppIconBadge extends StatelessWidget {
   }
 }
 
-// ─── STANDARD APP BAR ─────────────────────────────────────────────────────────────────────
+// ─── STANDARD APP BAR ────────────────────────────────────────────────────────
 class StoneGuardAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final List<Widget>? actions;
@@ -554,7 +548,7 @@ class StoneGuardAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-// ─── ROOT THEME DATA ─────────────────────────────────────────────────────────────────────────────
+// ─── LIGHT THEME DATA ────────────────────────────────────────────────────────
 ThemeData buildAppTheme() {
   const seed = AppColors.teal;
   final interTextTheme = GoogleFonts.interTextTheme();
@@ -685,7 +679,7 @@ ThemeData buildAppTheme() {
   );
 }
 
-// ─── DARK THEME DATA ─────────────────────────────────────────────────────────────────────────────
+// ─── DARK THEME DATA ─────────────────────────────────────────────────────────
 ThemeData buildDarkTheme() {
   const seed = AppColors.teal;
   final interTextTheme = GoogleFonts.interTextTheme(
