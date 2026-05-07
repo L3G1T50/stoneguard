@@ -457,16 +457,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   // ── ENTRY CARD ───────────────────────────────────────────────────────────────────
-  // FIX: Use Material as root with the correct cardColor so that InkWell's
-  // splash paints on top of the right background. The previous version wrapped
-  // a Container (correct color) with a Material(color: transparent) child, but
-  // Flutter's paint order means the Material background (transparent → white in
-  // light mode default) rendered on top of the Container color in some
-  // configurations. Now Material owns the color directly.
 
   Widget _buildEntryCard(BuildContext context, Map<String, dynamic> e) {
     final isDark      = Theme.of(context).brightness == Brightness.dark;
-    final cardColor   = isDark ? AppColors.darkSurface : AppColors.surface;
+    final cardColor   = AppDynamic.surface(context);
     final borderCol   = AppDynamic.border(context);
     final textPri     = AppDynamic.textPrimary(context);
     final mutedColor  = AppDynamic.textSecond(context);
@@ -484,7 +478,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
-        color: cardColor,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(14),
         clipBehavior: Clip.antiAlias,
         elevation: 0,
@@ -495,6 +489,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           highlightColor: AppColors.teal.withValues(alpha: 0.04),
           child: Container(
             decoration: BoxDecoration(
+              color: cardColor,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: borderCol),
               boxShadow: [BoxShadow(
