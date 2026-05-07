@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../database_helper.dart';
-import '../theme/app_theme.dart';   // ✔ correct path — AppDynamic lives here
+import '../theme/app_theme.dart';   // ✔ design system + AppCard
 import 'dart:math' as math;
 
 class HistoryScreen extends StatefulWidget {
@@ -460,8 +460,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Widget _buildEntryCard(BuildContext context, Map<String, dynamic> e) {
     final isDark      = Theme.of(context).brightness == Brightness.dark;
-    final cardColor   = AppDynamic.surface(context);
-    final borderCol   = AppDynamic.border(context);
     final textPri     = AppDynamic.textPrimary(context);
     final mutedColor  = AppDynamic.textSecond(context);
     final shadowColor = isDark
@@ -477,53 +475,61 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-        clipBehavior: Clip.antiAlias,
-        elevation: 0,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: () => _showEntryDetail(context, e),
-          splashColor: AppColors.teal.withValues(alpha: 0.06),
-          highlightColor: AppColors.teal.withValues(alpha: 0.04),
-          child: Container(
-            decoration: BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: borderCol),
-              boxShadow: [BoxShadow(
-                  color: shadowColor, blurRadius: 6, offset: const Offset(0, 2))],
-            ),
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 48, height: 48,
-                  decoration: BoxDecoration(
-                    color: _painColor(pain).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: Text('$pain', style: TextStyle(
-                        color: _painColor(pain), fontWeight: FontWeight.bold, fontSize: 18)),
+      child: AppCard(
+        onTap: () => _showEntryDetail(context, e),
+        radius: 14,
+        // Keep the same subtle shadow depth for both themes
+        child: Container(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: shadowColor,
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48, height: 48,
+                decoration: BoxDecoration(
+                  color: _painColor(pain).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Text(
+                    '$pain',
+                    style: TextStyle(
+                      color: _painColor(pain),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: _painColor(pain).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Text(_painLabel(pain), style: TextStyle(
-                              color: _painColor(pain), fontSize: 11, fontWeight: FontWeight.bold)),
+                          child: Text(
+                            _painLabel(pain),
+                            style: TextStyle(
+                              color: _painColor(pain),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                         if (stonePassed) ...[
                           const SizedBox(width: 6),
@@ -537,8 +543,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               color: AppColors.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Text(side, style: const TextStyle(
-                                color: AppColors.primary, fontSize: 10, fontWeight: FontWeight.w600)),
+                            child: const Text(
+                              'Side',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ],
                         if (symptoms.isNotEmpty) ...[
@@ -549,22 +561,46 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               color: AppColors.warning.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Text('+${symptoms.length}', style: const TextStyle(
-                                color: AppColors.warning, fontSize: 10, fontWeight: FontWeight.w600)),
+                            child: Text(
+                              '+${symptoms.length}',
+                              style: const TextStyle(
+                                color: AppColors.warning,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ],
-                      ]),
-                      const SizedBox(height: 5),
-                      Text(note, maxLines: 2, overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: textPri, fontSize: 13, height: 1.4)),
-                      const SizedBox(height: 3),
-                      Text(dateStr, style: TextStyle(color: mutedColor, fontSize: 11)),
-                    ],
-                  ),
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      note,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: textPri,
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      dateStr,
+                      style: TextStyle(
+                        color: mutedColor,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
                 ),
-                Icon(Icons.chevron_right, color: mutedColor, size: 20),
-              ],
-            ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: mutedColor,
+                size: 20,
+              ),
+            ],
           ),
         ),
       ),
