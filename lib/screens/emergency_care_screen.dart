@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
-import '../widgets/gradient_scaffold.dart';
-import 'settings_screen.dart';
 
 class EmergencyCareScreen extends StatelessWidget {
   const EmergencyCareScreen({super.key});
-
-  // Colors resolved dynamically in build()
 
   @override
   Widget build(BuildContext context) {

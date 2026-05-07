@@ -95,11 +95,11 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
     double total = prefs.getDouble(oxKey) ?? 0;
 
     if (!mounted) return;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final sheetBg  = AppDynamic.surface(context);
     final textPri  = AppDynamic.textPrimary(context);
     final textHint = AppDynamic.textHint(context);
     final divCol   = AppDynamic.divider(context);
+    final isDark   = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(
       context: context,
@@ -166,7 +166,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                         controller: scrollController,
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         itemCount: log.length,
-                        separatorBuilder: (_, _) => Divider(height: 1, color: divCol),
+                        separatorBuilder: (_, __) => Divider(height: 1, color: divCol),
                         itemBuilder: (_, index) {
                           final parts = log[index].split('|');
                           final foodName = parts[0];
