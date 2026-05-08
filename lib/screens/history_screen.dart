@@ -18,7 +18,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   String _sortOrder = 'Newest';
   String _chartTab = 'pain';
 
-  // ── Reads dark mode from ThemeNotifier (bypasses any local Theme overrides) ──
+  // ── Always reads from ThemeNotifier — bypasses any local Theme overrides ──
   bool _isDark(BuildContext context) => ThemeNotifier.of(context).isDark;
 
   Color _surface(BuildContext context) =>
@@ -481,6 +481,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   // ── ENTRY CARD ───────────────────────────────────────────────────────────────────
+  // FIX: Use ClipRRect + plain Container instead of Material so the card color
+  // is painted by ONE widget only and cannot be overridden by Material's own
+  // theme-based background paint.
 
   Widget _buildEntryCard(BuildContext context, Map<String, dynamic> e) {
     final isDark      = _isDark(context);
@@ -489,7 +492,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final textPri     = _textPrimary(context);
     final mutedColor  = _textSecond(context);
     final shadowColor = isDark
-        ? const Color(0x40000000)
+        ? const Color(0x44000000)
         : const Color(0x0A000000);
 
     final pain        = e['pain'] as int;
@@ -501,18 +504,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: cardColor,
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        clipBehavior: Clip.antiAlias,
-        elevation: 0,
         child: InkWell(
           onTap: () => _showEntryDetail(context, e),
-          splashColor: AppColors.teal.withValues(alpha: 0.06),
-          highlightColor: AppColors.teal.withValues(alpha: 0.04),
+          splashColor: AppColors.teal.withValues(alpha: 0.08),
+          highlightColor: AppColors.teal.withValues(alpha: 0.05),
           child: Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
+              // ← This is the ONLY place the card color is painted.
+              color: cardColor,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: borderCol),
               boxShadow: [
@@ -526,7 +528,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Pain level badge — larger (56×56)
+                // Pain level badge
                 Container(
                   width: 56, height: 56,
                   decoration: BoxDecoration(
