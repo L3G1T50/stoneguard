@@ -18,8 +18,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
   String _sortOrder = 'Newest';
   String _chartTab = 'pain';
 
-  // ── Always reads from ThemeNotifier — bypasses any local Theme overrides ──
-  bool _isDark(BuildContext context) => ThemeNotifier.of(context).isDark;
+  // ── All theme helpers now use Theme.of(context).brightness so they stay
+  //    in lock-step with AppDynamic and AppCard. ──────────────────────────
+  bool _isDark(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
 
   Color _surface(BuildContext context) =>
       _isDark(context) ? AppColors.darkSurface : AppColors.surface;
@@ -481,19 +483,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   // ── ENTRY CARD ───────────────────────────────────────────────────────────────────
-  // FIX: Use ClipRRect + plain Container instead of Material so the card color
-  // is painted by ONE widget only and cannot be overridden by Material's own
-  // theme-based background paint.
+  // FIX: Use AppCard instead of ClipRRect + bare InkWell.
+  // AppCard owns its own Material widget with the correct dark/light surface
+  // color, so Flutter never paints a white fallback background behind the ink.
 
   Widget _buildEntryCard(BuildContext context, Map<String, dynamic> e) {
-    final isDark      = _isDark(context);
-    final cardColor   = _surface(context);
-    final borderCol   = _border(context);
-    final textPri     = _textPrimary(context);
-    final mutedColor  = _textSecond(context);
-    final shadowColor = isDark
-        ? const Color(0x44000000)
-        : const Color(0x0A000000);
+    final textPri    = _textPrimary(context);
+    final mutedColor = _textSecond(context);
 
     final pain        = e['pain'] as int;
     final note        = e['note'] as String;
@@ -504,142 +500,123 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          onTap: () => _showEntryDetail(context, e),
-          splashColor: AppColors.teal.withValues(alpha: 0.08),
-          highlightColor: AppColors.teal.withValues(alpha: 0.05),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              // ← This is the ONLY place the card color is painted.
-              color: cardColor,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: borderCol),
-              boxShadow: [
-                BoxShadow(
-                  color: shadowColor,
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
+      child: AppCard(
+        radius: 14,
+        padding: const EdgeInsets.all(14),
+        onTap: () => _showEntryDetail(context, e),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Pain level badge
+            Container(
+              width: 56, height: 56,
+              decoration: BoxDecoration(
+                color: _painColor(pain).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: Text(
+                  '$pain',
+                  style: TextStyle(
+                    color: _painColor(pain),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
                 ),
-              ],
+              ),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Pain level badge
-                Container(
-                  width: 56, height: 56,
-                  decoration: BoxDecoration(
-                    color: _painColor(pain).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: Text(
-                      '$pain',
-                      style: TextStyle(
-                        color: _painColor(pain),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: _painColor(pain).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              _painLabel(pain),
-                              style: TextStyle(
-                                color: _painColor(pain),
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: _painColor(pain).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          _painLabel(pain),
+                          style: TextStyle(
+                            color: _painColor(pain),
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      if (stonePassed) ...[
+                        const SizedBox(width: 6),
+                        const Text('💎', style: TextStyle(fontSize: 13)),
+                      ],
+                      if (side != 'None') ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            'Side',
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          if (stonePassed) ...[
-                            const SizedBox(width: 6),
-                            const Text('💎', style: TextStyle(fontSize: 13)),
-                          ],
-                          if (side != 'None') ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Text(
-                                'Side',
-                                style: TextStyle(
-                                  color: AppColors.primary,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                          if (symptoms.isNotEmpty) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.warning.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                '+${symptoms.length}',
-                                style: const TextStyle(
-                                  color: AppColors.warning,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        note,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: textPri,
-                          fontSize: 13,
-                          height: 1.4,
                         ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        dateStr,
-                        style: TextStyle(
-                          color: mutedColor,
-                          fontSize: 11,
+                      ],
+                      if (symptoms.isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.warning.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '+${symptoms.length}',
+                            style: const TextStyle(
+                              color: AppColors.warning,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
-                ),
-                Icon(
-                  Icons.chevron_right,
-                  color: mutedColor,
-                  size: 20,
-                ),
-              ],
+                  const SizedBox(height: 5),
+                  Text(
+                    note,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: textPri,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    dateStr,
+                    style: TextStyle(
+                      color: mutedColor,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+            Icon(
+              Icons.chevron_right,
+              color: mutedColor,
+              size: 20,
+            ),
+          ],
         ),
       ),
     );
