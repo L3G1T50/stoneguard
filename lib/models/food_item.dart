@@ -27,6 +27,9 @@ const String coldCerealTip =
 const String hotCerealTip =
     'Plain oatmeal (instant Quaker) is surprisingly zero oxalate! Avoid corn grits which are very high.';
 
+const String snacksTip =
+    'Popcorn and pretzels are the safest snacks. Avoid baked potato chips (19mg) and high-protein bars.';
+
 enum OxalateLevel { low, moderate, high, veryHigh }
 
 class FoodItem {
@@ -398,19 +401,19 @@ const List<FoodItem> foodDatabase = [
   FoodItem(name: 'Salad Dressing Italian Lite', serving: '1.5 tbsp', oxalateMg: 0.2, level: OxalateLevel.low, category: 'Salad Dressings', tip: 'All salad dressings are very low oxalate. Use freely â€” they will not contribute to stone formation.'),
   FoodItem(name: 'Salad Dressing Italian Regular', serving: '1.5 tbsp', oxalateMg: 0.2, level: OxalateLevel.low, category: 'Salad Dressings', tip: 'All salad dressings are very low oxalate. Use freely â€” they will not contribute to stone formation.'),
   FoodItem(name: 'Salad Dressing Olive Oil And Vinegar', serving: '1.5 tbsp', oxalateMg: 0.5, level: OxalateLevel.low, category: 'Salad Dressings', tip: 'All salad dressings are very low oxalate. Use freely â€” they will not contribute to stone formation.'),
-  FoodItem(name: 'Bars Energy', serving: 'one', oxalateMg: 10.6, level: OxalateLevel.moderate, category: 'Snacks', tip: 'Popcorn and pretzels are the safest snacks. Avoid baked potato chips (19mg) and high-protein bars.'),
-  FoodItem(name: 'Bars High Protein', serving: 'one', oxalateMg: 20.1, level: OxalateLevel.low, category: 'Snacks', tip: 'Popcorn and pretzels are the safest snacks. Avoid baked potato chips (19mg) and high-protein bars.'),
-  FoodItem(name: 'Corn Chips Tortilla', serving: '1 oz', oxalateMg: 7.1, level: OxalateLevel.low, category: 'Snacks', tip: 'Popcorn and pretzels are the safest snacks. Avoid baked potato chips (19mg) and high-protein bars.'),
-  FoodItem(name: 'Jell-O Chocolate Pudding Snacks', serving: '1 snack cup', oxalateMg: 13.6, level: OxalateLevel.moderate, category: 'Snacks', tip: 'Popcorn and pretzels are the safest snacks. Avoid baked potato chips (19mg) and high-protein bars.'),
-  FoodItem(name: 'Jell-O Vanilla Pudding Snacks', serving: '1 snack cup', oxalateMg: 0.5, level: OxalateLevel.low, category: 'Snacks', tip: 'Popcorn and pretzels are the safest snacks. Avoid baked potato chips (19mg) and high-protein bars.'),
-  FoodItem(name: 'Jello Prepared From Packet', serving: '1/2 cup', oxalateMg: 0.3, level: OxalateLevel.low, category: 'Snacks', tip: 'Popcorn and pretzels are the safest snacks. Avoid baked potato chips (19mg) and high-protein bars.'),
-  FoodItem(name: 'Popcorn Air Popped', serving: '3 cups', oxalateMg: 3.5, level: OxalateLevel.low, category: 'Snacks', tip: 'Popcorn and pretzels are the safest snacks. Avoid baked potato chips (19mg) and high-protein bars.'),
-  FoodItem(name: 'Popcorn Ready To Eat & Microwave', serving: '3 cups', oxalateMg: 4.9, level: OxalateLevel.low, category: 'Snacks', tip: 'Popcorn and pretzels are the safest snacks. Avoid baked potato chips (19mg) and high-protein bars.'),
-  FoodItem(name: 'Potato Chip/Tortilla Chip Combo', serving: '1 oz', oxalateMg: 11.8, level: OxalateLevel.moderate, category: 'Snacks', tip: 'Popcorn and pretzels are the safest snacks. Avoid baked potato chips (19mg) and high-protein bars.'),
-  FoodItem(name: 'Potato Chips', serving: '1 oz', oxalateMg: 12.1, level: OxalateLevel.moderate, category: 'Snacks', tip: 'Popcorn and pretzels are the safest snacks. Avoid baked potato chips (19mg) and high-protein bars.'),
-  FoodItem(name: 'Potato Chips Baked', serving: '1 oz', oxalateMg: 19.3, level: OxalateLevel.moderate, category: 'Snacks', tip: 'Popcorn and pretzels are the safest snacks. Avoid baked potato chips (19mg) and high-protein bars.'),
-  FoodItem(name: 'Potato Chips Light', serving: '1 oz', oxalateMg: 12.2, level: OxalateLevel.moderate, category: 'Snacks', tip: 'Popcorn and pretzels are the safest snacks. Avoid baked potato chips (19mg) and high-protein bars.'),
-  FoodItem(name: 'Pretzels Plain Hard Salted', serving: '1.5 oz', oxalateMg: 6.9, level: OxalateLevel.low, category: 'Snacks', tip: 'Popcorn and pretzels are the safest snacks. Avoid baked potato chips (19mg) and high-protein bars.'),
+  FoodItem(name: 'Bars Energy', serving: 'one', oxalateMg: 10.6, level: OxalateLevel.moderate, category: 'Snacks', tip: snacksTip),
+  FoodItem(name: 'Bars High Protein', serving: 'one', oxalateMg: 20.1, level: OxalateLevel.low, category: 'Snacks', tip: snacksTip),
+  FoodItem(name: 'Corn Chips Tortilla', serving: '1 oz', oxalateMg: 7.1, level: OxalateLevel.low, category: 'Snacks', tip: snacksTip),
+  FoodItem(name: 'Jell-O Chocolate Pudding Snacks', serving: '1 snack cup', oxalateMg: 13.6, level: OxalateLevel.moderate, category: 'Snacks', tip: snacksTip),
+  FoodItem(name: 'Jell-O Vanilla Pudding Snacks', serving: '1 snack cup', oxalateMg: 0.5, level: OxalateLevel.low, category: 'Snacks', tip: snacksTip),
+  FoodItem(name: 'Jello Prepared From Packet', serving: '1/2 cup', oxalateMg: 0.3, level: OxalateLevel.low, category: 'Snacks', tip: snacksTip),
+  FoodItem(name: 'Popcorn Air Popped', serving: '3 cups', oxalateMg: 3.5, level: OxalateLevel.low, category: 'Snacks', tip: snacksTip),
+  FoodItem(name: 'Popcorn Ready To Eat & Microwave', serving: '3 cups', oxalateMg: 4.9, level: OxalateLevel.low, category: 'Snacks', tip: snacksTip),
+  FoodItem(name: 'Potato Chip/Tortilla Chip Combo', serving: '1 oz', oxalateMg: 11.8, level: OxalateLevel.moderate, category: 'Snacks', tip: snacksTip),
+  FoodItem(name: 'Potato Chips', serving: '1 oz', oxalateMg: 12.1, level: OxalateLevel.moderate, category: 'Snacks', tip: snacksTip),
+  FoodItem(name: 'Potato Chips Baked', serving: '1 oz', oxalateMg: 19.3, level: OxalateLevel.moderate, category: 'Snacks', tip: snacksTip),
+  FoodItem(name: 'Potato Chips Light', serving: '1 oz', oxalateMg: 12.2, level: OxalateLevel.moderate, category: 'Snacks', tip: snacksTip),
+  FoodItem(name: 'Pretzels Plain Hard Salted', serving: '1.5 oz', oxalateMg: 6.9, level: OxalateLevel.low, category: 'Snacks', tip: snacksTip),
   FoodItem(name: 'Chowder Clam Canned', serving: '1 cup', oxalateMg: 13.6, level: OxalateLevel.moderate, category: 'Soups And Chowder', tip: 'Avoid miso soup (58mg) entirely. Cream of mushroom and tomato soup are the safest choices.'),
   FoodItem(name: 'Soup Cream Of Mushroom Canned', serving: '1 cup', oxalateMg: 1.5, level: OxalateLevel.low, category: 'Soups And Chowder', tip: 'Avoid miso soup (58mg) entirely. Cream of mushroom and tomato soup are the safest choices.'),
   FoodItem(name: 'Soup Lentil', serving: '1/2 cup', oxalateMg: 16.8, level: OxalateLevel.moderate, category: 'Soups And Chowder', tip: 'Avoid miso soup (58mg) entirely. Cream of mushroom and tomato soup are the safest choices.'),
