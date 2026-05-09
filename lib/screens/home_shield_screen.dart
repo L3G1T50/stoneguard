@@ -296,8 +296,11 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
       _userName = prefs.getString('user_name') ?? '';
       _avatarPath = prefs.getString('avatar_path') ?? '';
       _celebratedBadges = celebratedList.toSet();
+      // Visual fill is capped at 1.0 so the ball stays full, but
+      // the actual waterOz value can exceed goalOz freely.
+      final visualFill = (savedWater / savedGoalOz).clamp(0.0, 1.0);
       _fillAnimation =
-          Tween<double>(begin: savedWater / goalOz, end: savedWater / goalOz)
+          Tween<double>(begin: visualFill, end: visualFill)
               .animate(CurvedAnimation(
                   parent: _fillController, curve: Curves.easeInOutCubic));
     });
@@ -305,16 +308,20 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
 
   Future<void> _addWater(double oz) async {
     final prefs = await SharedPreferences.getInstance();
-    final newOz = (waterOz + oz).clamp(0.0, goalOz);
+    // ── No upper clamp: users can log water beyond the daily goal ──
+    final newOz = (waterOz + oz).clamp(0.0, double.infinity);
     final currentAnimProg = _fillAnimation.value;
+    // Visual fill stays capped at 1.0 (ball stays full once goal met)
+    final newVisualFill = (newOz / goalOz).clamp(0.0, 1.0);
     _fillAnimation =
-        Tween<double>(begin: currentAnimProg, end: newOz / goalOz).animate(
+        Tween<double>(begin: currentAnimProg, end: newVisualFill).animate(
             CurvedAnimation(
                 parent: _fillController, curve: Curves.easeInOutCubic));
     _fillController.forward(from: 0);
     setState(() { waterOz = newOz; });
     await prefs.setDouble('water_$_todayKey', newOz);
     await _saveTodayToHistory();
+    // Pulse on first time hitting the goal; also pulse on each add-beyond
     if (newOz >= goalOz) {
       _pulseController.forward(from: 0).then((_) => _pulseController.reverse());
     }
@@ -368,11 +375,12 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     return '✅ Great job — staying well within your limit!';
   }
 
-  String _motivationalText(double progress) {
-    if (progress >= 1.0) return '🎉 Daily goal reached! Stones don\'t stand a chance!';
-    if (progress >= 0.75) return '💪 Almost there — keep it up!';
-    if (progress >= 0.50) return '👍 Halfway there, great progress!';
-    if (progress >= 0.25) return '💧 Good start — keep drinking!';
+  String _motivationalText(double oz) {
+    if (oz >= goalOz * 1.25) return '🌊 Super-hydrated! You\'re crushing it today!';
+    if (oz >= goalOz) return '🎉 Daily goal reached! Keep going — more is great!';
+    if (oz >= goalOz * 0.75) return '💪 Almost there — keep it up!';
+    if (oz >= goalOz * 0.50) return '👍 Halfway there, great progress!';
+    if (oz >= goalOz * 0.25) return '💧 Good start — keep drinking!';
     return '🛡️ Start hydrating to build your shield!';
   }
 
@@ -396,10 +404,12 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
       animation:
           Listenable.merge([_fillAnimation, _waveController, _pulseAnimation]),
       builder: (context, _) {
+        // Visual fill is capped at 1.0 — ball stays full even when over goal
         final fillProg = _fillAnimation.value.clamp(0.0, 1.0);
         final ringColor = _lerpShieldColor(fillProg);
         final wavePhase = _waveController.value * 2 * pi;
-        final displayOz = (_fillAnimation.value * goalOz).clamp(0.0, goalOz);
+        // Show actual oz (may exceed goalOz)
+        final displayOz = waterOz;
         final isDark = Theme.of(context).brightness == Brightness.dark;
 
         return ScaleTransition(
@@ -650,8 +660,11 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Visual ring/wave progress capped at 100% once goal is met
     final double waterProgress = (waterOz / goalOz).clamp(0.0, 1.0);
-    final double remaining = (goalOz - waterOz).clamp(0.0, goalOz);
+    final bool goalMet = waterOz >= goalOz;
+    final double overGoalOz = goalMet ? waterOz - goalOz : 0;
+    final double remaining = goalMet ? 0 : (goalOz - waterOz);
     final Color oxColor = _oxalateColor(oxalateMg);
     final double oxProgress = (oxalateMg / goalMg).clamp(0.0, 1.0);
 
@@ -721,11 +734,12 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
           const SizedBox(height: 16),
 
           // ── MOTIVATIONAL TEXT ──
-          Text(_motivationalText(waterProgress),
+          Text(_motivationalText(waterOz),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: textMuted)),
 
-          if (waterOz < goalOz) ...[
+          // Show remaining oz OR over-goal oz depending on status
+          if (!goalMet) ...[
             const SizedBox(height: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
@@ -737,11 +751,26 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                 style: TextStyle(fontSize: 12, color: textMuted),
               ),
             ),
+          ] else if (overGoalOz > 0) ...[
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+              decoration: BoxDecoration(
+                  color: Colors.teal.withValues(alpha: isDark ? 0.18 : 0.10),
+                  borderRadius: BorderRadius.circular(20)),
+              child: Text(
+                '+${overGoalOz.toStringAsFixed(0)} oz over goal 🌊',
+                style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.teal,
+                    fontWeight: FontWeight.w600),
+              ),
+            ),
           ],
 
           const SizedBox(height: 24),
 
-          // ── WATER BUTTONS ──
+          // ── WATER BUTTONS (always visible) ──
           Align(
               alignment: Alignment.centerLeft,
               child: Text('Log Water Intake',
