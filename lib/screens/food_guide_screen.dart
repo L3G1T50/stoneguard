@@ -2,10 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/food_item.dart';
-import '../models/food_database.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_dynamic.dart';
-import '../theme/app_card.dart';
+import '../food_database.dart';
+import '../theme/app_theme.dart';
 
 // ══════════════════════════════════════════════════════════════════════════
 // ENUMS & CONSTANTS
@@ -18,7 +16,7 @@ enum OxalateLevel { low, medium, high, veryHigh }
 // ══════════════════════════════════════════════════════════════════════════
 
 class FoodGuideScreen extends StatefulWidget {
-  final VoidCallback? onLogFood;
+  final void Function(double mg, String name)? onLogFood;
   const FoodGuideScreen({super.key, this.onLogFood});
 
   @override
@@ -119,7 +117,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
   // ── build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final isDark   = Theme.of(context).brightness == Brightness.dark;
     final bg       = AppDynamic.background(context);
     final surface  = AppDynamic.surface(context);
     final textPrim = AppDynamic.textPrimary(context);
@@ -157,8 +154,8 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildAllFoodsTab(context, isDark, surface, textPrim, textSec, divCol),
-          _buildFavoritesTab(context, surface, textPrim, textSec),
+          _buildAllFoodsTab(context, surface, textPrim, textSec, divCol),
+          _buildFavoritesTab(context, textSec),
         ],
       ),
     );
@@ -167,7 +164,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
   // ── ALL FOODS TAB ─────────────────────────────────────────────────────────
   Widget _buildAllFoodsTab(
     BuildContext context,
-    bool isDark,
     Color surface,
     Color textPrim,
     Color textSec,
@@ -177,12 +173,10 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
 
     return Column(
       children: [
-        // Search + filter row
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: Column(
             children: [
-              // Search field
               Container(
                 decoration: BoxDecoration(
                   color: surface,
@@ -203,7 +197,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
                 ),
               ),
               const SizedBox(height: 10),
-              // Filter chips
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -226,7 +219,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
           ),
         ),
         const SizedBox(height: 8),
-        // Results count
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
@@ -239,7 +231,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
           ),
         ),
         const SizedBox(height: 4),
-        // List
         Expanded(
           child: foods.isEmpty
               ? _emptyState(textSec)
@@ -254,12 +245,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
   }
 
   // ── FAVORITES TAB ─────────────────────────────────────────────────────────
-  Widget _buildFavoritesTab(
-    BuildContext context,
-    Color surface,
-    Color textPrim,
-    Color textSec,
-  ) {
+  Widget _buildFavoritesTab(BuildContext context, Color textSec) {
     final favs = _favoriteFoods;
     if (favs.isEmpty) {
       return Center(
@@ -297,13 +283,13 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
     final lvlEmoji = _levelEmoji(food.oxalateLevel);
 
     return AppCard(
-      context: context,
-      margin: const EdgeInsets.symmetric(vertical: 5),
+      onTap: widget.onLogFood != null
+          ? () => widget.onLogFood!(food.oxalateMgPer100g, food.name)
+          : null,
       padding: const EdgeInsets.all(14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Oxalate level indicator dot
           Padding(
             padding: const EdgeInsets.only(top: 3),
             child: Container(
@@ -315,12 +301,10 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
             ),
           ),
           const SizedBox(width: 12),
-          // Main content
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Name + level badge row
                 Row(
                   children: [
                     Expanded(
@@ -353,7 +337,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
                   ],
                 ),
                 const SizedBox(height: 4),
-                // Category
                 Text(
                   food.category,
                   style: TextStyle(
@@ -362,7 +345,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
                   ),
                 ),
                 const SizedBox(height: 6),
-                // Oxalate amount
                 Row(
                   children: [
                     Icon(Icons.science_outlined,
@@ -393,7 +375,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
               ],
             ),
           ),
-          // Favorite button
           GestureDetector(
             onTap: () => _toggleFavorite(food.name),
             child: Padding(

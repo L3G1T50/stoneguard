@@ -2,8 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../database_helper.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_card.dart';
+import '../theme/app_theme.dart';
 
 // ═══════════════════════════════════════════════════════════
 // HISTORY SCREEN WIDGET
@@ -18,7 +17,6 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
   // ── theme helpers ───────────────────────────────────────────
-  //    in lock-step with AppDynamic and AppCard. ──────────────────────
   bool _isDark(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark;
 
@@ -131,7 +129,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
         ),
         iconTheme: IconThemeData(color: textPrim),
         actions: [
-          // Sort picker
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: DropdownButton<String>(
@@ -285,7 +282,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         lineBarsData: [LineChartBarData(
           spots: spots, isCurved: true, curveSmoothness: 0.3,
           color: AppColors.primary, barWidth: 2.5, isStrokeCapRound: true,
-          dotData: FlDotData(show: true, getDotPainter: (spot, _, _2, _3) =>
+          dotData: FlDotData(show: true, getDotPainter: (spot, p1, p2, p3) =>
               FlDotCirclePainter(
                 radius: 4, color: _painColor(spot.y.toInt()),
                 strokeColor: Colors.white, strokeWidth: 1.5)),
@@ -344,8 +341,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
         barGroups: groups,
         barTouchData: BarTouchData(
           touchTooltipData: BarTouchTooltipData(
-            getTooltipItem: (group, _, rod, _2) => BarTooltipItem(
-              '${rod.toY.toInt()} entries',
+            getTooltipItem: (group, p1, rod, p2) => BarTooltipItem(
+              '${rod.toY.toInt()} oz',
               const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
             ),
           ),
@@ -399,61 +396,53 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final painColor  = _painColor(painLevel);
 
     return AppCard(
-      context: context,
-      margin: const EdgeInsets.symmetric(vertical: 5),
-      padding: const EdgeInsets.all(0),
+      onTap: () => setState(() {
+        _selectedEntryId = isExpanded ? null : id;
+      }),
+      padding: EdgeInsets.zero,
       child: Column(
         children: [
-          // — summary row —
-          InkWell(
-            onTap: () => setState(() {
-              _selectedEntryId = isExpanded ? null : id;
-            }),
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              child: Row(
-                children: [
-                  // Date
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          date,
-                          style: TextStyle(
-                            color: textPrim,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        date,
+                        style: TextStyle(
+                          color: textPrim,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
                         ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            _miniStat('🔥', '${painLevel}/10', painColor),
-                            const SizedBox(width: 10),
-                            _miniStat('💧', '${waterOz.toStringAsFixed(0)} oz',
-                                AppColors.primary),
-                            const SizedBox(width: 10),
-                            _miniStat('🔬', '${oxalateMg.toStringAsFixed(0)} mg',
-                                Colors.orange),
-                          ],
-                        ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          _miniStat('🔥', '$painLevel/10', painColor),
+                          const SizedBox(width: 10),
+                          _miniStat('💧', '${waterOz.toStringAsFixed(0)} oz',
+                              AppColors.primary),
+                          const SizedBox(width: 10),
+                          _miniStat('🔬', '${oxalateMg.toStringAsFixed(0)} mg',
+                              Colors.orange),
+                        ],
+                      ),
+                    ],
                   ),
-                  Icon(
-                    isExpanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    color: textSec,
-                    size: 20,
-                  ),
-                ],
-              ),
+                ),
+                Icon(
+                  isExpanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
+                  color: textSec,
+                  size: 20,
+                ),
+              ],
             ),
           ),
-          // — expanded details —
           if (isExpanded)
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
