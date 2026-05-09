@@ -18,10 +18,11 @@ class FoodGuideScreen extends StatefulWidget {
 
 class _FoodGuideScreenState extends State<FoodGuideScreen>
     with SingleTickerProviderStateMixin {
-  String         _searchQuery      = '';
-  OxalateLevel?  _filterLevel;
-  bool           _showFavoritesOnly = false;
-  Set<String>    _favorites         = {};
+  String        _searchQuery       = '';
+  OxalateLevel? _filterLevel;
+  bool          _showFavoritesOnly = false;
+  Set<String>   _favorites         = {};
+  Set<String>   _expandedTips      = {};   // tracks which cards are expanded
   late TabController _tabController;
 
   static const String _favKey = 'food_favorites';
@@ -58,6 +59,16 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
     await prefs.setStringList(_favKey, _favorites.toList());
   }
 
+  void _toggleTip(String foodName) {
+    setState(() {
+      if (_expandedTips.contains(foodName)) {
+        _expandedTips.remove(foodName);
+      } else {
+        _expandedTips.add(foodName);
+      }
+    });
+  }
+
   void _logFood(BuildContext context, double mg, String name) {
     if (widget.onLogFood == null) return;
     widget.onLogFood!(mg, name);
@@ -89,15 +100,14 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
       final matchesSearch = _searchQuery.isEmpty ||
           food.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           food.category.toLowerCase().contains(_searchQuery.toLowerCase());
-      final matchesLevel   = _filterLevel == null || food.level == _filterLevel;
+      final matchesLevel    = _filterLevel == null || food.level == _filterLevel;
       final matchesFavorite = !_showFavoritesOnly || _favorites.contains(food.name);
       return matchesSearch && matchesLevel && matchesFavorite;
     }).toList();
   }
 
-  List<FoodItem> get _favoriteFoods {
-    return foodItems.where((food) => _favorites.contains(food.name)).toList();
-  }
+  List<FoodItem> get _favoriteFoods =>
+      foodItems.where((f) => _favorites.contains(f.name)).toList();
 
   Color _levelColor(OxalateLevel level) {
     switch (level) {
@@ -140,14 +150,9 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
       appBar: AppBar(
         backgroundColor: bg,
         elevation: 0,
-        title: Text(
-          'Food Guide',
-          style: TextStyle(
-            color: textPrim,
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        title: Text('Food Guide',
+            style: TextStyle(
+                color: textPrim, fontSize: 22, fontWeight: FontWeight.bold)),
         iconTheme: IconThemeData(color: textPrim),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
@@ -182,7 +187,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
     Color divCol,
   ) {
     final foods = _filteredFoods;
-
     return Column(
       children: [
         Padding(
@@ -203,8 +207,8 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
                     hintStyle: TextStyle(color: textSec),
                     prefixIcon: Icon(Icons.search, color: textSec),
                     border: InputBorder.none,
-                    contentPadding:
-                        const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 14, horizontal: 4),
                   ),
                 ),
               ),
@@ -213,15 +217,15 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    _filterChip(context, 'All',           null),
+                    _filterChip(context, 'All', null),
                     const SizedBox(width: 8),
-                    _filterChip(context, '✅ Low',        OxalateLevel.low),
+                    _filterChip(context, '✅ Low', OxalateLevel.low),
                     const SizedBox(width: 8),
-                    _filterChip(context, '⚠️ Moderate',  OxalateLevel.moderate),
+                    _filterChip(context, '⚠️ Moderate', OxalateLevel.moderate),
                     const SizedBox(width: 8),
-                    _filterChip(context, '🚫 High',       OxalateLevel.high),
+                    _filterChip(context, '🚫 High', OxalateLevel.high),
                     const SizedBox(width: 8),
-                    _filterChip(context, '❌ Very High',  OxalateLevel.veryHigh),
+                    _filterChip(context, '❌ Very High', OxalateLevel.veryHigh),
                     const SizedBox(width: 8),
                     _favChip(context),
                   ],
@@ -235,10 +239,13 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
-              Text(
-                '${foods.length} item${foods.length == 1 ? '' : 's'}',
-                style: TextStyle(color: textSec, fontSize: 13),
-              ),
+              Text('${foods.length} item${foods.length == 1 ? '' : 's'}',
+                  style: TextStyle(color: textSec, fontSize: 13)),
+              const Spacer(),
+              if (widget.onLogFood != null)
+                Text('Tap ➕ to log  •  Tap card for tip',
+                    style: TextStyle(
+                        color: textSec.withValues(alpha: 0.6), fontSize: 11)),
             ],
           ),
         ),
@@ -267,19 +274,15 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
           children: [
             Icon(Icons.star_border, size: 56, color: textSec),
             const SizedBox(height: 12),
-            Text(
-              'No favorites yet',
-              style: TextStyle(
-                  color: textSec,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500),
-            ),
+            Text('No favorites yet',
+                style: TextStyle(
+                    color: textSec,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500)),
             const SizedBox(height: 6),
-            Text(
-              'Tap ⭐ on any food to save it here.',
-              style: TextStyle(
-                  color: textSec.withValues(alpha: 0.7), fontSize: 13),
-            ),
+            Text('Tap ⭐ on any food to save it here.',
+                style:
+                    TextStyle(color: textSec.withValues(alpha: 0.7), fontSize: 13)),
           ],
         ),
       );
@@ -293,126 +296,180 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
 
   // ── FOOD CARD ─────────────────────────────────────────────────────────────
   Widget _foodCard(BuildContext context, FoodItem food) {
-    final isFav    = _favorites.contains(food.name);
-    final lvlColor = _levelColor(food.level);
-    final lvlLabel = _levelLabel(food.level);
-    final lvlEmoji = _levelEmoji(food.level);
+    final isFav      = _favorites.contains(food.name);
+    final isExpanded = _expandedTips.contains(food.name);
+    final hasTip     = food.tip.isNotEmpty;
+    final lvlColor   = _levelColor(food.level);
+    final lvlLabel   = _levelLabel(food.level);
+    final lvlEmoji   = _levelEmoji(food.level);
 
     return AppCard(
+      // tapping the card body toggles the tip (if one exists)
+      onTap: hasTip ? () => _toggleTip(food.name) : null,
       padding: const EdgeInsets.all(14),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ─ level dot ────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Container(
-              width: 12, height: 12,
-              decoration: BoxDecoration(
-                  color: lvlColor, shape: BoxShape.circle),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // ─ food details ───────────────────────────────────────────
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        food.name,
-                        style: TextStyle(
-                          color: AppDynamic.textPrimary(context),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: lvlColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '$lvlEmoji $lvlLabel',
-                        style: TextStyle(
-                          color: lvlColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ─ level dot ────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Container(
+                  width: 12, height: 12,
+                  decoration: BoxDecoration(
+                      color: lvlColor, shape: BoxShape.circle),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  food.category,
-                  style: TextStyle(
-                      color: AppDynamic.textSecond(context), fontSize: 12),
-                ),
-                const SizedBox(height: 6),
-                Row(
+              ),
+              const SizedBox(width: 12),
+              // ─ food details ─────────────────────────────────
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.science_outlined,
-                        size: 13, color: AppDynamic.textSecond(context)),
-                    const SizedBox(width: 4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            food.name,
+                            style: TextStyle(
+                              color: AppDynamic.textPrimary(context),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: lvlColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '$lvlEmoji $lvlLabel',
+                            style: TextStyle(
+                              color: lvlColor,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
                     Text(
-                      '${food.oxalateMg} mg oxalate  •  ${food.serving}',
+                      food.category,
                       style: TextStyle(
                           color: AppDynamic.textSecond(context), fontSize: 12),
                     ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(Icons.science_outlined,
+                            size: 13,
+                            color: AppDynamic.textSecond(context)),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${food.oxalateMg} mg oxalate  •  ${food.serving}',
+                          style: TextStyle(
+                              color: AppDynamic.textSecond(context),
+                              fontSize: 12),
+                        ),
+                      ],
+                    ),
+                    // ─ tip chevron hint (only if tip exists) ────────────
+                    if (hasTip) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            isExpanded
+                                ? Icons.expand_less
+                                : Icons.expand_more,
+                            size: 14,
+                            color: AppDynamic.textSecond(context)
+                                .withValues(alpha: 0.5),
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            isExpanded ? 'Hide tip' : 'Show tip',
+                            style: TextStyle(
+                              color: AppDynamic.textSecond(context)
+                                  .withValues(alpha: 0.5),
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
-                if (food.tip.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    food.tip,
-                    style: TextStyle(
-                      color: AppDynamic.textSecond(context)
-                          .withValues(alpha: 0.8),
-                      fontSize: 12,
-                      fontStyle: FontStyle.italic,
+              ),
+              const SizedBox(width: 8),
+              // ─ right column: star + add ───────────────────────
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: () => _toggleFavorite(food.name),
+                    child: Icon(
+                      isFav ? Icons.star : Icons.star_border,
+                      color: isFav
+                          ? Colors.amber
+                          : AppDynamic.textSecond(context),
+                      size: 22,
+                    ),
+                  ),
+                  if (widget.onLogFood != null) ...[
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () =>
+                          _logFood(context, food.oxalateMg, food.name),
+                      child: const Icon(
+                        Icons.add_circle_outline,
+                        color: Color(0xFF01696F),
+                        size: 22,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+          // ─ expandable tip ────────────────────────────────────────
+          if (hasTip && isExpanded) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF01696F).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: const Color(0xFF01696F).withValues(alpha: 0.18)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.lightbulb_outline,
+                      size: 14, color: Color(0xFF01696F)),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      food.tip,
+                      style: TextStyle(
+                        color: AppDynamic.textSecond(context),
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
                   ),
                 ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          // ─ right column: star + add icon ────────────────────────
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // star / favourite
-              GestureDetector(
-                onTap: () => _toggleFavorite(food.name),
-                child: Icon(
-                  isFav ? Icons.star : Icons.star_border,
-                  color: isFav
-                      ? Colors.amber
-                      : AppDynamic.textSecond(context),
-                  size: 22,
-                ),
               ),
-              // add / log  (only shown when logging is available)
-              if (widget.onLogFood != null) ...[
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: () => _logFood(context, food.oxalateMg, food.name),
-                  child: const Icon(
-                    Icons.add_circle_outline,
-                    color: Color(0xFF01696F),
-                    size: 22,
-                  ),
-                ),
-              ],
-            ],
-          ),
+            ),
+          ],
         ],
       ),
     );
@@ -426,17 +483,15 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
         children: [
           Icon(Icons.search_off, size: 52, color: textSec),
           const SizedBox(height: 12),
-          Text(
-            'No foods match your search',
-            style: TextStyle(
-                color: textSec, fontSize: 15, fontWeight: FontWeight.w500),
-          ),
+          Text('No foods match your search',
+              style: TextStyle(
+                  color: textSec,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500)),
           const SizedBox(height: 6),
-          Text(
-            'Try adjusting your search or filters.',
-            style: TextStyle(
-                color: textSec.withValues(alpha: 0.7), fontSize: 13),
-          ),
+          Text('Try adjusting your search or filters.',
+              style: TextStyle(
+                  color: textSec.withValues(alpha: 0.7), fontSize: 13)),
         ],
       ),
     );
