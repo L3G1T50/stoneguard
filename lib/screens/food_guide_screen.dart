@@ -7,18 +7,19 @@ import '../theme/app_colors.dart';
 import '../theme/app_dynamic.dart';
 import '../theme/app_card.dart';
 
-// ═══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════
 // ENUMS & CONSTANTS
-// ═══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════
 
 enum OxalateLevel { low, medium, high, veryHigh }
 
-// ═══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════
 // FOOD GUIDE SCREEN
-// ═══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════
 
 class FoodGuideScreen extends StatefulWidget {
-  const FoodGuideScreen({super.key});
+  final VoidCallback? onLogFood;
+  const FoodGuideScreen({super.key, this.onLogFood});
 
   @override
   State<FoodGuideScreen> createState() => _FoodGuideScreenState();
@@ -26,16 +27,16 @@ class FoodGuideScreen extends StatefulWidget {
 
 class _FoodGuideScreenState extends State<FoodGuideScreen>
     with SingleTickerProviderStateMixin {
-  // ── state ────────────────────────────────────────────────
+  // ── state ────────────────────────────────────────────────────────────────
   String        _searchQuery     = '';
-  OxalateLevel? _filterLevel     = null;
+  OxalateLevel? _filterLevel;
   bool          _showFavoritesOnly = false;
   Set<String>   _favorites       = {};
   late TabController _tabController;
 
   static const String _favKey = 'food_favorites';
 
-  // ── lifecycle ────────────────────────────────────────────
+  // ── lifecycle ────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
@@ -49,7 +50,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
     super.dispose();
   }
 
-  // ── persistence ──────────────────────────────────────────
+  // ── persistence ──────────────────────────────────────────────────────────
   Future<void> _loadFavorites() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -69,7 +70,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
     await prefs.setStringList(_favKey, _favorites.toList());
   }
 
-  // ── helpers ───────────────────────────────────────────────
+  // ── helpers ───────────────────────────────────────────────────────────────
   List<FoodItem> get _filteredFoods {
     final allFoods = FoodDatabase.allFoods;
     return allFoods.where((food) {
@@ -115,7 +116,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
     }
   }
 
-  // ── build ─────────────────────────────────────────────────
+  // ── build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final isDark   = Theme.of(context).brightness == Brightness.dark;
@@ -163,7 +164,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
     );
   }
 
-  // ── ALL FOODS TAB ─────────────────────────────────────────
+  // ── ALL FOODS TAB ─────────────────────────────────────────────────────────
   Widget _buildAllFoodsTab(
     BuildContext context,
     bool isDark,
@@ -207,13 +208,13 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    _filterChip(context, 'All',       null),
+                    _filterChip(context, 'All',         null),
                     const SizedBox(width: 8),
-                    _filterChip(context, '✅ Low',    OxalateLevel.low),
+                    _filterChip(context, '✅ Low',      OxalateLevel.low),
                     const SizedBox(width: 8),
-                    _filterChip(context, '⚠️ Medium', OxalateLevel.medium),
+                    _filterChip(context, '⚠️ Medium',  OxalateLevel.medium),
                     const SizedBox(width: 8),
-                    _filterChip(context, '🚫 High',   OxalateLevel.high),
+                    _filterChip(context, '🚫 High',     OxalateLevel.high),
                     const SizedBox(width: 8),
                     _filterChip(context, '❌ Very High', OxalateLevel.veryHigh),
                     const SizedBox(width: 8),
@@ -252,7 +253,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
     );
   }
 
-  // ── FAVORITES TAB ─────────────────────────────────────────
+  // ── FAVORITES TAB ─────────────────────────────────────────────────────────
   Widget _buildFavoritesTab(
     BuildContext context,
     Color surface,
@@ -288,7 +289,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
     );
   }
 
-  // ── FOOD CARD ─────────────────────────────────────────────
+  // ── FOOD CARD ─────────────────────────────────────────────────────────────
   Widget _foodCard(BuildContext context, FoodItem food) {
     final isFav    = _favorites.contains(food.name);
     final lvlColor = _levelColor(food.oxalateLevel);
@@ -409,7 +410,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
     );
   }
 
-  // ── EMPTY STATE ───────────────────────────────────────────
+  // ── EMPTY STATE ───────────────────────────────────────────────────────────
   Widget _emptyState(Color textSec) {
     return Center(
       child: Column(
@@ -433,7 +434,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
     );
   }
 
-  // ── FILTER CHIPS ──────────────────────────────────────────
+  // ── FILTER CHIPS ──────────────────────────────────────────────────────────
   Widget _favChip(BuildContext context) {
     final bg      = AppDynamic.background(context);
     final textSec = AppDynamic.textSecond(context);
