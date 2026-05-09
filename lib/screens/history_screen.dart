@@ -200,7 +200,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         lineBarsData: [LineChartBarData(
           spots: spots, isCurved: true, curveSmoothness: 0.3,
           color: AppColors.primary, barWidth: 2.5, isStrokeCapRound: true,
-          dotData: FlDotData(show: true, getDotPainter: (spot, _, __, ___) =>
+          dotData: FlDotData(show: true, getDotPainter: (spot, _, _, _) =>
               FlDotCirclePainter(
                 radius: 4, color: _painColor(spot.y.toInt()),
                 strokeColor: Colors.white, strokeWidth: 1.5)),
@@ -271,7 +271,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         )).toList(),
         barTouchData: BarTouchData(
           touchTooltipData: BarTouchTooltipData(
-            getTooltipItem: (group, _, rod, __) => BarTooltipItem(
+            getTooltipItem: (group, _, rod, _) => BarTooltipItem(
               '${rod.toY.toInt()} entries',
               const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
             ),
