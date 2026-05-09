@@ -42,6 +42,15 @@ const String fishTip =
 const String poultryTip =
     'All plain chicken and turkey are zero or near-zero oxalate. A perfect protein staple for a low-oxalate diet.';
 
+const String candyTip =
+    'Avoid dark chocolate entirely (67mg!). Non-chocolate candies are safe. Limit regular candy bars.';
+
+const String sugarsTip =
+    'Sugar, honey, maple syrup, and molasses are all very low oxalate. Use as sweeteners freely.';
+
+const String sweetenersTip =
+    'All artificial sweeteners are zero oxalate. Use any of them freely as sugar substitutes.';
+
 enum OxalateLevel { low, moderate, high, veryHigh }
 
 class FoodItem {
@@ -217,10 +226,10 @@ const List<FoodItem> foodDatabase = [
   FoodItem(name: 'Snack Cake Creme-Filled Sponge', serving: 'one', oxalateMg: 3.6, level: OxalateLevel.low, category: 'Breads And Bakery', tip: breadTip),
   FoodItem(name: 'Tortillas Corn', serving: 'two', oxalateMg: 10.0, level: OxalateLevel.moderate, category: 'Breads And Bakery', tip: breadTip),
   FoodItem(name: 'Tortillas Flour', serving: 'two', oxalateMg: 9.0, level: OxalateLevel.low, category: 'Breads And Bakery', tip: breadTip),
-  FoodItem(name: 'Candies Milk Chocolate', serving: '1.5 oz', oxalateMg: 7.0, level: OxalateLevel.low, category: 'Candy', tip: 'Avoid dark chocolate entirely (67mg!). Non-chocolate candies are safe. Limit regular candy bars.'),
-  FoodItem(name: 'Candies Non-Chocolate', serving: '1 oz', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Candy', tip: 'Avoid dark chocolate entirely (67mg!). Non-chocolate candies are safe. Limit regular candy bars.'),
-  FoodItem(name: 'Candy Bar', serving: '2 oz', oxalateMg: 35.4, level: OxalateLevel.high, category: 'Candy', tip: 'Avoid dark chocolate entirely (67mg!). Non-chocolate candies are safe. Limit regular candy bars.'),
-  FoodItem(name: 'Chocolate Dark Bar', serving: '1.5 oz', oxalateMg: 67.7, level: OxalateLevel.veryHigh, category: 'Candy', tip: 'Avoid dark chocolate entirely (67mg!). Non-chocolate candies are safe. Limit regular candy bars.'),
+  FoodItem(name: 'Candies Milk Chocolate', serving: '1.5 oz', oxalateMg: 7.0, level: OxalateLevel.low, category: 'Candy', tip: candyTip),
+  FoodItem(name: 'Candies Non-Chocolate', serving: '1 oz', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Candy', tip: candyTip),
+  FoodItem(name: 'Candy Bar', serving: '2 oz', oxalateMg: 35.4, level: OxalateLevel.high, category: 'Candy', tip: candyTip),
+  FoodItem(name: 'Chocolate Dark Bar', serving: '1.5 oz', oxalateMg: 67.7, level: OxalateLevel.veryHigh, category: 'Candy', tip: candyTip),
   FoodItem(name: 'Catsup Ketchup', serving: '1 tbsp', oxalateMg: 1.5, level: OxalateLevel.low, category: 'Condiments', tip: 'Most condiments are very low oxalate. Ketchup, mustard, and BBQ sauce are all safe in normal amounts.'),
   FoodItem(name: 'Mustard Yellow', serving: '1 tsp', oxalateMg: 0.6, level: OxalateLevel.low, category: 'Condiments', tip: 'Most condiments are very low oxalate. Ketchup, mustard, and BBQ sauce are all safe in normal amounts.'),
   FoodItem(name: 'Sauce Barbecue', serving: '2 tbsp', oxalateMg: 2.3, level: OxalateLevel.low, category: 'Condiments', tip: 'Most condiments are very low oxalate. Ketchup, mustard, and BBQ sauce are all safe in normal amounts.'),
@@ -431,15 +440,15 @@ const List<FoodItem> foodDatabase = [
   FoodItem(name: 'Soup Lentil', serving: '1/2 cup', oxalateMg: 16.8, level: OxalateLevel.moderate, category: 'Soups And Chowder', tip: soupsTip),
   FoodItem(name: 'Soup Miso', serving: '1 cup', oxalateMg: 58.3, level: OxalateLevel.veryHigh, category: 'Soups And Chowder', tip: soupsTip),
   FoodItem(name: 'Soup Tomato Canned', serving: '1 cup', oxalateMg: 9.0, level: OxalateLevel.low, category: 'Soups And Chowder', tip: soupsTip),
-  FoodItem(name: 'Aspartame Equal Nutrasweet', serving: '1 packet', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Artificial Sweeteners', tip: 'All artificial sweeteners are zero oxalate. Use any of them freely as sugar substitutes.'),
-  FoodItem(name: 'Saccharin', serving: '1 packet', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Artificial Sweeteners', tip: 'All artificial sweeteners are zero oxalate. Use any of them freely as sugar substitutes.'),
-  FoodItem(name: 'Stevia', serving: '1 packet', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Artificial Sweeteners', tip: 'All artificial sweeteners are zero oxalate. Use any of them freely as sugar substitutes.'),
-  FoodItem(name: 'Sucralose Splenda', serving: '1 packet', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Artificial Sweeteners', tip: 'All artificial sweeteners are zero oxalate. Use any of them freely as sugar substitutes.'),
-  FoodItem(name: 'Truvia', serving: '1 packet', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Artificial Sweeteners', tip: 'All artificial sweeteners are zero oxalate. Use any of them freely as sugar substitutes.'),
-  FoodItem(name: 'Jams And Preserves', serving: '1 tbsp', oxalateMg: 0.5, level: OxalateLevel.low, category: 'Sugars', tip: 'Sugar, honey, maple syrup, and molasses are all very low oxalate. Use as sweeteners freely.'),
-  FoodItem(name: 'Molasses', serving: '1 tbsp', oxalateMg: 0.1, level: OxalateLevel.low, category: 'Sugars', tip: 'Sugar, honey, maple syrup, and molasses are all very low oxalate. Use as sweeteners freely.'),
-  FoodItem(name: 'Sugar Granulated', serving: '1 tsp', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Sugars', tip: 'Sugar, honey, maple syrup, and molasses are all very low oxalate. Use as sweeteners freely.'),
-  FoodItem(name: 'Syrup Pancake', serving: '1 tbsp', oxalateMg: 0.5, level: OxalateLevel.low, category: 'Sugars', tip: 'Sugar, honey, maple syrup, and molasses are all very low oxalate. Use as sweeteners freely.'),
+  FoodItem(name: 'Aspartame Equal Nutrasweet', serving: '1 packet', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Artificial Sweeteners', tip: sweetenersTip),
+  FoodItem(name: 'Saccharin', serving: '1 packet', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Artificial Sweeteners', tip: sweetenersTip),
+  FoodItem(name: 'Stevia', serving: '1 packet', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Artificial Sweeteners', tip: sweetenersTip),
+  FoodItem(name: 'Sucralose Splenda', serving: '1 packet', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Artificial Sweeteners', tip: sweetenersTip),
+  FoodItem(name: 'Truvia', serving: '1 packet', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Artificial Sweeteners', tip: sweetenersTip),
+  FoodItem(name: 'Jams And Preserves', serving: '1 tbsp', oxalateMg: 0.5, level: OxalateLevel.low, category: 'Sugars', tip: sugarsTip),
+  FoodItem(name: 'Molasses', serving: '1 tbsp', oxalateMg: 0.1, level: OxalateLevel.low, category: 'Sugars', tip: sugarsTip),
+  FoodItem(name: 'Sugar Granulated', serving: '1 tsp', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Sugars', tip: sugarsTip),
+  FoodItem(name: 'Syrup Pancake', serving: '1 tbsp', oxalateMg: 0.5, level: OxalateLevel.low, category: 'Sugars', tip: sugarsTip),
   FoodItem(name: 'Arugula Raw', serving: '1/2 cup', oxalateMg: 0.3, level: OxalateLevel.low, category: 'Vegetables', tip: vegetablesTip),
   FoodItem(name: 'Asparagus Boiled Drained', serving: '1/2 cup', oxalateMg: 8.7, level: OxalateLevel.low, category: 'Vegetables', tip: vegetablesTip),
   FoodItem(name: 'Winter Squash Baked Unsalted', serving: '1/2 cup', oxalateMg: 4.0, level: OxalateLevel.low, category: 'Vegetables', tip: vegetablesTip),
