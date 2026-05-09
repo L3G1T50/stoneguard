@@ -18,6 +18,9 @@ const String fruitTip =
 const String grainsTip =
     'White rice and barley are the best grains. Avoid buckwheat, bulgur, quinoa, and whole wheat pasta.';
 
+const String nutsTip =
+    'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.';
+
 enum OxalateLevel { low, moderate, high, veryHigh }
 
 class FoodItem {
@@ -271,7 +274,7 @@ const List<FoodItem> foodDatabase = [
   FoodItem(name: 'Mixed Dried Fruit Prunes Apricots Pears', serving: '1/4 cup', oxalateMg: 6.1, level: OxalateLevel.low, category: 'Fruit', tip: fruitTip),
   FoodItem(name: 'Nectarines Raw', serving: 'one', oxalateMg: 0.4, level: OxalateLevel.low, category: 'Fruit', tip: fruitTip),
   FoodItem(name: 'Olives Canned Ripe', serving: '3 medium', oxalateMg: 5.0, level: OxalateLevel.low, category: 'Fruit', tip: fruitTip),
-  FoodItem(name: 'Oranges Raw', serving: 'one', oxalateMg: 23.3, level: OxalateLevel.low, category: 'Fruit', tip: fruitTip),
+  FoodItem(name: 'Oranges Raw', serving: 'one', oxalateMg: 23.3, level: OxalateLevel.moderate, category: 'Fruit', tip: fruitTip),
   FoodItem(name: 'Papayas Raw', serving: '1/2 medium', oxalateMg: 0.5, level: OxalateLevel.low, category: 'Fruit', tip: fruitTip),
   FoodItem(name: 'Peaches Canned In Heavy Syrup', serving: '1/2 cup', oxalateMg: 0.9, level: OxalateLevel.low, category: 'Fruit', tip: fruitTip),
   FoodItem(name: 'Peaches Canned Juice Packed', serving: '1/2 cup', oxalateMg: 0.5, level: OxalateLevel.low, category: 'Fruit', tip: fruitTip),
@@ -335,24 +338,24 @@ const List<FoodItem> foodDatabase = [
   FoodItem(name: 'Macaroni And Cheese', serving: '1 cup', oxalateMg: 15.3, level: OxalateLevel.moderate, category: 'Mixed Dishes', tip: 'Watch out for meat lasagna and mac & cheese. Pizza in moderation is fine. Avoid high-oxalate pasta dishes.'),
   FoodItem(name: 'Meat Lasagna', serving: '1 piece or cup', oxalateMg: 45.7, level: OxalateLevel.high, category: 'Mixed Dishes', tip: 'Watch out for meat lasagna and mac & cheese. Pizza in moderation is fine. Avoid high-oxalate pasta dishes.'),
   FoodItem(name: 'Pizza Restaurant & Frozen Cheese', serving: '2 slices', oxalateMg: 8.5, level: OxalateLevel.low, category: 'Mixed Dishes', tip: 'Watch out for meat lasagna and mac & cheese. Pizza in moderation is fine. Avoid high-oxalate pasta dishes.'),
-  FoodItem(name: 'Almond Butter Salted', serving: '1 tbsp', oxalateMg: 41.6, level: OxalateLevel.high, category: 'Nuts And Seeds', tip: 'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.'),
-  FoodItem(name: 'Almonds Oil Roasted', serving: '1 oz', oxalateMg: 72.0, level: OxalateLevel.veryHigh, category: 'Nuts And Seeds', tip: 'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.'),
-  FoodItem(name: 'Cashews Oil Roasted', serving: '1 oz', oxalateMg: 63.5, level: OxalateLevel.veryHigh, category: 'Nuts And Seeds', tip: 'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.'),
-  FoodItem(name: 'Coconut Meat Dried Sweetened Shredded', serving: '1 tbsp', oxalateMg: 0.1, level: OxalateLevel.low, category: 'Nuts And Seeds', tip: 'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.'),
-  FoodItem(name: 'Coconut Meat Raw', serving: '1/8 cup', oxalateMg: 0.1, level: OxalateLevel.low, category: 'Nuts And Seeds', tip: 'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.'),
-  FoodItem(name: 'Flaxseed Ground', serving: '1 tbsp', oxalateMg: 0.2, level: OxalateLevel.low, category: 'Nuts And Seeds', tip: 'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.'),
-  FoodItem(name: 'Mixed Nuts With Peanuts Oil Roasted', serving: '1 oz', oxalateMg: 45.2, level: OxalateLevel.high, category: 'Nuts And Seeds', tip: 'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.'),
-  FoodItem(name: 'Peanut Butter Salted Smooth', serving: '1 tbsp', oxalateMg: 19.2, level: OxalateLevel.moderate, category: 'Nuts And Seeds', tip: 'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.'),
-  FoodItem(name: 'Peanuts Dry Roasted', serving: '1 oz', oxalateMg: 28.8, level: OxalateLevel.high, category: 'Nuts And Seeds', tip: 'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.'),
-  FoodItem(name: 'Peanuts Oil Roasted Salted', serving: '1 oz', oxalateMg: 29.0, level: OxalateLevel.high, category: 'Nuts And Seeds', tip: 'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.'),
-  FoodItem(name: 'Pecans Oil Roasted', serving: '1 oz', oxalateMg: 15.7, level: OxalateLevel.moderate, category: 'Nuts And Seeds', tip: 'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.'),
-  FoodItem(name: 'Pistachios Dry Roasted', serving: '1 oz', oxalateMg: 9.0, level: OxalateLevel.low, category: 'Nuts And Seeds', tip: 'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.'),
-  FoodItem(name: 'Pumpkin & Squash Seeds Whole Roasted', serving: '1/4 cup', oxalateMg: 4.3, level: OxalateLevel.low, category: 'Nuts And Seeds', tip: 'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.'),
-  FoodItem(name: 'Pumpkin And Squash Seed Kernels Dried', serving: '1/4 cup', oxalateMg: 7.7, level: OxalateLevel.low, category: 'Nuts And Seeds', tip: 'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.'),
-  FoodItem(name: 'Sesame Butter Tahini', serving: '1 tbsp', oxalateMg: 16.2, level: OxalateLevel.moderate, category: 'Nuts And Seeds', tip: 'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.'),
-  FoodItem(name: 'Sunflower Seed Kernels Oil Roasted', serving: '1/4 cup', oxalateMg: 8.0, level: OxalateLevel.low, category: 'Nuts And Seeds', tip: 'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.'),
-  FoodItem(name: 'Sunflower Seed Dried Kernels', serving: '1/4 cup', oxalateMg: 2.9, level: OxalateLevel.low, category: 'Nuts And Seeds', tip: 'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.'),
-  FoodItem(name: 'Walnuts', serving: '1 oz', oxalateMg: 11.7, level: OxalateLevel.moderate, category: 'Nuts And Seeds', tip: 'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.'),
+  FoodItem(name: 'Almond Butter Salted', serving: '1 tbsp', oxalateMg: 41.6, level: OxalateLevel.high, category: 'Nuts And Seeds', tip: nutsTip),
+  FoodItem(name: 'Almonds Oil Roasted', serving: '1 oz', oxalateMg: 72.0, level: OxalateLevel.veryHigh, category: 'Nuts And Seeds', tip: nutsTip),
+  FoodItem(name: 'Cashews Oil Roasted', serving: '1 oz', oxalateMg: 63.5, level: OxalateLevel.veryHigh, category: 'Nuts And Seeds', tip: nutsTip),
+  FoodItem(name: 'Coconut Meat Dried Sweetened Shredded', serving: '1 tbsp', oxalateMg: 0.1, level: OxalateLevel.low, category: 'Nuts And Seeds', tip: nutsTip),
+  FoodItem(name: 'Coconut Meat Raw', serving: '1/8 cup', oxalateMg: 0.1, level: OxalateLevel.low, category: 'Nuts And Seeds', tip: nutsTip),
+  FoodItem(name: 'Flaxseed Ground', serving: '1 tbsp', oxalateMg: 0.2, level: OxalateLevel.low, category: 'Nuts And Seeds', tip: nutsTip),
+  FoodItem(name: 'Mixed Nuts With Peanuts Oil Roasted', serving: '1 oz', oxalateMg: 45.2, level: OxalateLevel.high, category: 'Nuts And Seeds', tip: nutsTip),
+  FoodItem(name: 'Peanut Butter Salted Smooth', serving: '1 tbsp', oxalateMg: 19.2, level: OxalateLevel.moderate, category: 'Nuts And Seeds', tip: nutsTip),
+  FoodItem(name: 'Peanuts Dry Roasted', serving: '1 oz', oxalateMg: 28.8, level: OxalateLevel.high, category: 'Nuts And Seeds', tip: nutsTip),
+  FoodItem(name: 'Peanuts Oil Roasted Salted', serving: '1 oz', oxalateMg: 29.0, level: OxalateLevel.high, category: 'Nuts And Seeds', tip: nutsTip),
+  FoodItem(name: 'Pecans Oil Roasted', serving: '1 oz', oxalateMg: 15.7, level: OxalateLevel.moderate, category: 'Nuts And Seeds', tip: nutsTip),
+  FoodItem(name: 'Pistachios Dry Roasted', serving: '1 oz', oxalateMg: 9.0, level: OxalateLevel.low, category: 'Nuts And Seeds', tip: nutsTip),
+  FoodItem(name: 'Pumpkin & Squash Seeds Whole Roasted', serving: '1/4 cup', oxalateMg: 4.3, level: OxalateLevel.low, category: 'Nuts And Seeds', tip: nutsTip),
+  FoodItem(name: 'Pumpkin And Squash Seed Kernels Dried', serving: '1/4 cup', oxalateMg: 7.7, level: OxalateLevel.low, category: 'Nuts And Seeds', tip: nutsTip),
+  FoodItem(name: 'Sesame Butter Tahini', serving: '1 tbsp', oxalateMg: 16.2, level: OxalateLevel.moderate, category: 'Nuts And Seeds', tip: nutsTip),
+  FoodItem(name: 'Sunflower Seed Kernels Oil Roasted', serving: '1/4 cup', oxalateMg: 8.0, level: OxalateLevel.low, category: 'Nuts And Seeds', tip: nutsTip),
+  FoodItem(name: 'Sunflower Seed Dried Kernels', serving: '1/4 cup', oxalateMg: 2.9, level: OxalateLevel.low, category: 'Nuts And Seeds', tip: nutsTip),
+  FoodItem(name: 'Walnuts', serving: '1 oz', oxalateMg: 11.7, level: OxalateLevel.moderate, category: 'Nuts And Seeds', tip: nutsTip),
   FoodItem(name: 'Barley Cooked Pearled', serving: '1 cup', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Pasta And Grains', tip: grainsTip),
   FoodItem(name: 'Buckwheat Groats Roasted', serving: '1 cup', oxalateMg: 132.6, level: OxalateLevel.veryHigh, category: 'Pasta And Grains', tip: grainsTip),
   FoodItem(name: 'Bulgur Cooked', serving: '1 cup', oxalateMg: 85.9, level: OxalateLevel.veryHigh, category: 'Pasta And Grains', tip: grainsTip),
