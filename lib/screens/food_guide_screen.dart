@@ -1,12 +1,12 @@
-// ─── FOOD GUIDE SCREEN ────────────────────────────────────
+// ─── FOOD GUIDE SCREEN ────────────────────────────────────────────────────────
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../food_database.dart';
 import '../theme/app_theme.dart';
 
-// ══════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // FOOD GUIDE SCREEN
-// ══════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 
 class FoodGuideScreen extends StatefulWidget {
   final void Function(double mg, String name)? onLogFood;
@@ -22,7 +22,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
   OxalateLevel? _filterLevel;
   bool          _showFavoritesOnly = false;
   Set<String>   _favorites         = {};
-  Set<String>   _expandedTips      = {};   // tracks which cards are expanded
+  Set<String>   _expandedTips      = {};
   late TabController _tabController;
 
   static const String _favKey = 'food_favorites';
@@ -304,7 +304,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
     final lvlEmoji   = _levelEmoji(food.level);
 
     return AppCard(
-      // tapping the card body toggles the tip (if one exists)
       onTap: hasTip ? () => _toggleTip(food.name) : null,
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -313,7 +312,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ─ level dot ────────────────────────────────────────
+              // ─ level dot ──────────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Container(
@@ -323,7 +322,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
                 ),
               ),
               const SizedBox(width: 12),
-              // ─ food details ─────────────────────────────────
+              // ─ food details ───────────────────────────────────────────
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,7 +379,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
                         ),
                       ],
                     ),
-                    // ─ tip chevron hint (only if tip exists) ────────────
                     if (hasTip) ...[
                       const SizedBox(height: 4),
                       Row(
@@ -409,7 +407,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
                 ),
               ),
               const SizedBox(width: 8),
-              // ─ right column: star + add ───────────────────────
+              // ─ right column: star + add ────────────────────────────────
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -424,14 +422,14 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
                     ),
                   ),
                   if (widget.onLogFood != null) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     GestureDetector(
                       onTap: () =>
                           _logFood(context, food.oxalateMg, food.name),
                       child: const Icon(
                         Icons.add_circle_outline,
                         color: Color(0xFF01696F),
-                        size: 22,
+                        size: 28,   // ← increased from 22
                       ),
                     ),
                   ],
@@ -439,7 +437,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
               ),
             ],
           ),
-          // ─ expandable tip ────────────────────────────────────────
+          // ─ expandable tip ──────────────────────────────────────────────
           if (hasTip && isExpanded) ...[
             const SizedBox(height: 8),
             Container(
