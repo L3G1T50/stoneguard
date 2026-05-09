@@ -1,25 +1,24 @@
-// ─── HISTORY SCREEN ─────────────────────────────────────────────────────────────────────────
+// ─── HISTORY SCREEN ───────────────────────────────────────────────────────────────────────────────────
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../database_helper.dart';
-import '../theme/app_theme.dart';   // ✔ design system + AppCard
-import 'dart:math' as math;
+import '../theme/app_colors.dart';
+import '../theme/app_card.dart';
+
+// ═══════════════════════════════════════════════════════════
+// HISTORY SCREEN WIDGET
+// ═══════════════════════════════════════════════════════════
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
+
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  List<Map<String, dynamic>> _entries = [];
-  bool _loading = true;
-  String _filterSeverity = 'All';
-  String _sortOrder = 'Newest';
-  String _chartTab = 'pain';
-
-  // ── All theme helpers now use Theme.of(context).brightness so they stay
-  //    in lock-step with AppDynamic and AppCard. ──────────────────────────
+  // ── theme helpers ───────────────────────────────────────────
+  //    in lock-step with AppDynamic and AppCard. ──────────────────────
   bool _isDark(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark;
 
@@ -38,172 +37,255 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Color _textSecond(BuildContext context) =>
       _isDark(context) ? AppColors.darkTextSecond : AppColors.textSecond;
 
+  // ── state ────────────────────────────────────────────────
+  List<Map<String, dynamic>> _entries  = [];
+  List<Map<String, dynamic>> _filtered = [];
+  bool   _loading  = true;
+  String _search   = '';
+  String _sortBy   = 'date_desc';
+  String _filterType = 'all';
+  int?   _selectedEntryId;
+
+  // ── lifecycle ────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
-    _loadEntries();
+    _load();
   }
 
-  Future<void> _loadEntries() async {
-    final entries = await DatabaseHelper.instance.getAllEntries();
+  // ── data ───────────────────────────────────────────────────
+  Future<void> _load() async {
+    final db = DatabaseHelper.instance;
+    final entries = await db.getAllEntries();
     setState(() {
-      _entries = entries;
-      _loading = false;
+      _entries  = entries;
+      _filtered = _applyFilters(entries);
+      _loading  = false;
     });
   }
 
-  Color _painColor(int level) {
-    if (level <= 3) return AppColors.success;
-    if (level <= 6) return AppColors.warning;
-    return AppColors.danger;
-  }
-
-  String _painLabel(int level) {
-    if (level <= 2) return 'No Pain';
-    if (level <= 4) return 'Mild';
-    if (level <= 6) return 'Moderate';
-    if (level <= 8) return 'Severe';
-    return 'Extreme';
-  }
-
-  String _formatDate(String isoDate) {
-    final date = DateTime.parse(isoDate);
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
-    final ampm = date.hour >= 12 ? 'PM' : 'AM';
-    final min = date.minute.toString().padLeft(2, '0');
-    return '${days[date.weekday - 1]}, ${months[date.month - 1]} ${date.day} · $hour:$min $ampm';
-  }
-
-  String _monthKey(String isoDate) {
-    final date = DateTime.parse(isoDate);
-    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    return '${months[date.month - 1]} ${date.year}';
-  }
-
-  String _shortMonth(String isoDate) {
-    final date = DateTime.parse(isoDate);
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return months[date.month - 1];
-  }
-
-  List<Map<String, dynamic>> get _filteredEntries {
-    List<Map<String, dynamic>> result = _entries;
-    if (_filterSeverity != 'All') {
-      result = result.where((e) {
-        final p = e['pain'] as int;
-        switch (_filterSeverity) {
-          case 'Mild':     return p <= 4;
-          case 'Moderate': return p >= 5 && p <= 7;
-          case 'Severe':   return p >= 8;
-          case 'Stone':    return (e['stonePassed'] as bool?) ?? false;
-          default:         return true;
-        }
-      }).toList();
-    }
-    if (_sortOrder == 'Oldest') result = result.reversed.toList();
-    return result;
-  }
-
-  Map<String, dynamic> get _stats {
-    if (_entries.isEmpty) return {'total': 0, 'avgPain': 0.0, 'stonesPassed': 0, 'highestPain': 0, 'streak': 0};
-    final pains = _entries.map((e) => e['pain'] as int).toList();
-    final avg = pains.reduce((a, b) => a + b) / pains.length;
-    final stones = _entries.where((e) => (e['stonePassed'] as bool?) ?? false).length;
-    final highest = pains.reduce(math.max);
-    final days = _entries.map((e) {
-      final d = DateTime.parse(e['date'] as String);
-      return DateTime(d.year, d.month, d.day);
-    }).toSet().length;
-    return {'total': _entries.length, 'avgPain': avg, 'stonesPassed': stones, 'highestPain': highest, 'streak': days};
-  }
-
-  Map<String, List<Map<String, dynamic>>> get _groupedEntries {
-    final Map<String, List<Map<String, dynamic>>> groups = {};
-    for (final entry in _filteredEntries) {
-      final key = _monthKey(entry['date'] as String);
-      groups.putIfAbsent(key, () => []).add(entry);
-    }
-    return groups;
-  }
-
-  List<Map<String, dynamic>> _lastN(int n) {
-    if (_entries.isEmpty) return [];
-    final sorted = List<Map<String, dynamic>>.from(_entries)
-      ..sort((a, b) => (a['date'] as String).compareTo(b['date'] as String));
-    return sorted.length > n ? sorted.sublist(sorted.length - n) : sorted;
-  }
-
-  List<_MonthBucket> _entriesPerMonth() {
-    final now = DateTime.now();
-    final months = List.generate(6, (i) => DateTime(now.year, now.month - 5 + i, 1));
-    const shortNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return months.map((m) {
-      final count = _entries.where((e) {
-        final d = DateTime.parse(e['date'] as String);
-        return d.year == m.year && d.month == m.month;
-      }).length;
-      return _MonthBucket(shortNames[m.month - 1], count.toDouble());
+  List<Map<String, dynamic>> _applyFilters(
+      List<Map<String, dynamic>> src) {
+    var list = src.where((e) {
+      final q = _search.toLowerCase();
+      if (q.isEmpty) return true;
+      return (e['notes'] ?? '').toString().toLowerCase().contains(q) ||
+             (e['date']  ?? '').toString().contains(q);
     }).toList();
+
+    if (_filterType == 'water') {
+      list = list.where((e) => (e['water_oz'] ?? 0) > 0).toList();
+    } else if (_filterType == 'pain') {
+      list = list.where((e) => (e['pain_level'] ?? 0) > 0).toList();
+    } else if (_filterType == 'oxalate') {
+      list = list.where((e) => (e['oxalate_mg'] ?? 0) > 0).toList();
+    }
+
+    list.sort((a, b) {
+      switch (_sortBy) {
+        case 'date_asc':
+          return (a['date'] ?? '').compareTo(b['date'] ?? '');
+        case 'pain_desc':
+          return (b['pain_level'] ?? 0).compareTo(a['pain_level'] ?? 0);
+        case 'water_desc':
+          return (b['water_oz'] ?? 0).compareTo(a['water_oz'] ?? 0);
+        default:
+          return (b['date'] ?? '').compareTo(a['date'] ?? '');
+      }
+    });
+    return list;
   }
 
-  // ── CHARTS ───────────────────────────────────────────────────────────────────
+  void _onSearch(String q) =>
+      setState(() { _search = q; _filtered = _applyFilters(_entries); });
 
-  Widget _buildPainLineChart(Color mutedColor, Color borderCol) {
-    final data = _lastN(10);
-    if (data.length < 2) {
-      return SizedBox(
-        height: 120,
-        child: Center(
-          child: Text(
-            'Log at least 2 entries to see your pain trend.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: mutedColor, fontSize: 13),
+  void _onSort(String? v) {
+    if (v == null) return;
+    setState(() { _sortBy = v; _filtered = _applyFilters(_entries); });
+  }
+
+  void _onFilter(String v) =>
+      setState(() { _filterType = v; _filtered = _applyFilters(_entries); });
+
+  // ── build ─────────────────────────────────────────────────
+  @override
+  Widget build(BuildContext context) {
+    final bg       = _background(context);
+    final surface  = _surface(context);
+    final borderC  = _border(context);
+    final textPrim = _textPrimary(context);
+    final textSec  = _textSecond(context);
+
+    return Scaffold(
+      backgroundColor: bg,
+      appBar: AppBar(
+        backgroundColor: bg,
+        elevation: 0,
+        title: Text(
+          'History',
+          style: TextStyle(
+            color: textPrim,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
           ),
         ),
-      );
-    }
-    final spots = data.asMap().entries
-        .map((e) => FlSpot(e.key.toDouble(), (e.value['pain'] as int).toDouble()))
+        iconTheme: IconThemeData(color: textPrim),
+        actions: [
+          // Sort picker
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: DropdownButton<String>(
+              value: _sortBy,
+              dropdownColor: surface,
+              underline: const SizedBox(),
+              icon: Icon(Icons.sort, color: textSec, size: 20),
+              style: TextStyle(color: textSec, fontSize: 13),
+              items: const [
+                DropdownMenuItem(value: 'date_desc',  child: Text('Newest first')),
+                DropdownMenuItem(value: 'date_asc',   child: Text('Oldest first')),
+                DropdownMenuItem(value: 'pain_desc',  child: Text('Highest pain')),
+                DropdownMenuItem(value: 'water_desc', child: Text('Most water')),
+              ],
+              onChanged: _onSort,
+            ),
+          ),
+        ],
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                _buildSearchBar(context, surface, textSec, borderC),
+                _buildFilterChips(context, textSec),
+                _buildCharts(context),
+                const Divider(height: 1),
+                Expanded(child: _buildList(context, textPrim, textSec, surface, borderC)),
+              ],
+            ),
+    );
+  }
+
+  // ── SEARCH BAR ──────────────────────────────────────────────
+  Widget _buildSearchBar(
+    BuildContext context,
+    Color surface,
+    Color textSec,
+    Color borderC,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: borderC),
+        ),
+        child: TextField(
+          onChanged: _onSearch,
+          style: TextStyle(color: _textPrimary(context)),
+          decoration: InputDecoration(
+            hintText: 'Search by notes or date…',
+            hintStyle: TextStyle(color: textSec),
+            prefixIcon: Icon(Icons.search, color: textSec),
+            border: InputBorder.none,
+            contentPadding:
+                const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── FILTER CHIPS ───────────────────────────────────────────
+  Widget _buildFilterChips(BuildContext context, Color textSec) {
+    final chips = [
+      ('all',     'All'),
+      ('water',   '💧 Water'),
+      ('pain',    '🟡 Pain'),
+      ('oxalate', '🔬 Oxalate'),
+    ];
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        children: chips.map((c) {
+          final sel = _filterType == c.$1;
+          return Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: GestureDetector(
+              onTap: () => _onFilter(c.$1),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: sel ? AppColors.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: sel ? AppColors.primary : textSec.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Text(
+                  c.$2,
+                  style: TextStyle(
+                    color: sel ? Colors.white : textSec,
+                    fontSize: 12,
+                    fontWeight: sel ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  // ── CHARTS ───────────────────────────────────────────────────
+  Widget _buildCharts(BuildContext context) {
+    if (_entries.length < 2) return const SizedBox();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Expanded(child: _painTrendChart(context)),
+          const SizedBox(width: 12),
+          Expanded(child: _waterBarChart(context)),
+        ],
+      ),
+    );
+  }
+
+  Color _painColor(int level) {
+    if (level <= 2) return Colors.green;
+    if (level <= 5) return Colors.orange;
+    return Colors.red;
+  }
+
+  Widget _painTrendChart(BuildContext context) {
+    final spots = _entries
+        .asMap()
+        .entries
+        .take(14)
+        .map((e) => FlSpot(
+              e.key.toDouble(),
+              (e.value['pain_level'] ?? 0).toDouble(),
+            ))
         .toList();
 
     return SizedBox(
-      height: 200,
+      height: 100,
       child: LineChart(LineChartData(
         minY: 0, maxY: 10,
-        gridData: FlGridData(
-          show: true, drawVerticalLine: false, horizontalInterval: 2,
-          getDrawingHorizontalLine: (_) => FlLine(
-            color: borderCol.withValues(alpha: 0.6), strokeWidth: 1, dashArray: [4, 4]),
-        ),
+        gridData: FlGridData(show: false),
         borderData: FlBorderData(show: false),
         titlesData: FlTitlesData(
-          leftTitles: AxisTitles(sideTitles: SideTitles(
-            showTitles: true, interval: 2, reservedSize: 28,
-            getTitlesWidget: (v, _) => Text('${v.toInt()}',
-                style: TextStyle(fontSize: 10, color: mutedColor)),
-          )),
-          bottomTitles: AxisTitles(sideTitles: SideTitles(
-            showTitles: true, reservedSize: 32,
-            getTitlesWidget: (v, meta) {
-              final idx = v.toInt();
-              if (idx < 0 || idx >= data.length) return const SizedBox.shrink();
-              return SideTitleWidget(
-                axisSide: meta.axisSide,
-                space: 6,
-                child: Text(_shortMonth(data[idx]['date'] as String),
-                    style: TextStyle(fontSize: 9, color: mutedColor)),
-              );
-            },
-          )),
+          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         lineBarsData: [LineChartBarData(
           spots: spots, isCurved: true, curveSmoothness: 0.3,
           color: AppColors.primary, barWidth: 2.5, isStrokeCapRound: true,
-          dotData: FlDotData(show: true, getDotPainter: (spot, _, __, p3) =>
+          dotData: FlDotData(show: true, getDotPainter: (spot, _, _2, _3) =>
               FlDotCirclePainter(
                 radius: 4, color: _painColor(spot.y.toInt()),
                 strokeColor: Colors.white, strokeWidth: 1.5)),
@@ -220,66 +302,49 @@ class _HistoryScreenState extends State<HistoryScreen> {
         )],
         lineTouchData: LineTouchData(
           touchTooltipData: LineTouchTooltipData(
-            getTooltipItems: (spots) => spots.map((s) => LineTooltipItem(
-              'Pain: ${s.y.toInt()}',
-              TextStyle(color: _painColor(s.y.toInt()), fontWeight: FontWeight.bold, fontSize: 12),
-            )).toList(),
+            getTooltipItems: (spots) => spots.map((s) =>
+              LineTooltipItem(
+                'Pain: ${s.y.toInt()}',
+                const TextStyle(color: Colors.white, fontSize: 11),
+              )
+            ).toList(),
           ),
         ),
       )),
     );
   }
 
-  Widget _buildEntriesBarChart(Color mutedColor, Color borderCol) {
-    final buckets = _entriesPerMonth();
-    final maxVal = buckets.map((b) => b.count).reduce(math.max).clamp(1.0, double.infinity);
+  Widget _waterBarChart(BuildContext context) {
+    final recent = _entries.take(7).toList().reversed.toList();
+    final groups = recent.asMap().entries.map((e) {
+      final oz = (e.value['water_oz'] ?? 0).toDouble();
+      return BarChartGroupData(
+        x: e.key,
+        barRods: [BarChartRodData(
+          toY: oz,
+          color: oz >= 64 ? Colors.teal : Colors.teal.withValues(alpha: 0.5),
+          width: 10,
+          borderRadius: BorderRadius.circular(4),
+        )],
+      );
+    }).toList();
+
     return SizedBox(
-      height: 200,
+      height: 100,
       child: BarChart(BarChartData(
-        maxY: maxVal + 1,
-        gridData: FlGridData(
-          show: true, drawVerticalLine: false, horizontalInterval: 1,
-          getDrawingHorizontalLine: (_) => FlLine(
-              color: borderCol.withValues(alpha: 0.6), strokeWidth: 1, dashArray: [4, 4]),
-        ),
+        maxY: 120,
+        gridData: FlGridData(show: false),
         borderData: FlBorderData(show: false),
         titlesData: FlTitlesData(
-          leftTitles: AxisTitles(sideTitles: SideTitles(
-            showTitles: true, reservedSize: 28, interval: 1,
-            getTitlesWidget: (v, _) => v == v.floorToDouble()
-                ? Text('${v.toInt()}', style: TextStyle(fontSize: 10, color: mutedColor))
-                : const SizedBox.shrink(),
-          )),
-          bottomTitles: AxisTitles(sideTitles: SideTitles(
-            showTitles: true, reservedSize: 32,
-            getTitlesWidget: (v, meta) {
-              final idx = v.toInt();
-              if (idx < 0 || idx >= buckets.length) return const SizedBox.shrink();
-              return SideTitleWidget(
-                axisSide: meta.axisSide,
-                space: 6,
-                child: Text(buckets[idx].label,
-                    style: TextStyle(fontSize: 10, color: mutedColor)),
-              );
-            },
-          )),
+          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
-        barGroups: buckets.asMap().entries.map((e) => BarChartGroupData(
-          x: e.key,
-          barRods: [BarChartRodData(
-            toY: e.value.count, color: AppColors.primary, width: 22,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
-            backDrawRodData: BackgroundBarChartRodData(
-              show: true, toY: maxVal + 1,
-              color: borderCol.withValues(alpha: 0.25),
-            ),
-          )],
-        )).toList(),
+        barGroups: groups,
         barTouchData: BarTouchData(
           touchTooltipData: BarTouchTooltipData(
-            getTooltipItem: (group, _, rod, __) => BarTooltipItem(
+            getTooltipItem: (group, _, rod, _2) => BarTooltipItem(
               '${rod.toY.toInt()} entries',
               const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
             ),
@@ -289,684 +354,175 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _buildChartsSection(BuildContext context) {
-    if (_entries.isEmpty) return const SizedBox.shrink();
-    final surfaceCol = _surface(context);
-    final borderCol  = _border(context);
-    final mutedColor = _textSecond(context);
-    final bgColor    = _background(context);
-    final isDark     = _isDark(context);
+  // ── LIST ──────────────────────────────────────────────────────
+  Widget _buildList(
+    BuildContext context,
+    Color textPrim,
+    Color textSec,
+    Color surface,
+    Color borderC,
+  ) {
+    if (_filtered.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.history, size: 56, color: textSec),
+            const SizedBox(height: 12),
+            Text('No entries found',
+                style: TextStyle(color: textSec, fontSize: 16)),
+          ],
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      itemCount: _filtered.length,
+      itemBuilder: (_, i) => _entryCard(context, _filtered[i], textPrim, textSec),
+    );
+  }
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: surfaceCol,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderCol),
-        boxShadow: [BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.06),
-            blurRadius: 10, offset: const Offset(0, 3))],
-      ),
+  // ── ENTRY CARD ────────────────────────────────────────────
+  Widget _entryCard(
+    BuildContext context,
+    Map<String, dynamic> entry,
+    Color textPrim,
+    Color textSec,
+  ) {
+    final id         = entry['id'] as int?;
+    final date       = entry['date']       ?? '—';
+    final painLevel  = (entry['pain_level'] ?? 0) as int;
+    final waterOz    = (entry['water_oz']   ?? 0.0) as double;
+    final oxalateMg  = (entry['oxalate_mg'] ?? 0.0) as double;
+    final notes      = (entry['notes']      ?? '') as String;
+    final isExpanded = _selectedEntryId == id;
+    final painColor  = _painColor(painLevel);
+
+    return AppCard(
+      context: context,
+      margin: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.all(0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            _chartTabBtn(context, 'pain', Icons.show_chart_rounded, 'Pain Trend', bgColor, borderCol, mutedColor),
-            const SizedBox(width: 8),
-            _chartTabBtn(context, 'entries', Icons.bar_chart_rounded, 'Monthly', bgColor, borderCol, mutedColor),
-          ]),
-          const SizedBox(height: 16),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: _chartTab == 'pain'
-                ? _buildPainLineChart(mutedColor, borderCol)
-                : _buildEntriesBarChart(mutedColor, borderCol),
+          // — summary row —
+          InkWell(
+            onTap: () => setState(() {
+              _selectedEntryId = isExpanded ? null : id;
+            }),
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Row(
+                children: [
+                  // Date
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          date,
+                          style: TextStyle(
+                            color: textPrim,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            _miniStat('🔥', '${painLevel}/10', painColor),
+                            const SizedBox(width: 10),
+                            _miniStat('💧', '${waterOz.toStringAsFixed(0)} oz',
+                                AppColors.primary),
+                            const SizedBox(width: 10),
+                            _miniStat('🔬', '${oxalateMg.toStringAsFixed(0)} mg',
+                                Colors.orange),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    isExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    color: textSec,
+                    size: 20,
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            _chartTab == 'pain'
-                ? 'Last 10 journal entries · Tap a dot for details'
-                : 'Journal entries per month · Last 6 months',
-            style: TextStyle(fontSize: 10, color: mutedColor),
-          ),
+          // — expanded details —
+          if (isExpanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Divider(color: _border(context), height: 1),
+                  const SizedBox(height: 10),
+                  _detailRow('🔥 Pain Level',
+                      '$painLevel / 10', painColor),
+                  _detailRow('💧 Water Intake',
+                      '${waterOz.toStringAsFixed(1)} oz', AppColors.primary),
+                  _detailRow('🔬 Oxalate Intake',
+                      '${oxalateMg.toStringAsFixed(1)} mg', Colors.orange),
+                  if (notes.isNotEmpty) ...
+                    [
+                      const SizedBox(height: 8),
+                      Text(
+                        '📝 Notes',
+                        style: TextStyle(
+                            color: textSec,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        notes,
+                        style: TextStyle(color: textSec, fontSize: 13),
+                      ),
+                    ],
+                ],
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _chartTabBtn(BuildContext context, String id, IconData icon, String label,
-      Color bgColor, Color borderCol, Color mutedColor) {
-    final active = _chartTab == id;
-    return GestureDetector(
-      onTap: () => setState(() => _chartTab = id),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: active ? AppColors.primary.withValues(alpha: 0.15) : bgColor,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: active ? AppColors.primary : borderCol, width: 1.5),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 14, color: active ? AppColors.primary : mutedColor),
-          const SizedBox(width: 5),
-          Text(label, style: TextStyle(
-              fontSize: 12, fontWeight: FontWeight.w600,
-              color: active ? AppColors.primary : mutedColor)),
-        ]),
-      ),
-    );
-  }
-
-  // ── STAT CARDS ──────────────────────────────────────────────────────────────────
-
-  Widget _buildStatCard(BuildContext context, String label, String value, IconData icon, Color color) {
-    final surfaceCol = _surface(context);
-    final borderCol  = _border(context);
-    final mutedColor = _textSecond(context);
-    final isDark     = _isDark(context);
-
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
-        decoration: BoxDecoration(
-          color: surfaceCol,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: borderCol),
-          boxShadow: [BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
-              blurRadius: 6, offset: const Offset(0, 2))],
-        ),
-        child: Column(children: [
-          Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
-            child: Icon(icon, color: color, size: 18),
-          ),
-          const SizedBox(height: 8),
-          Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
-          const SizedBox(height: 2),
-          Text(label, textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 10, color: mutedColor, fontWeight: FontWeight.w500)),
-        ]),
-      ),
-    );
-  }
-
-  Widget _buildStatsSection(BuildContext context) {
-    final s = _stats;
-    if (s['total'] == 0) return const SizedBox.shrink();
-    final avg = (s['avgPain'] as double).toStringAsFixed(1);
-    final mutedColor = _textSecond(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _miniStat(String emoji, String val, Color color) {
+    return Row(
       children: [
-        Text('OVERVIEW', style: TextStyle(
-            fontSize: 11, fontWeight: FontWeight.w700, color: mutedColor, letterSpacing: 1.1)),
-        const SizedBox(height: 8),
-        Row(children: [
-          _buildStatCard(context, 'Entries', '${s['total']}', Icons.edit_note_rounded, AppColors.primary),
-          const SizedBox(width: 8),
-          _buildStatCard(context, 'Avg Pain', avg, Icons.show_chart_rounded, AppColors.warning),
-          const SizedBox(width: 8),
-          _buildStatCard(context, 'Stones\nPassed', '${s['stonesPassed']}', Icons.diamond_outlined, AppColors.success),
-          const SizedBox(width: 8),
-          _buildStatCard(context, 'Days\nTracked', '${s['streak']}', Icons.calendar_today_outlined, AppColors.primary),
-        ]),
+        Text(emoji, style: const TextStyle(fontSize: 11)),
+        const SizedBox(width: 3),
+        Text(
+          val,
+          style: TextStyle(
+              color: color, fontSize: 11, fontWeight: FontWeight.w600),
+        ),
       ],
     );
   }
 
-  // ── FILTER BAR ───────────────────────────────────────────────────────────────────
-
-  Widget _buildFilterBar(BuildContext context) {
-    final filters = ['All', 'Mild', 'Moderate', 'Severe', 'Stone'];
-    final bgColor    = _background(context);
-    final borderCol  = _border(context);
-    final mutedColor = _textSecond(context);
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(children: [
-        GestureDetector(
-          onTap: () => setState(() => _sortOrder = _sortOrder == 'Newest' ? 'Oldest' : 'Newest'),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
-            margin: const EdgeInsets.only(right: 10),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
-            ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(_sortOrder == 'Newest' ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
-                  size: 13, color: AppColors.primary),
-              const SizedBox(width: 4),
-              Text(_sortOrder, style: const TextStyle(
-                  fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
-            ]),
-          ),
-        ),
-        ...filters.map((f) {
-          final active = _filterSeverity == f;
-          Color chipColor;
-          switch (f) {
-            case 'Mild':     chipColor = AppColors.success; break;
-            case 'Moderate': chipColor = AppColors.warning; break;
-            case 'Severe':   chipColor = AppColors.danger;  break;
-            case 'Stone':    chipColor = AppColors.success; break;
-            default:         chipColor = AppColors.primary;
-          }
-          return GestureDetector(
-            onTap: () => setState(() => _filterSeverity = f),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: active ? chipColor.withValues(alpha: 0.15) : bgColor,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: active ? chipColor : borderCol, width: 1.5),
-              ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                if (f == 'Stone') ...[
-                  const Text('💎', style: TextStyle(fontSize: 11)),
-                  const SizedBox(width: 4),
-                ],
-                Text(f, style: TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.w600,
-                    color: active ? chipColor : mutedColor)),
-              ]),
-            ),
-          );
-        }),
-      ]),
-    );
-  }
-
-  // ── ENTRY CARD ───────────────────────────────────────────────────────────────────
-
-  Widget _buildEntryCard(BuildContext context, Map<String, dynamic> e) {
-    final textPri    = _textPrimary(context);
-    final mutedColor = _textSecond(context);
-
-    final pain        = e['pain'] as int;
-    final note        = e['note'] as String;
-    final dateStr     = _formatDate(e['date'] as String);
-    final stonePassed = (e['stonePassed'] as bool?) ?? false;
-    final symptoms    = List<String>.from((e['symptoms'] as List<dynamic>?) ?? []);
-    final side        = (e['side'] as String?) ?? 'None';
-
+  Widget _detailRow(String label, String value, Color color) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: AppCard(
-        radius: 14,
-        padding: const EdgeInsets.all(14),
-        onTap: () => _showEntryDetail(context, e),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Pain level badge
-            Container(
-              width: 56, height: 56,
-              decoration: BoxDecoration(
-                color: _painColor(pain).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: Text(
-                  '$pain',
-                  style: TextStyle(
-                    color: _painColor(pain),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: _painColor(pain).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          _painLabel(pain),
-                          style: TextStyle(
-                            color: _painColor(pain),
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      if (stonePassed) ...[
-                        const SizedBox(width: 6),
-                        const Text('💎', style: TextStyle(fontSize: 13)),
-                      ],
-                      if (side != 'None') ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            'Side',
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                      if (symptoms.isNotEmpty) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.warning.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '+${symptoms.length}',
-                            style: const TextStyle(
-                              color: AppColors.warning,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    note,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: textPri,
-                      fontSize: 13,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    dateStr,
-                    style: TextStyle(
-                      color: mutedColor,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right,
-              color: mutedColor,
-              size: 20,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMonthHeader(BuildContext context, String month, int count) {
-    final mutedColor = _textSecond(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10, top: 4),
-      child: Row(children: [
-        Text(month.toUpperCase(), style: TextStyle(
-            fontSize: 11, fontWeight: FontWeight.w700, color: mutedColor, letterSpacing: 1.1)),
-        const SizedBox(width: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Text('$count', style: const TextStyle(
-              color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 11)),
-        ),
-      ]),
-    );
-  }
-
-  Widget _buildEmptyState(BuildContext context) {
-    final surfaceCol = _surface(context);
-    final borderCol  = _border(context);
-    final textPri    = _textPrimary(context);
-    final mutedColor = _textSecond(context);
-    final isFiltered = _filterSeverity != 'All';
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(22, 26, 22, 22),
-          decoration: BoxDecoration(
-            color: surfaceCol,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: borderCol),
-            boxShadow: [BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05), blurRadius: 18, offset: const Offset(0, 8))],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                height: 84, width: 84,
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.primary.withValues(alpha: 0.10)),
-                child: const Icon(Icons.history_rounded, size: 42, color: AppColors.primary),
-              ),
-              const SizedBox(height: 18),
-              Text(isFiltered ? 'No matching entries' : 'No history yet',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPri)),
-              const SizedBox(height: 10),
-              Text(
-                isFiltered
-                    ? 'Try a different filter to see more entries.'
-                    : 'Your journal entries will appear here.\nStart logging from the Journal tab.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, height: 1.5, color: mutedColor),
-              ),
-              if (isFiltered) ...[
-                const SizedBox(height: 18),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => setState(() => _filterSeverity = 'All'),
-                    icon: const Icon(Icons.filter_alt_off_rounded),
-                    label: const Text('Clear filter', style: TextStyle(fontWeight: FontWeight.w600)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showEntryDetail(BuildContext context, Map<String, dynamic> entry) {
-    final surfaceCol = _surface(context);
-    final borderCol  = _border(context);
-    final textPri    = _textPrimary(context);
-    final mutedColor = _textSecond(context);
-    final bgColor    = _background(context);
-
-    final pain        = entry['pain'] as int;
-    final note        = entry['note'] as String;
-    final dateStr     = _formatDate(entry['date'] as String);
-    final side        = (entry['side'] as String?) ?? 'None';
-    final stonePassed = (entry['stonePassed'] as bool?) ?? false;
-    final symptoms    = List<String>.from((entry['symptoms'] as List<dynamic>?) ?? []);
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) => Container(
-        decoration: BoxDecoration(
-          color: surfaceCol,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(color: borderCol, borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(children: [
-              Container(
-                width: 56, height: 56,
-                decoration: BoxDecoration(
-                  color: _painColor(pain).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Center(
-                  child: Text('$pain', style: TextStyle(
-                      color: _painColor(pain), fontWeight: FontWeight.bold, fontSize: 22)),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _painColor(pain).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text('$pain / 10 — ${_painLabel(pain)}',
-                        style: TextStyle(
-                            color: _painColor(pain), fontWeight: FontWeight.bold, fontSize: 13)),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(dateStr, style: TextStyle(color: mutedColor, fontSize: 12)),
-                ]),
-              ),
-              if (stonePassed)
-                const Padding(
-                    padding: EdgeInsets.only(left: 8),
-                    child: Text('💎', style: TextStyle(fontSize: 22))),
-            ]),
-            const SizedBox(height: 14),
-            if (side != 'None' || stonePassed) ...[
-              Wrap(spacing: 8, children: [
-                if (side != 'None') _infoBadge('$side Side', Icons.location_on_outlined, AppColors.primary),
-                if (stonePassed) _infoBadge('Stone Passed', Icons.check_circle_outline, AppColors.success),
-              ]),
-              const SizedBox(height: 12),
-            ],
-            if (symptoms.isNotEmpty) ...[
-              Text('SYMPTOMS', style: TextStyle(
-                  color: mutedColor, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.8)),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6, runSpacing: 6,
-                children: symptoms.map((s) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.warning.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
-                  ),
-                  child: Text(s, style: const TextStyle(
-                      color: AppColors.warning, fontSize: 12, fontWeight: FontWeight.w500)),
-                )).toList(),
-              ),
-              const SizedBox(height: 12),
-            ],
-            Divider(color: borderCol, height: 1),
-            const SizedBox(height: 14),
-            Text('NOTE', style: TextStyle(
-                color: mutedColor, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.8)),
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: bgColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: borderCol),
-              ),
-              child: Text(note, style: TextStyle(color: textPri, fontSize: 14, height: 1.6)),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Close', style: TextStyle(fontWeight: FontWeight.w600)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _infoBadge(String label, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 13, color: color),
-        const SizedBox(width: 4),
-        Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500)),
-      ]),
-    );
-  }
-
-  // ── BUILD ───────────────────────────────────────────────────────────────────────────
-
-  @override
-  Widget build(BuildContext context) {
-    final bgScroll   = _background(context);
-    final mutedColor = _textSecond(context);
-
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
-    }
-
-    if (_entries.isEmpty) {
-      return _buildEmptyState(context);
-    }
-
-    final grouped  = _groupedEntries;
-    final filtered = _filteredEntries;
-
-    return ColoredBox(
-      color: bgScroll,
-      child: CustomScrollView(
-        slivers: [
-          // Stats
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-              child: _buildStatsSection(context),
-            ),
-          ),
-
-          // Charts
-          SliverToBoxAdapter(child: _buildChartsSection(context)),
-
-          // Filter bar
-          SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  child: Text('FILTER & SORT', style: TextStyle(
-                      fontSize: 11, fontWeight: FontWeight.w700,
-                      color: mutedColor, letterSpacing: 1.1)),
-                ),
-                _buildFilterBar(context),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
-
-          // Entry count badge
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-              child: Row(children: [
-                Text('ENTRIES', style: TextStyle(
-                    fontSize: 11, fontWeight: FontWeight.w700,
-                    color: mutedColor, letterSpacing: 1.1)),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text('${filtered.length}', style: const TextStyle(
-                      color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 11)),
-                ),
-              ]),
-            ),
-          ),
-
-          // Entry list or empty state
-          if (filtered.isEmpty)
-            SliverFillRemaining(
-                hasScrollBody: false,
-                child: _buildEmptyState(context))
-          else
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final keys = grouped.keys.toList();
-                    final List<Widget> items = [];
-                    for (final month in keys) {
-                      final monthEntries = grouped[month]!;
-                      items.add(_buildMonthHeader(context, month, monthEntries.length));
-                      for (final e in monthEntries) {
-                        items.add(_buildEntryCard(context, e));
-                      }
-                    }
-                    return items[index];
-                  },
-                  childCount: grouped.entries
-                      .fold<int>(0, (sum, e) => sum + 1 + e.value.length),
-                ),
-              ),
-            ),
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label,
+              style: TextStyle(
+                  color: _textSecond(context),
+                  fontSize: 13)),
+          Text(value,
+              style: TextStyle(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
-}
-
-class _MonthBucket {
-  final String label;
-  final double count;
-  const _MonthBucket(this.label, this.count);
 }
