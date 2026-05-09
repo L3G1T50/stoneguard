@@ -1,15 +1,8 @@
 // ─── FOOD GUIDE SCREEN ────────────────────────────────────
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/food_item.dart';
 import '../food_database.dart';
 import '../theme/app_theme.dart';
-
-// ══════════════════════════════════════════════════════════════════════════
-// ENUMS & CONSTANTS
-// ══════════════════════════════════════════════════════════════════════════
-
-enum OxalateLevel { low, medium, high, veryHigh }
 
 // ══════════════════════════════════════════════════════════════════════════
 // FOOD GUIDE SCREEN
@@ -26,10 +19,10 @@ class FoodGuideScreen extends StatefulWidget {
 class _FoodGuideScreenState extends State<FoodGuideScreen>
     with SingleTickerProviderStateMixin {
   // ── state ────────────────────────────────────────────────────────────────
-  String        _searchQuery     = '';
-  OxalateLevel? _filterLevel;
-  bool          _showFavoritesOnly = false;
-  Set<String>   _favorites       = {};
+  String         _searchQuery      = '';
+  OxalateLevel?  _filterLevel;
+  bool           _showFavoritesOnly = false;
+  Set<String>    _favorites         = {};
   late TabController _tabController;
 
   static const String _favKey = 'food_favorites';
@@ -76,8 +69,9 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
           food.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           food.category.toLowerCase().contains(_searchQuery.toLowerCase());
       final matchesLevel =
-          _filterLevel == null || food.oxalateLevel == _filterLevel;
-      final matchesFavorite = !_showFavoritesOnly || _favorites.contains(food.name);
+          _filterLevel == null || food.level == _filterLevel;
+      final matchesFavorite =
+          !_showFavoritesOnly || _favorites.contains(food.name);
       return matchesSearch && matchesLevel && matchesFavorite;
     }).toList();
   }
@@ -90,7 +84,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
   Color _levelColor(OxalateLevel level) {
     switch (level) {
       case OxalateLevel.low:      return const Color(0xFF4CAF50);
-      case OxalateLevel.medium:   return const Color(0xFFFFC107);
+      case OxalateLevel.moderate: return const Color(0xFFFFC107);
       case OxalateLevel.high:     return const Color(0xFFFF9800);
       case OxalateLevel.veryHigh: return const Color(0xFFF44336);
     }
@@ -99,7 +93,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
   String _levelLabel(OxalateLevel level) {
     switch (level) {
       case OxalateLevel.low:      return 'Low';
-      case OxalateLevel.medium:   return 'Medium';
+      case OxalateLevel.moderate: return 'Moderate';
       case OxalateLevel.high:     return 'High';
       case OxalateLevel.veryHigh: return 'Very High';
     }
@@ -108,7 +102,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
   String _levelEmoji(OxalateLevel level) {
     switch (level) {
       case OxalateLevel.low:      return '✅';
-      case OxalateLevel.medium:   return '⚠️';
+      case OxalateLevel.moderate: return '⚠️';
       case OxalateLevel.high:     return '🚫';
       case OxalateLevel.veryHigh: return '❌';
     }
@@ -201,15 +195,15 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    _filterChip(context, 'All',         null),
+                    _filterChip(context, 'All',            null),
                     const SizedBox(width: 8),
-                    _filterChip(context, '✅ Low',      OxalateLevel.low),
+                    _filterChip(context, '✅ Low',         OxalateLevel.low),
                     const SizedBox(width: 8),
-                    _filterChip(context, '⚠️ Medium',  OxalateLevel.medium),
+                    _filterChip(context, '⚠️ Moderate',   OxalateLevel.moderate),
                     const SizedBox(width: 8),
-                    _filterChip(context, '🚫 High',     OxalateLevel.high),
+                    _filterChip(context, '🚫 High',        OxalateLevel.high),
                     const SizedBox(width: 8),
-                    _filterChip(context, '❌ Very High', OxalateLevel.veryHigh),
+                    _filterChip(context, '❌ Very High',   OxalateLevel.veryHigh),
                     const SizedBox(width: 8),
                     _favChip(context),
                   ],
@@ -235,7 +229,8 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
           child: foods.isEmpty
               ? _emptyState(textSec)
               : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   itemCount: foods.length,
                   itemBuilder: (_, i) => _foodCard(context, foods[i]),
                 ),
@@ -257,12 +252,15 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
             Text(
               'No favorites yet',
               style: TextStyle(
-                  color: textSec, fontSize: 16, fontWeight: FontWeight.w500),
+                  color: textSec,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 6),
             Text(
               'Tap ⭐ on any food to save it here.',
-              style: TextStyle(color: textSec.withValues(alpha: 0.7), fontSize: 13),
+              style: TextStyle(
+                  color: textSec.withValues(alpha: 0.7), fontSize: 13),
             ),
           ],
         ),
@@ -278,13 +276,13 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
   // ── FOOD CARD ─────────────────────────────────────────────────────────────
   Widget _foodCard(BuildContext context, FoodItem food) {
     final isFav    = _favorites.contains(food.name);
-    final lvlColor = _levelColor(food.oxalateLevel);
-    final lvlLabel = _levelLabel(food.oxalateLevel);
-    final lvlEmoji = _levelEmoji(food.oxalateLevel);
+    final lvlColor = _levelColor(food.level);
+    final lvlLabel = _levelLabel(food.level);
+    final lvlEmoji = _levelEmoji(food.level);
 
     return AppCard(
       onTap: widget.onLogFood != null
-          ? () => widget.onLogFood!(food.oxalateMgPer100g, food.name)
+          ? () => widget.onLogFood!(food.oxalateMg, food.name)
           : null,
       padding: const EdgeInsets.all(14),
       child: Row(
@@ -293,7 +291,8 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
           Padding(
             padding: const EdgeInsets.only(top: 3),
             child: Container(
-              width: 12, height: 12,
+              width: 12,
+              height: 12,
               decoration: BoxDecoration(
                 color: lvlColor,
                 shape: BoxShape.circle,
@@ -351,7 +350,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
                         size: 13, color: AppDynamic.textSecond(context)),
                     const SizedBox(width: 4),
                     Text(
-                      '${food.oxalateMgPer100g} mg oxalate / 100g',
+                      '${food.oxalateMg} mg oxalate  •  ${food.serving}',
                       style: TextStyle(
                         color: AppDynamic.textSecond(context),
                         fontSize: 12,
@@ -359,19 +358,18 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
                     ),
                   ],
                 ),
-                if (food.notes != null && food.notes!.isNotEmpty) ...
-                  [
-                    const SizedBox(height: 6),
-                    Text(
-                      food.notes!,
-                      style: TextStyle(
-                        color: AppDynamic.textSecond(context)
-                            .withValues(alpha: 0.8),
-                        fontSize: 12,
-                        fontStyle: FontStyle.italic,
-                      ),
+                if (food.tip.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    food.tip,
+                    style: TextStyle(
+                      color: AppDynamic.textSecond(context)
+                          .withValues(alpha: 0.8),
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
                     ),
-                  ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -417,9 +415,9 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
 
   // ── FILTER CHIPS ──────────────────────────────────────────────────────────
   Widget _favChip(BuildContext context) {
-    final bg      = AppDynamic.background(context);
-    final textSec = AppDynamic.textSecond(context);
-    final divCol  = AppDynamic.divider(context);
+    final bg       = AppDynamic.background(context);
+    final textSec  = AppDynamic.textSecond(context);
+    final divCol   = AppDynamic.divider(context);
     final selected = _showFavoritesOnly;
     return GestureDetector(
       onTap: () => setState(() {
@@ -445,10 +443,11 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
     );
   }
 
-  Widget _filterChip(BuildContext context, String label, OxalateLevel? level) {
-    final bg     = AppDynamic.background(context);
-    final textSec= AppDynamic.textSecond(context);
-    final divCol = AppDynamic.divider(context);
+  Widget _filterChip(
+      BuildContext context, String label, OxalateLevel? level) {
+    final bg      = AppDynamic.background(context);
+    final textSec = AppDynamic.textSecond(context);
+    final divCol  = AppDynamic.divider(context);
     final selected = _filterLevel == level && !_showFavoritesOnly;
     return GestureDetector(
       onTap: () => setState(() {
@@ -462,13 +461,14 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
           borderRadius: BorderRadius.circular(20),
           border: selected ? null : Border.all(color: divCol),
         ),
-        child: Text(label,
-            style: TextStyle(
-              color: selected ? Colors.white : textSec,
-              fontWeight:
-                  selected ? FontWeight.bold : FontWeight.normal,
-              fontSize: 13,
-            )),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : textSec,
+            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 13,
+          ),
+        ),
       ),
     );
   }
