@@ -51,6 +51,15 @@ const String sugarsTip =
 const String sweetenersTip =
     'All artificial sweeteners are zero oxalate. Use any of them freely as sugar substitutes.';
 
+const String eggsTip =
+    'All eggs are zero oxalate – a perfect protein source for every meal.';
+
+const String plantMilkTip =
+    'Avoid almond milk (27mg). Use regular dairy milk or plain plant-based milks (not soy or almond).';
+
+const String mixedDishesTip =
+    'Watch out for meat lasagna and mac & cheese. Pizza in moderation is fine. Avoid high-oxalate pasta dishes.';
+
 enum OxalateLevel { low, moderate, high, veryHigh }
 
 class FoodItem {
@@ -272,14 +281,14 @@ const List<FoodItem> foodDatabase = [
   FoodItem(name: 'Yogurt Plain Lowfat', serving: '6 oz', oxalateMg: 0.7, level: OxalateLevel.low, category: 'Dairy', tip: dairyTip),
   FoodItem(name: 'Yogurt Plain Whole Milk', serving: '6 oz', oxalateMg: 0.5, level: OxalateLevel.low, category: 'Dairy', tip: dairyTip),
   FoodItem(name: 'Yogurt Whole Fruit', serving: '6 oz', oxalateMg: 0.8, level: OxalateLevel.low, category: 'Dairy', tip: dairyTip),
-  FoodItem(name: 'Almond Milk Sweetened Or Unsweetened', serving: '8 oz', oxalateMg: 27.1, level: OxalateLevel.high, category: 'Plant-Based Milk', tip: 'Avoid almond milk (27mg). Use regular dairy milk or plain plant-based milks (not soy or almond).'),
-  FoodItem(name: 'Plant-Based Milk Excludes Soy & Almond', serving: '1 cup', oxalateMg: 0.2, level: OxalateLevel.low, category: 'Plant-Based Milk', tip: 'Avoid almond milk (27mg). Use regular dairy milk or plain plant-based milks (not soy or almond).'),
-  FoodItem(name: 'Soymilk Fortified', serving: '8 oz', oxalateMg: 9.6, level: OxalateLevel.low, category: 'Plant-Based Milk', tip: 'Avoid almond milk (27mg). Use regular dairy milk or plain plant-based milks (not soy or almond).'),
-  FoodItem(name: 'Whey Powder High Protein Drink', serving: '1 scoop', oxalateMg: 1.5, level: OxalateLevel.low, category: 'Plant-Based Milk', tip: 'Avoid almond milk (27mg). Use regular dairy milk or plain plant-based milks (not soy or almond).'),
-  FoodItem(name: 'Egg Beaters', serving: '1/4 cup', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Eggs', tip: 'All eggs are zero oxalate â€” a perfect protein source for every meal.'),
-  FoodItem(name: 'Egg Raw Whole', serving: 'one', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Eggs', tip: 'All eggs are zero oxalate â€” a perfect protein source for every meal.'),
-  FoodItem(name: 'Egg Yolk Raw Fresh', serving: 'one', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Eggs', tip: 'All eggs are zero oxalate â€” a perfect protein source for every meal.'),
-  FoodItem(name: 'Eggs Omega 3 Supplemented', serving: 'one', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Eggs', tip: 'All eggs are zero oxalate â€” a perfect protein source for every meal.'),
+  FoodItem(name: 'Almond Milk Sweetened Or Unsweetened', serving: '8 oz', oxalateMg: 27.1, level: OxalateLevel.high, category: 'Plant-Based Milk', tip: plantMilkTip),
+  FoodItem(name: 'Plant-Based Milk Excludes Soy & Almond', serving: '1 cup', oxalateMg: 0.2, level: OxalateLevel.low, category: 'Plant-Based Milk', tip: plantMilkTip),
+  FoodItem(name: 'Soymilk Fortified', serving: '8 oz', oxalateMg: 9.6, level: OxalateLevel.low, category: 'Plant-Based Milk', tip: plantMilkTip),
+  FoodItem(name: 'Whey Powder High Protein Drink', serving: '1 scoop', oxalateMg: 1.5, level: OxalateLevel.low, category: 'Plant-Based Milk', tip: plantMilkTip),
+  FoodItem(name: 'Egg Beaters', serving: '1/4 cup', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Eggs', tip: eggsTip
+  FoodItem(name: 'Egg Raw Whole', serving: 'one', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Eggs', tip: eggsTip
+  FoodItem(name: 'Egg Yolk Raw Fresh', serving: 'one', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Eggs', tip: eggsTip
+  FoodItem(name: 'Eggs Omega 3 Supplemented', serving: 'one', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Eggs', tip: eggsTip
   FoodItem(name: 'Apples Raw With Skin', serving: 'one', oxalateMg: 0.7, level: OxalateLevel.low, category: 'Fruit', tip: fruitTip),
   FoodItem(name: 'Apples Raw Without Skin', serving: 'one', oxalateMg: 0.7, level: OxalateLevel.low, category: 'Fruit', tip: fruitTip),
   FoodItem(name: 'Apples Sulfured Dried', serving: '1/4 cup', oxalateMg: 0.4, level: OxalateLevel.low, category: 'Fruit', tip: fruitTip),
@@ -365,9 +374,9 @@ const List<FoodItem> foodDatabase = [
   FoodItem(name: 'Ham Canned', serving: '5 oz', oxalateMg: 0.7, level: OxalateLevel.low, category: 'Meat', tip: meatTip),
   FoodItem(name: 'Pork Loin/Chops Broiled', serving: '5 oz', oxalateMg: 0.1, level: OxalateLevel.low, category: 'Meat', tip: meatTip),
   FoodItem(name: 'Sausage Cooked Pork & Beef', serving: '2 oz', oxalateMg: 1.8, level: OxalateLevel.low, category: 'Meat', tip: meatTip),
-  FoodItem(name: 'Macaroni And Cheese', serving: '1 cup', oxalateMg: 15.3, level: OxalateLevel.moderate, category: 'Mixed Dishes', tip: 'Watch out for meat lasagna and mac & cheese. Pizza in moderation is fine. Avoid high-oxalate pasta dishes.'),
-  FoodItem(name: 'Meat Lasagna', serving: '1 piece or cup', oxalateMg: 45.7, level: OxalateLevel.high, category: 'Mixed Dishes', tip: 'Watch out for meat lasagna and mac & cheese. Pizza in moderation is fine. Avoid high-oxalate pasta dishes.'),
-  FoodItem(name: 'Pizza Restaurant & Frozen Cheese', serving: '2 slices', oxalateMg: 8.5, level: OxalateLevel.low, category: 'Mixed Dishes', tip: 'Watch out for meat lasagna and mac & cheese. Pizza in moderation is fine. Avoid high-oxalate pasta dishes.'),
+  FoodItem(name: 'Macaroni And Cheese', serving: '1 cup', oxalateMg: 15.3, level: OxalateLevel.moderate, category: 'Mixed Dishes', tip: mixedDishesTip),
+  FoodItem(name: 'Meat Lasagna', serving: '1 piece or cup', oxalateMg: 45.7, level: OxalateLevel.high, category: 'Mixed Dishes', tip: mixedDishesTip),
+  FoodItem(name: 'Pizza Restaurant & Frozen Cheese', serving: '2 slices', oxalateMg: 8.5, level: OxalateLevel.low, category: 'Mixed Dishes', tip: mixedDishesTip),
   FoodItem(name: 'Almond Butter Salted', serving: '1 tbsp', oxalateMg: 41.6, level: OxalateLevel.high, category: 'Nuts And Seeds', tip: nutsTip),
   FoodItem(name: 'Almonds Oil Roasted', serving: '1 oz', oxalateMg: 72.0, level: OxalateLevel.veryHigh, category: 'Nuts And Seeds', tip: nutsTip),
   FoodItem(name: 'Cashews Oil Roasted', serving: '1 oz', oxalateMg: 63.5, level: OxalateLevel.veryHigh, category: 'Nuts And Seeds', tip: nutsTip),
