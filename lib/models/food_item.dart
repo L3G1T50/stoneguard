@@ -6,6 +6,9 @@ const String breadTip =
 const String dairyTip =
     'Dairy is your best friend! The calcium in dairy binds oxalates in the gut, preventing absorption. Eat dairy with every meal.';
 
+const String beansTip =
+    'Lentils and kidney beans are the safest legumes. Avoid baked beans, refried beans, and plant-based burgers.';
+
 enum OxalateLevel { low, moderate, high, veryHigh }
 
 class FoodItem {
@@ -135,17 +138,17 @@ const List<FoodItem> foodDatabase = [
   FoodItem(name: 'White & Dark Spirits Hard Seltzer Mixed Cocktail', serving: '1.5 oz', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Beverages', tip: 'Stay well hydrated â€” aim for 80+ oz of water daily. Coffee and OJ are safe. Avoid Slim Fast and carrot juice.'),
   FoodItem(name: 'Wine Red', serving: '5 oz', oxalateMg: 1.2, level: OxalateLevel.low, category: 'Beverages', tip: 'Stay well hydrated â€” aim for 80+ oz of water daily. Coffee and OJ are safe. Avoid Slim Fast and carrot juice.'),
   FoodItem(name: 'Wine White', serving: '5 oz', oxalateMg: 0.3, level: OxalateLevel.low, category: 'Beverages', tip: 'Stay well hydrated â€” aim for 80+ oz of water daily. Coffee and OJ are safe. Avoid Slim Fast and carrot juice.'),
-  FoodItem(name: 'Beans Baked Canned Vegetarian', serving: '1/2 cup', oxalateMg: 57.5, level: OxalateLevel.veryHigh, category: 'Beans And Lentils', tip: 'Lentils and kidney beans are the safest legumes. Avoid baked beans, refried beans, and plant-based burgers.'),
-  FoodItem(name: 'Beans Black Boiled', serving: '1/2 cup', oxalateMg: 10.5, level: OxalateLevel.moderate, category: 'Beans And Lentils', tip: 'Lentils and kidney beans are the safest legumes. Avoid baked beans, refried beans, and plant-based burgers.'),
-  FoodItem(name: 'Beans Navy Canned', serving: '1/2 cup', oxalateMg: 96.3, level: OxalateLevel.veryHigh, category: 'Beans And Lentils', tip: 'Lentils and kidney beans are the safest legumes. Avoid baked beans, refried beans, and plant-based burgers.'),
-  FoodItem(name: 'Beans Red Kidney Boiled', serving: '1/2 cup', oxalateMg: 9.9, level: OxalateLevel.low, category: 'Beans And Lentils', tip: 'Lentils and kidney beans are the safest legumes. Avoid baked beans, refried beans, and plant-based burgers.'),
-  FoodItem(name: 'Beans Refried Canned', serving: '1/2 cup', oxalateMg: 59.6, level: OxalateLevel.veryHigh, category: 'Beans And Lentils', tip: 'Lentils and kidney beans are the safest legumes. Avoid baked beans, refried beans, and plant-based burgers.'),
-  FoodItem(name: 'Burger Plant-Based', serving: '1 patty', oxalateMg: 57.9, level: OxalateLevel.veryHigh, category: 'Beans And Lentils', tip: 'Lentils and kidney beans are the safest legumes. Avoid baked beans, refried beans, and plant-based burgers.'),
-  FoodItem(name: 'Burger Soy', serving: '3.5 oz', oxalateMg: 11.9, level: OxalateLevel.moderate, category: 'Beans And Lentils', tip: 'Lentils and kidney beans are the safest legumes. Avoid baked beans, refried beans, and plant-based burgers.'),
-  FoodItem(name: 'Burger Vegetable', serving: 'one', oxalateMg: 5.0, level: OxalateLevel.low, category: 'Beans And Lentils', tip: 'Lentils and kidney beans are the safest legumes. Avoid baked beans, refried beans, and plant-based burgers.'),
-  FoodItem(name: 'Hummus Commercial', serving: '1/4 cup', oxalateMg: 39.1, level: OxalateLevel.high, category: 'Beans And Lentils', tip: 'Lentils and kidney beans are the safest legumes. Avoid baked beans, refried beans, and plant-based burgers.'),
-  FoodItem(name: 'Lentils Boiled', serving: '1/2 cup', oxalateMg: 2.4, level: OxalateLevel.low, category: 'Beans And Lentils', tip: 'Lentils and kidney beans are the safest legumes. Avoid baked beans, refried beans, and plant-based burgers.'),
-  FoodItem(name: 'Tofu Soft', serving: '3.5 oz', oxalateMg: 10.6, level: OxalateLevel.moderate, category: 'Beans And Lentils', tip: 'Lentils and kidney beans are the safest legumes. Avoid baked beans, refried beans, and plant-based burgers.'),
+  FoodItem(name: 'Beans Baked Canned Vegetarian', serving: '1/2 cup', oxalateMg: 57.5, level: OxalateLevel.veryHigh, category: 'Beans And Lentils', tip: beansTip),
+  FoodItem(name: 'Beans Black Boiled', serving: '1/2 cup', oxalateMg: 10.5, level: OxalateLevel.moderate, category: 'Beans And Lentils', tip: beansTip),
+  FoodItem(name: 'Beans Navy Canned', serving: '1/2 cup', oxalateMg: 96.3, level: OxalateLevel.veryHigh, category: 'Beans And Lentils', tip: beansTip),
+  FoodItem(name: 'Beans Red Kidney Boiled', serving: '1/2 cup', oxalateMg: 9.9, level: OxalateLevel.low, category: 'Beans And Lentils', tip: beansTip),
+  FoodItem(name: 'Beans Refried Canned', serving: '1/2 cup', oxalateMg: 59.6, level: OxalateLevel.veryHigh, category: 'Beans And Lentils', tip: beansTip),
+  FoodItem(name: 'Burger Plant-Based', serving: '1 patty', oxalateMg: 57.9, level: OxalateLevel.veryHigh, category: 'Beans And Lentils', tip: beansTip),
+  FoodItem(name: 'Burger Soy', serving: '3.5 oz', oxalateMg: 11.9, level: OxalateLevel.moderate, category: 'Beans And Lentils', tip: beansTip),
+  FoodItem(name: 'Burger Vegetable', serving: 'one', oxalateMg: 5.0, level: OxalateLevel.low, category: 'Beans And Lentils', tip: beansTip),
+  FoodItem(name: 'Hummus Commercial', serving: '1/4 cup', oxalateMg: 39.1, level: OxalateLevel.high, category: 'Beans And Lentils', tip: beansTip),
+  FoodItem(name: 'Lentils Boiled', serving: '1/2 cup', oxalateMg: 2.4, level: OxalateLevel.low, category: 'Beans And Lentils', tip: beansTip),
+  FoodItem(name: 'Tofu Soft', serving: '3.5 oz', oxalateMg: 10.6, level: OxalateLevel.moderate, category: 'Beans And Lentils', tip: beansTip),
   FoodItem(name: 'Biscuit', serving: 'one', oxalateMg: 13.5, level: OxalateLevel.moderate, category: 'Breads And Bakery', tip: breadTip),
   FoodItem(name: 'Bread Multigrain Whole Grain', serving: '1 slice', oxalateMg: 18.0, level: OxalateLevel.moderate, category: 'Breads And Bakery', tip: breadTip),
   FoodItem(name: 'Bread Oat Whole', serving: '1 slice', oxalateMg: 6.4, level: OxalateLevel.low, category: 'Breads And Bakery', tip: breadTip),
