@@ -151,7 +151,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }).toList();
   }
 
-  // ── CHARTS ───────────────────────────────────────────────────────────────────────
+  // ── CHARTS ───────────────────────────────────────────────────────────────────
 
   Widget _buildPainLineChart(Color mutedColor, Color borderCol) {
     final data = _lastN(10);
@@ -188,12 +188,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 style: TextStyle(fontSize: 10, color: mutedColor)),
           )),
           bottomTitles: AxisTitles(sideTitles: SideTitles(
-            showTitles: true, reservedSize: 22,
-            getTitlesWidget: (v, _) {
+            showTitles: true, reservedSize: 32,
+            getTitlesWidget: (v, meta) {
               final idx = v.toInt();
               if (idx < 0 || idx >= data.length) return const SizedBox.shrink();
-              return Text(_shortMonth(data[idx]['date'] as String),
-                  style: TextStyle(fontSize: 9, color: mutedColor));
+              return SideTitleWidget(
+                meta: meta,
+                space: 6,
+                child: Text(_shortMonth(data[idx]['date'] as String),
+                    style: TextStyle(fontSize: 9, color: mutedColor)),
+              );
             },
           )),
           rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -202,7 +206,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         lineBarsData: [LineChartBarData(
           spots: spots, isCurved: true, curveSmoothness: 0.3,
           color: AppColors.primary, barWidth: 2.5, isStrokeCapRound: true,
-          dotData: FlDotData(show: true, getDotPainter: (spot, _, _, _) =>
+          dotData: FlDotData(show: true, getDotPainter: (spot, _, __, ___) =>
               FlDotCirclePainter(
                 radius: 4, color: _painColor(spot.y.toInt()),
                 strokeColor: Colors.white, strokeWidth: 1.5)),
@@ -250,11 +254,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 : const SizedBox.shrink(),
           )),
           bottomTitles: AxisTitles(sideTitles: SideTitles(
-            showTitles: true, reservedSize: 22,
-            getTitlesWidget: (v, _) {
+            showTitles: true, reservedSize: 32,
+            getTitlesWidget: (v, meta) {
               final idx = v.toInt();
               if (idx < 0 || idx >= buckets.length) return const SizedBox.shrink();
-              return Text(buckets[idx].label, style: TextStyle(fontSize: 10, color: mutedColor));
+              return SideTitleWidget(
+                meta: meta,
+                space: 6,
+                child: Text(buckets[idx].label,
+                    style: TextStyle(fontSize: 10, color: mutedColor)),
+              );
             },
           )),
           rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -273,7 +282,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         )).toList(),
         barTouchData: BarTouchData(
           touchTooltipData: BarTouchTooltipData(
-            getTooltipItem: (group, _, rod, _) => BarTooltipItem(
+            getTooltipItem: (group, _, rod, __) => BarTooltipItem(
               '${rod.toY.toInt()} entries',
               const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
             ),
@@ -483,9 +492,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   // ── ENTRY CARD ───────────────────────────────────────────────────────────────────
-  // FIX: Use AppCard instead of ClipRRect + bare InkWell.
-  // AppCard owns its own Material widget with the correct dark/light surface
-  // color, so Flutter never paints a white fallback background behind the ink.
 
   Widget _buildEntryCard(BuildContext context, Map<String, dynamic> e) {
     final textPri    = _textPrimary(context);
