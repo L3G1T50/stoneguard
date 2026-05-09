@@ -30,6 +30,9 @@ const String hotCerealTip =
 const String snacksTip =
     'Popcorn and pretzels are the safest snacks. Avoid baked potato chips (19mg) and high-protein bars.';
 
+const String soupsTip =
+    'Avoid miso soup (58mg) entirely. Cream of mushroom and tomato soup are the safest choices.';
+
 enum OxalateLevel { low, moderate, high, veryHigh }
 
 class FoodItem {
@@ -414,11 +417,11 @@ const List<FoodItem> foodDatabase = [
   FoodItem(name: 'Potato Chips Baked', serving: '1 oz', oxalateMg: 19.3, level: OxalateLevel.moderate, category: 'Snacks', tip: snacksTip),
   FoodItem(name: 'Potato Chips Light', serving: '1 oz', oxalateMg: 12.2, level: OxalateLevel.moderate, category: 'Snacks', tip: snacksTip),
   FoodItem(name: 'Pretzels Plain Hard Salted', serving: '1.5 oz', oxalateMg: 6.9, level: OxalateLevel.low, category: 'Snacks', tip: snacksTip),
-  FoodItem(name: 'Chowder Clam Canned', serving: '1 cup', oxalateMg: 13.6, level: OxalateLevel.moderate, category: 'Soups And Chowder', tip: 'Avoid miso soup (58mg) entirely. Cream of mushroom and tomato soup are the safest choices.'),
-  FoodItem(name: 'Soup Cream Of Mushroom Canned', serving: '1 cup', oxalateMg: 1.5, level: OxalateLevel.low, category: 'Soups And Chowder', tip: 'Avoid miso soup (58mg) entirely. Cream of mushroom and tomato soup are the safest choices.'),
-  FoodItem(name: 'Soup Lentil', serving: '1/2 cup', oxalateMg: 16.8, level: OxalateLevel.moderate, category: 'Soups And Chowder', tip: 'Avoid miso soup (58mg) entirely. Cream of mushroom and tomato soup are the safest choices.'),
-  FoodItem(name: 'Soup Miso', serving: '1 cup', oxalateMg: 58.3, level: OxalateLevel.veryHigh, category: 'Soups And Chowder', tip: 'Avoid miso soup (58mg) entirely. Cream of mushroom and tomato soup are the safest choices.'),
-  FoodItem(name: 'Soup Tomato Canned', serving: '1 cup', oxalateMg: 9.0, level: OxalateLevel.low, category: 'Soups And Chowder', tip: 'Avoid miso soup (58mg) entirely. Cream of mushroom and tomato soup are the safest choices.'),
+  FoodItem(name: 'Chowder Clam Canned', serving: '1 cup', oxalateMg: 13.6, level: OxalateLevel.moderate, category: 'Soups And Chowder', tip: soupsTip),
+  FoodItem(name: 'Soup Cream Of Mushroom Canned', serving: '1 cup', oxalateMg: 1.5, level: OxalateLevel.low, category: 'Soups And Chowder', tip: soupsTip),
+  FoodItem(name: 'Soup Lentil', serving: '1/2 cup', oxalateMg: 16.8, level: OxalateLevel.moderate, category: 'Soups And Chowder', tip: soupsTip),
+  FoodItem(name: 'Soup Miso', serving: '1 cup', oxalateMg: 58.3, level: OxalateLevel.veryHigh, category: 'Soups And Chowder', tip: soupsTip),
+  FoodItem(name: 'Soup Tomato Canned', serving: '1 cup', oxalateMg: 9.0, level: OxalateLevel.low, category: 'Soups And Chowder', tip: soupsTip),
   FoodItem(name: 'Aspartame Equal Nutrasweet', serving: '1 packet', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Artificial Sweeteners', tip: 'All artificial sweeteners are zero oxalate. Use any of them freely as sugar substitutes.'),
   FoodItem(name: 'Saccharin', serving: '1 packet', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Artificial Sweeteners', tip: 'All artificial sweeteners are zero oxalate. Use any of them freely as sugar substitutes.'),
   FoodItem(name: 'Stevia', serving: '1 packet', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Artificial Sweeteners', tip: 'All artificial sweeteners are zero oxalate. Use any of them freely as sugar substitutes.'),
