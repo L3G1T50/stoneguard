@@ -18,8 +18,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
   String _sortOrder = 'Newest';
   String _chartTab = 'pain';
 
-  // ── All theme helpers now use Theme.of(context).brightness so they stay
-  //    in lock-step with AppDynamic and AppCard. ──────────────────────────
   bool _isDark(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark;
 
@@ -193,7 +191,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               final idx = v.toInt();
               if (idx < 0 || idx >= data.length) return const SizedBox.shrink();
               return SideTitleWidget(
-                meta: meta,
+                axisSide: meta.axisSide,
                 space: 6,
                 child: Text(_shortMonth(data[idx]['date'] as String),
                     style: TextStyle(fontSize: 9, color: mutedColor)),
@@ -259,7 +257,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               final idx = v.toInt();
               if (idx < 0 || idx >= buckets.length) return const SizedBox.shrink();
               return SideTitleWidget(
-                meta: meta,
+                axisSide: meta.axisSide,
                 space: 6,
                 child: Text(buckets[idx].label,
                     style: TextStyle(fontSize: 10, color: mutedColor)),
@@ -513,7 +511,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Pain level badge
             Container(
               width: 56, height: 56,
               decoration: BoxDecoration(
@@ -885,18 +882,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
       color: bgScroll,
       child: CustomScrollView(
         slivers: [
-          // Stats
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
               child: _buildStatsSection(context),
             ),
           ),
-
-          // Charts
           SliverToBoxAdapter(child: _buildChartsSection(context)),
-
-          // Filter bar
           SliverToBoxAdapter(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -912,8 +904,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ],
             ),
           ),
-
-          // Entry count badge
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
@@ -934,8 +924,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ]),
             ),
           ),
-
-          // Entry list or empty state
           if (filtered.isEmpty)
             SliverFillRemaining(
                 hasScrollBody: false,
