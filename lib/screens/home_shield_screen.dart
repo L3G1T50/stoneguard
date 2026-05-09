@@ -579,7 +579,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                       color: const Color(0xFFD4A020).withValues(alpha: isDark ? 0.22 : 0.14),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    // ── Fixed: was 🎅, now correct 🏆 trophy ──
                     child: const Text('🏆', style: TextStyle(fontSize: 18)),
                   ),
                   const SizedBox(width: 10),
@@ -675,7 +674,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final double waterProgress = (waterOz / goalOz).clamp(0.0, 1.0);
     final bool goalMet = waterOz >= goalOz;
     final double overGoalOz = goalMet ? waterOz - goalOz : 0;
     final double remaining = goalMet ? 0 : (goalOz - waterOz);
