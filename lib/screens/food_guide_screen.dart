@@ -63,8 +63,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
 
   // ── helpers ───────────────────────────────────────────────────────────────
   List<FoodItem> get _filteredFoods {
-    final allFoods = FoodDatabase.allFoods;
-    return allFoods.where((food) {
+    return foodItems.where((food) {
       final matchesSearch = _searchQuery.isEmpty ||
           food.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           food.category.toLowerCase().contains(_searchQuery.toLowerCase());
@@ -77,8 +76,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
   }
 
   List<FoodItem> get _favoriteFoods {
-    final allFoods = FoodDatabase.allFoods;
-    return allFoods.where((food) => _favorites.contains(food.name)).toList();
+    return foodItems.where((food) => _favorites.contains(food.name)).toList();
   }
 
   Color _levelColor(OxalateLevel level) {
@@ -195,15 +193,15 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    _filterChip(context, 'All',            null),
+                    _filterChip(context, 'All',           null),
                     const SizedBox(width: 8),
-                    _filterChip(context, '✅ Low',         OxalateLevel.low),
+                    _filterChip(context, '✅ Low',        OxalateLevel.low),
                     const SizedBox(width: 8),
-                    _filterChip(context, '⚠️ Moderate',   OxalateLevel.moderate),
+                    _filterChip(context, '⚠️ Moderate',  OxalateLevel.moderate),
                     const SizedBox(width: 8),
-                    _filterChip(context, '🚫 High',        OxalateLevel.high),
+                    _filterChip(context, '🚫 High',       OxalateLevel.high),
                     const SizedBox(width: 8),
-                    _filterChip(context, '❌ Very High',   OxalateLevel.veryHigh),
+                    _filterChip(context, '❌ Very High',  OxalateLevel.veryHigh),
                     const SizedBox(width: 8),
                     _favChip(context),
                   ],
