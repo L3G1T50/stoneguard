@@ -291,10 +291,10 @@ const List<FoodItem> foodDatabase = [
   FoodItem(name: 'Plant-Based Milk Excludes Soy & Almond', serving: '1 cup', oxalateMg: 0.2, level: OxalateLevel.low, category: 'Plant-Based Milk', tip: plantMilkTip),
   FoodItem(name: 'Soymilk Fortified', serving: '8 oz', oxalateMg: 9.6, level: OxalateLevel.low, category: 'Plant-Based Milk', tip: plantMilkTip),
   FoodItem(name: 'Whey Powder High Protein Drink', serving: '1 scoop', oxalateMg: 1.5, level: OxalateLevel.low, category: 'Plant-Based Milk', tip: plantMilkTip),
-  FoodItem(name: 'Egg Beaters', serving: '1/4 cup', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Eggs', tip: eggsTip
-  FoodItem(name: 'Egg Raw Whole', serving: 'one', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Eggs', tip: eggsTip
-  FoodItem(name: 'Egg Yolk Raw Fresh', serving: 'one', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Eggs', tip: eggsTip
-  FoodItem(name: 'Eggs Omega 3 Supplemented', serving: 'one', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Eggs', tip: eggsTip
+  FoodItem(name: 'Egg Beaters', serving: '1/4 cup', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Eggs', tip: eggsTip),
+  FoodItem(name: 'Egg Raw Whole', serving: 'one', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Eggs', tip: eggsTip),
+  FoodItem(name: 'Egg Yolk Raw Fresh', serving: 'one', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Eggs', tip: eggsTip),
+  FoodItem(name: 'Eggs Omega 3 Supplemented', serving: 'one', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Eggs', tip: eggsTip),
   FoodItem(name: 'Apples Raw With Skin', serving: 'one', oxalateMg: 0.7, level: OxalateLevel.low, category: 'Fruit', tip: fruitTip),
   FoodItem(name: 'Apples Raw Without Skin', serving: 'one', oxalateMg: 0.7, level: OxalateLevel.low, category: 'Fruit', tip: fruitTip),
   FoodItem(name: 'Apples Sulfured Dried', serving: '1/4 cup', oxalateMg: 0.4, level: OxalateLevel.low, category: 'Fruit', tip: fruitTip),
