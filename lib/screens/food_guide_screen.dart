@@ -157,7 +157,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                             Text('No foods logged yet today',
                                 style: TextStyle(color: textHint, fontSize: 16)),
                             const SizedBox(height: 6),
-                            Text('Tap "Log This Food" on any food item',
+                            Text('Tap + on any food row to log quickly',
                                 style: TextStyle(color: textHint, fontSize: 13)),
                           ],
                         ),
@@ -421,6 +421,32 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
     );
   }
 
+  // ── QUICK-LOG: logs food directly from the list row, no detail sheet needed ──
+  void _quickLogFood(FoodItem food) {
+    final color = levelColor[food.level]!;
+    _logFood(food.oxalateMg, food.name);
+    Future.delayed(const Duration(milliseconds: 200), _refreshLogCount);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(children: [
+          const Icon(Icons.check_circle, color: Colors.white, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '${food.name} logged — +${food.oxalateMg.toStringAsFixed(1)} mg',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ]),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -628,6 +654,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                                 ],
                               ),
                             ),
+                            // ── mg badge ──
                             Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 5),
@@ -643,7 +670,30 @@ class _FoodGuideScreenState extends State<FoodGuideScreen> {
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13)),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
+                            // ── quick-log button ──
+                            GestureDetector(
+                              onTap: () => _quickLogFood(food),
+                              child: Tooltip(
+                                message: 'Quick log',
+                                child: Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: Colors.teal.withValues(
+                                        alpha: isDark ? 0.18 : 0.10),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.add_circle_outline,
+                                    color: Colors.teal,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            // ── detail chevron ──
                             Icon(Icons.chevron_right,
                                 color: textHint, size: 20),
                           ],
