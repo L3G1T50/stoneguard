@@ -60,6 +60,12 @@ const String plantMilkTip =
 const String mixedDishesTip =
     'Watch out for meat lasagna and mac & cheese. Pizza in moderation is fine. Avoid high-oxalate pasta dishes.';
 
+const String condimentsTip =
+    'Most condiments are very low oxalate. Ketchup, mustard, and BBQ sauce are all safe in normal amounts.';
+
+const String dressingsTip =
+    'All salad dressings are very low oxalate. Use freely – they will not contribute to stone formation.';
+
 enum OxalateLevel { low, moderate, high, veryHigh }
 
 class FoodItem {
@@ -239,10 +245,10 @@ const List<FoodItem> foodDatabase = [
   FoodItem(name: 'Candies Non-Chocolate', serving: '1 oz', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Candy', tip: candyTip),
   FoodItem(name: 'Candy Bar', serving: '2 oz', oxalateMg: 35.4, level: OxalateLevel.high, category: 'Candy', tip: candyTip),
   FoodItem(name: 'Chocolate Dark Bar', serving: '1.5 oz', oxalateMg: 67.7, level: OxalateLevel.veryHigh, category: 'Candy', tip: candyTip),
-  FoodItem(name: 'Catsup Ketchup', serving: '1 tbsp', oxalateMg: 1.5, level: OxalateLevel.low, category: 'Condiments', tip: 'Most condiments are very low oxalate. Ketchup, mustard, and BBQ sauce are all safe in normal amounts.'),
-  FoodItem(name: 'Mustard Yellow', serving: '1 tsp', oxalateMg: 0.6, level: OxalateLevel.low, category: 'Condiments', tip: 'Most condiments are very low oxalate. Ketchup, mustard, and BBQ sauce are all safe in normal amounts.'),
-  FoodItem(name: 'Sauce Barbecue', serving: '2 tbsp', oxalateMg: 2.3, level: OxalateLevel.low, category: 'Condiments', tip: 'Most condiments are very low oxalate. Ketchup, mustard, and BBQ sauce are all safe in normal amounts.'),
-  FoodItem(name: 'Sauce Soy', serving: '1 tbsp', oxalateMg: 2.9, level: OxalateLevel.low, category: 'Condiments', tip: 'Most condiments are very low oxalate. Ketchup, mustard, and BBQ sauce are all safe in normal amounts.'),
+  FoodItem(name: 'Catsup Ketchup', serving: '1 tbsp', oxalateMg: 1.5, level: OxalateLevel.low, category: 'Condiments', tip: condimentsTip),
+  FoodItem(name: 'Mustard Yellow', serving: '1 tsp', oxalateMg: 0.6, level: OxalateLevel.low, category: 'Condiments', tip: condimentsTip),
+  FoodItem(name: 'Sauce Barbecue', serving: '2 tbsp', oxalateMg: 2.3, level: OxalateLevel.low, category: 'Condiments', tip: condimentsTip),
+  FoodItem(name: 'Sauce Soy', serving: '1 tbsp', oxalateMg: 2.9, level: OxalateLevel.low, category: 'Condiments', tip: condimentsTip),
   FoodItem(name: 'Butter Salted', serving: '1 tsp', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Dairy', tip: dairyTip),
   FoodItem(name: 'Buttermilk Lowfat', serving: '1 cup', oxalateMg: 0.7, level: OxalateLevel.low, category: 'Dairy', tip: dairyTip),
   FoodItem(name: 'Cheese American Pasteurized', serving: '1 oz', oxalateMg: 0.3, level: OxalateLevel.low, category: 'Dairy', tip: dairyTip),
@@ -420,17 +426,17 @@ const List<FoodItem> foodDatabase = [
   FoodItem(name: 'Turkey Sausage Cooked', serving: 'one', oxalateMg: 3.5, level: OxalateLevel.low, category: 'Poultry', tip: poultryTip),
   FoodItem(name: 'Turkey Cooked Ground', serving: '3 oz', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Poultry', tip: poultryTip),
   FoodItem(name: 'Turkey Breast Meat Only Cooked Roasted', serving: '3 oz', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Poultry', tip: poultryTip),
-  FoodItem(name: 'Mayonnaise', serving: '1 tbsp', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Salad Dressings', tip: 'All salad dressings are very low oxalate. Use freely â€” they will not contribute to stone formation.'),
-  FoodItem(name: 'Mayonnaise Low Fat', serving: '1 tbsp', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Salad Dressings', tip: 'All salad dressings are very low oxalate. Use freely â€” they will not contribute to stone formation.'),
-  FoodItem(name: 'Mayonnaise Olive Oil', serving: '1 tbsp', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Salad Dressings', tip: 'All salad dressings are very low oxalate. Use freely â€” they will not contribute to stone formation.'),
-  FoodItem(name: 'Salad Dressing Creamy Ranch Fat Free', serving: '1.5 tbsp', oxalateMg: 0.4, level: OxalateLevel.low, category: 'Salad Dressings', tip: 'All salad dressings are very low oxalate. Use freely â€” they will not contribute to stone formation.'),
-  FoodItem(name: 'Salad Dressing Creamy Ranch Lite', serving: '1.5 tbsp', oxalateMg: 0.2, level: OxalateLevel.low, category: 'Salad Dressings', tip: 'All salad dressings are very low oxalate. Use freely â€” they will not contribute to stone formation.'),
-  FoodItem(name: 'Salad Dressing Creamy Ranch Regular', serving: '1.5 tbsp', oxalateMg: 0.1, level: OxalateLevel.low, category: 'Salad Dressings', tip: 'All salad dressings are very low oxalate. Use freely â€” they will not contribute to stone formation.'),
-  FoodItem(name: 'Salad Dressing Italian', serving: '1.5 tbsp', oxalateMg: 0.4, level: OxalateLevel.low, category: 'Salad Dressings', tip: 'All salad dressings are very low oxalate. Use freely â€” they will not contribute to stone formation.'),
-  FoodItem(name: 'Salad Dressing Italian Fat Free', serving: '1.5 tbsp', oxalateMg: 0.2, level: OxalateLevel.low, category: 'Salad Dressings', tip: 'All salad dressings are very low oxalate. Use freely â€” they will not contribute to stone formation.'),
-  FoodItem(name: 'Salad Dressing Italian Lite', serving: '1.5 tbsp', oxalateMg: 0.2, level: OxalateLevel.low, category: 'Salad Dressings', tip: 'All salad dressings are very low oxalate. Use freely â€” they will not contribute to stone formation.'),
-  FoodItem(name: 'Salad Dressing Italian Regular', serving: '1.5 tbsp', oxalateMg: 0.2, level: OxalateLevel.low, category: 'Salad Dressings', tip: 'All salad dressings are very low oxalate. Use freely â€” they will not contribute to stone formation.'),
-  FoodItem(name: 'Salad Dressing Olive Oil And Vinegar', serving: '1.5 tbsp', oxalateMg: 0.5, level: OxalateLevel.low, category: 'Salad Dressings', tip: 'All salad dressings are very low oxalate. Use freely â€” they will not contribute to stone formation.'),
+  FoodItem(name: 'Mayonnaise', serving: '1 tbsp', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Salad Dressings', tip: dressingsTip),
+  FoodItem(name: 'Mayonnaise Low Fat', serving: '1 tbsp', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Salad Dressings', tip: dressingsTip),
+  FoodItem(name: 'Mayonnaise Olive Oil', serving: '1 tbsp', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Salad Dressings', tip: dressingsTip),
+  FoodItem(name: 'Salad Dressing Creamy Ranch Fat Free', serving: '1.5 tbsp', oxalateMg: 0.4, level: OxalateLevel.low, category: 'Salad Dressings', tip: dressingsTip),
+  FoodItem(name: 'Salad Dressing Creamy Ranch Lite', serving: '1.5 tbsp', oxalateMg: 0.2, level: OxalateLevel.low, category: 'Salad Dressings', tip: dressingsTip),
+  FoodItem(name: 'Salad Dressing Creamy Ranch Regular', serving: '1.5 tbsp', oxalateMg: 0.1, level: OxalateLevel.low, category: 'Salad Dressings', tip: dressingsTip),
+  FoodItem(name: 'Salad Dressing Italian', serving: '1.5 tbsp', oxalateMg: 0.4, level: OxalateLevel.low, category: 'Salad Dressings', tip: dressingsTip),
+  FoodItem(name: 'Salad Dressing Italian Fat Free', serving: '1.5 tbsp', oxalateMg: 0.2, level: OxalateLevel.low, category: 'Salad Dressings', tip: dressingsTip),
+  FoodItem(name: 'Salad Dressing Italian Lite', serving: '1.5 tbsp', oxalateMg: 0.2, level: OxalateLevel.low, category: 'Salad Dressings', tip: dressingsTip),
+  FoodItem(name: 'Salad Dressing Italian Regular', serving: '1.5 tbsp', oxalateMg: 0.2, level: OxalateLevel.low, category: 'Salad Dressings', tip: dressingsTip),
+  FoodItem(name: 'Salad Dressing Olive Oil And Vinegar', serving: '1.5 tbsp', oxalateMg: 0.5, level: OxalateLevel.low, category: 'Salad Dressings', tip: dressingsTip),
   FoodItem(name: 'Bars Energy', serving: 'one', oxalateMg: 10.6, level: OxalateLevel.moderate, category: 'Snacks', tip: snacksTip),
   FoodItem(name: 'Bars High Protein', serving: 'one', oxalateMg: 20.1, level: OxalateLevel.low, category: 'Snacks', tip: snacksTip),
   FoodItem(name: 'Corn Chips Tortilla', serving: '1 oz', oxalateMg: 7.1, level: OxalateLevel.low, category: 'Snacks', tip: snacksTip),
