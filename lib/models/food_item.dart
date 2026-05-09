@@ -15,6 +15,9 @@ const String vegetablesTip =
 const String fruitTip =
     'Most fruits are low oxalate. Avoid oranges and tangerines (high). Best choices: apples, peaches, watermelon, grapes.';
 
+const String grainsTip =
+    'White rice and barley are the best grains. Avoid buckwheat, bulgur, quinoa, and whole wheat pasta.';
+
 enum OxalateLevel { low, moderate, high, veryHigh }
 
 class FoodItem {
@@ -350,18 +353,18 @@ const List<FoodItem> foodDatabase = [
   FoodItem(name: 'Sunflower Seed Kernels Oil Roasted', serving: '1/4 cup', oxalateMg: 8.0, level: OxalateLevel.low, category: 'Nuts And Seeds', tip: 'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.'),
   FoodItem(name: 'Sunflower Seed Dried Kernels', serving: '1/4 cup', oxalateMg: 2.9, level: OxalateLevel.low, category: 'Nuts And Seeds', tip: 'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.'),
   FoodItem(name: 'Walnuts', serving: '1 oz', oxalateMg: 11.7, level: OxalateLevel.moderate, category: 'Nuts And Seeds', tip: 'Avoid almonds, cashews, and peanuts entirely. Safest options: pistachios, coconut, flaxseed, and sunflower seeds.'),
-  FoodItem(name: 'Barley Cooked Pearled', serving: '1 cup', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Pasta And Grains', tip: 'White rice and barley are the best grains. Avoid buckwheat, bulgur, quinoa, and whole wheat pasta.'),
-  FoodItem(name: 'Buckwheat Groats Roasted', serving: '1 cup', oxalateMg: 132.6, level: OxalateLevel.veryHigh, category: 'Pasta And Grains', tip: 'White rice and barley are the best grains. Avoid buckwheat, bulgur, quinoa, and whole wheat pasta.'),
-  FoodItem(name: 'Bulgur Cooked', serving: '1 cup', oxalateMg: 85.9, level: OxalateLevel.veryHigh, category: 'Pasta And Grains', tip: 'White rice and barley are the best grains. Avoid buckwheat, bulgur, quinoa, and whole wheat pasta.'),
-  FoodItem(name: 'Couscous Cooked', serving: '1 cup', oxalateMg: 15.1, level: OxalateLevel.moderate, category: 'Pasta And Grains', tip: 'White rice and barley are the best grains. Avoid buckwheat, bulgur, quinoa, and whole wheat pasta.'),
-  FoodItem(name: 'Oat Bran Raw', serving: '1/2 cup', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Pasta And Grains', tip: 'White rice and barley are the best grains. Avoid buckwheat, bulgur, quinoa, and whole wheat pasta.'),
-  FoodItem(name: 'Quinoa Cooked', serving: '1 cup', oxalateMg: 54.4, level: OxalateLevel.veryHigh, category: 'Pasta And Grains', tip: 'White rice and barley are the best grains. Avoid buckwheat, bulgur, quinoa, and whole wheat pasta.'),
-  FoodItem(name: 'Rice Brown Cooked Long Grain', serving: '1 cup', oxalateMg: 18.7, level: OxalateLevel.moderate, category: 'Pasta And Grains', tip: 'White rice and barley are the best grains. Avoid buckwheat, bulgur, quinoa, and whole wheat pasta.'),
-  FoodItem(name: 'Rice White Cooked Long Grain', serving: '1 cup', oxalateMg: 3.8, level: OxalateLevel.low, category: 'Pasta And Grains', tip: 'White rice and barley are the best grains. Avoid buckwheat, bulgur, quinoa, and whole wheat pasta.'),
-  FoodItem(name: 'Spaghetti Cooked', serving: '1 cup', oxalateMg: 16.5, level: OxalateLevel.moderate, category: 'Pasta And Grains', tip: 'White rice and barley are the best grains. Avoid buckwheat, bulgur, quinoa, and whole wheat pasta.'),
-  FoodItem(name: 'Spaghetti Cooked Whole Wheat', serving: '1 cup', oxalateMg: 46.1, level: OxalateLevel.high, category: 'Pasta And Grains', tip: 'White rice and barley are the best grains. Avoid buckwheat, bulgur, quinoa, and whole wheat pasta.'),
-  FoodItem(name: 'Wheat Berries Cooked', serving: '1 cup', oxalateMg: 97.6, level: OxalateLevel.veryHigh, category: 'Pasta And Grains', tip: 'White rice and barley are the best grains. Avoid buckwheat, bulgur, quinoa, and whole wheat pasta.'),
-  FoodItem(name: 'Wheat Bran Crude', serving: '1 tbsp', oxalateMg: 7.5, level: OxalateLevel.low, category: 'Pasta And Grains', tip: 'White rice and barley are the best grains. Avoid buckwheat, bulgur, quinoa, and whole wheat pasta.'),
+  FoodItem(name: 'Barley Cooked Pearled', serving: '1 cup', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Pasta And Grains', tip: grainsTip),
+  FoodItem(name: 'Buckwheat Groats Roasted', serving: '1 cup', oxalateMg: 132.6, level: OxalateLevel.veryHigh, category: 'Pasta And Grains', tip: grainsTip),
+  FoodItem(name: 'Bulgur Cooked', serving: '1 cup', oxalateMg: 85.9, level: OxalateLevel.veryHigh, category: 'Pasta And Grains', tip: grainsTip),
+  FoodItem(name: 'Couscous Cooked', serving: '1 cup', oxalateMg: 15.1, level: OxalateLevel.moderate, category: 'Pasta And Grains', tip: grainsTip),
+  FoodItem(name: 'Oat Bran Raw', serving: '1/2 cup', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Pasta And Grains', tip: grainsTip),
+  FoodItem(name: 'Quinoa Cooked', serving: '1 cup', oxalateMg: 54.4, level: OxalateLevel.veryHigh, category: 'Pasta And Grains', tip: grainsTip),
+  FoodItem(name: 'Rice Brown Cooked Long Grain', serving: '1 cup', oxalateMg: 18.7, level: OxalateLevel.moderate, category: 'Pasta And Grains', tip: grainsTip),
+  FoodItem(name: 'Rice White Cooked Long Grain', serving: '1 cup', oxalateMg: 3.8, level: OxalateLevel.low, category: 'Pasta And Grains', tip: grainsTip),
+  FoodItem(name: 'Spaghetti Cooked', serving: '1 cup', oxalateMg: 16.5, level: OxalateLevel.moderate, category: 'Pasta And Grains', tip: grainsTip),
+  FoodItem(name: 'Spaghetti Cooked Whole Wheat', serving: '1 cup', oxalateMg: 46.1, level: OxalateLevel.high, category: 'Pasta And Grains', tip: grainsTip),
+  FoodItem(name: 'Wheat Berries Cooked', serving: '1 cup', oxalateMg: 97.6, level: OxalateLevel.veryHigh, category: 'Pasta And Grains', tip: grainsTip),
+  FoodItem(name: 'Wheat Bran Crude', serving: '1 tbsp', oxalateMg: 7.5, level: OxalateLevel.low, category: 'Pasta And Grains', tip: grainsTip),
   FoodItem(name: 'Bacon Turkey Microwaved', serving: '2 slices', oxalateMg: 0.0, level: OxalateLevel.low, category: 'Poultry', tip: 'All plain chicken and turkey are zero or near-zero oxalate. A perfect protein staple for a low-oxalate diet.'),
   FoodItem(name: 'Chicken Meat & Skin Roasted', serving: '3 oz', oxalateMg: 0.2, level: OxalateLevel.low, category: 'Poultry', tip: 'All plain chicken and turkey are zero or near-zero oxalate. A perfect protein staple for a low-oxalate diet.'),
   FoodItem(name: 'Chicken Breast Deli Rotisserie', serving: '3 oz', oxalateMg: 0.1, level: OxalateLevel.low, category: 'Poultry', tip: 'All plain chicken and turkey are zero or near-zero oxalate. A perfect protein staple for a low-oxalate diet.'),
