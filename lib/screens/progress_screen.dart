@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:confetti/confetti.dart';
 import 'dart:convert';
+import 'dart:math' as math;
 
 // ── Timeframe enum ────────────────────────────────────────────────────────────
 enum ChartTimeframe { d7, d30, m6, y1, y2 }
@@ -79,10 +80,11 @@ class _ProgressScreenState extends State<ProgressScreen>
   static const Color accentGreen = Color(0xFF2A9A5A);
   static const Color barOk       = Color(0xFF4AACCC);
   static const Color barOver     = Color(0xFFE07070);
-  static const Color barEmpty    = Color(0xFFDDDDDD);
+  static const Color barEmpty    = Color(0xFFEEEEEE);
   static const Color barWater    = Color(0xFF5BB8D4);
   static const Color barWaterLow = Color(0xFFFFB347);
   static const Color goalLine    = Color(0xFF1A8A9A);
+  static const Color gridLine    = Color(0xFFEAEAEA);
 
   // ── Badge definitions ─────────────────────────────────────────────────────
   List<Map<String, dynamic>> get _achievements => [
@@ -759,15 +761,27 @@ class _ProgressScreenState extends State<ProgressScreen>
   }
 
   // ── Bar chart ─────────────────────────────────────────────────────────────
-  // FIX: Each bar column is a fully-constrained SizedBox(height: _kTotalH).
-  // The three layers (value label / bar area / x-axis label) are all fixed
-  // SizedBoxes so Flutter never needs to measure unbounded children, which
-  // was what caused the black-and-yellow overflow stripes.
-  static const double _kBarAreaH    = 110.0; // usable drawing area for bars
-  static const double _kValueLabelH =  14.0; // top slot for the value text
-  static const double _kXLabelH     =  14.0; // bottom slot for the x-axis text
+  // Layout constants
+  static const double _kBarAreaH    = 140.0; // taller usable drawing area
+  static const double _kValueLabelH =  16.0; // top slot for value text
+  static const double _kXLabelH     =  16.0; // bottom slot for x-axis label
+  static const double _kYAxisW      =  36.0; // left y-axis label column
   static const double _kTotalH =
-      _kValueLabelH + _kBarAreaH + _kXLabelH;      // 138 px total, never exceeded
+      _kValueLabelH + _kBarAreaH + _kXLabelH;   // 172 px total
+
+  /// Nice round y-axis tick values for a given max
+  List<double> _yTicks(double chartMax) {
+    if (chartMax <= 0) return [0];
+    // pick a step that gives ~4 ticks
+    final rawStep = chartMax / 4;
+    final mag = math.pow(10, (math.log(rawStep) / math.ln10).floor()).toDouble();
+    final niceStep = (rawStep / mag).ceil() * mag;
+    final ticks = <double>[];
+    for (double v = 0; v <= chartMax + niceStep * 0.01; v += niceStep) {
+      ticks.add(v);
+    }
+    return ticks;
+  }
 
   Widget _buildBarChart() {
     if (_chartBars.isEmpty) return _buildEmptyChart();
@@ -776,6 +790,7 @@ class _ProgressScreenState extends State<ProgressScreen>
     final goal      = isOxalate ? _oxalateGoal : _waterGoal;
     final maxValue  = _chartBars.fold(0.0, (m, b) => b.value > m ? b.value : m);
     final chartMax  = maxValue < goal ? goal * 1.2 : maxValue * 1.2;
+    final ticks     = _yTicks(chartMax);
 
     final showEveryN = _selectedTimeframe == ChartTimeframe.d30
         ? 5
@@ -786,7 +801,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                 : 1;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 14, 12, 10),
+      padding: const EdgeInsets.fromLTRB(8, 14, 12, 10),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(16),
@@ -803,168 +818,253 @@ class _ProgressScreenState extends State<ProgressScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           // Legend row
-          Row(children: [
-            _legendDot(
-                isOxalate ? barOk : barWater,
-                isOxalate ? 'Under goal' : 'Met goal'),
-            const SizedBox(width: 12),
-            _legendDot(
-                isOxalate ? barOver : barWaterLow,
-                isOxalate ? 'Over goal' : 'Under goal'),
-          ]),
+          Padding(
+            padding: const EdgeInsets.only(left: _kYAxisW),
+            child: Row(children: [
+              _legendDot(
+                  isOxalate ? barOk : barWater,
+                  isOxalate ? 'Under goal' : 'Met goal'),
+              const SizedBox(width: 12),
+              _legendDot(
+                  isOxalate ? barOver : barWaterLow,
+                  isOxalate ? 'Over goal' : 'Under goal'),
+            ]),
+          ),
           const SizedBox(height: 10),
 
-          // ── Fixed-height chart area ───────────────────────────────────────
-          // ClipRect prevents any child from painting outside _kTotalH.
-          ClipRect(
-            child: SizedBox(
-              height: _kTotalH,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: List.generate(_chartBars.length, (idx) {
-                  final bar   = _chartBars[idx];
-                  // Clamp bar height strictly inside [2, _kBarAreaH]
-                  final barH  = chartMax > 0
-                      ? (bar.value / chartMax * _kBarAreaH)
-                          .clamp(2.0, _kBarAreaH)
-                      : 2.0;
-                  // Goal-line position from bottom of bar area
-                  final goalH = chartMax > 0
-                      ? (goal / chartMax * _kBarAreaH)
-                          .clamp(0.0, _kBarAreaH)
-                      : 0.0;
+          // ── Chart area: y-axis labels + bars side by side ─────────────────
+          SizedBox(
+            height: _kTotalH,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ── Y-axis label column ─────────────────────────────────────
+                SizedBox(
+                  width: _kYAxisW,
+                  child: Stack(
+                    children: ticks.map((tick) {
+                      final frac = chartMax > 0
+                          ? (tick / chartMax).clamp(0.0, 1.0)
+                          : 0.0;
+                      // position from bottom of the bar area
+                      final bottomOffset =
+                          _kXLabelH + frac * _kBarAreaH - 6;
+                      return Positioned(
+                        bottom: bottomOffset,
+                        right: 4,
+                        child: Text(
+                          tick >= 1000
+                              ? '${(tick / 1000).toStringAsFixed(1)}k'
+                              : tick.toStringAsFixed(0),
+                          style: const TextStyle(
+                              color: mutedColor, fontSize: 9),
+                          textAlign: TextAlign.right,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
 
-                  Color barColor;
-                  if (bar.value == 0) {
-                    barColor = barEmpty;
-                  } else if (isOxalate) {
-                    barColor = bar.value > goal ? barOver : barOk;
-                  } else {
-                    barColor = bar.value >= goal ? barWater : barWaterLow;
-                  }
+                // ── Bars + grid ─────────────────────────────────────────────
+                Expanded(
+                  child: ClipRect(
+                    child: CustomPaint(
+                      painter: _GridPainter(
+                        ticks: ticks,
+                        chartMax: chartMax,
+                        barAreaH: _kBarAreaH,
+                        xLabelH: _kXLabelH,
+                        valueLabelH: _kValueLabelH,
+                        goalFrac: chartMax > 0
+                            ? (goal / chartMax).clamp(0.0, 1.0)
+                            : 0.0,
+                        goalLineColor: goalLine,
+                        gridLineColor: gridLine,
+                      ),
+                      child: SizedBox(
+                        height: _kTotalH,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: List.generate(_chartBars.length, (idx) {
+                            final bar  = _chartBars[idx];
+                            final barH = chartMax > 0
+                                ? (bar.value / chartMax * _kBarAreaH)
+                                    .clamp(2.0, _kBarAreaH)
+                                : 2.0;
 
-                  final showLabel = idx % showEveryN == 0;
-                  final showValue = bar.value > 0 &&
-                      (_selectedTimeframe == ChartTimeframe.d7 ||
-                          _selectedTimeframe == ChartTimeframe.d30);
+                            Color barColor;
+                            if (bar.value == 0) {
+                              barColor = barEmpty;
+                            } else if (isOxalate) {
+                              barColor =
+                                  bar.value > goal ? barOver : barOk;
+                            } else {
+                              barColor = bar.value >= goal
+                                  ? barWater
+                                  : barWaterLow;
+                            }
 
-                  final barWidth = _selectedTimeframe == ChartTimeframe.d7
-                      ? 22.0
-                      : _selectedTimeframe == ChartTimeframe.d30
-                          ? 8.0
-                          : _selectedTimeframe == ChartTimeframe.m6
-                              ? 8.0
-                              : 12.0;
+                            final showLabel = idx % showEveryN == 0;
+                            // Show value labels on 7D; 30D only if bar is wide enough
+                            final showValue = bar.value > 0 &&
+                                (_selectedTimeframe == ChartTimeframe.d7 ||
+                                    _selectedTimeframe ==
+                                        ChartTimeframe.d30);
 
-                  return Expanded(
-                    child: SizedBox(
-                      height: _kTotalH,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.max,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          // ① Value label — fixed height slot
-                          SizedBox(
-                            height: _kValueLabelH,
-                            child: showValue
-                                ? Align(
-                                    alignment: Alignment.bottomCenter,
-                                    child: Text(
-                                      bar.value >= 1000
-                                          ? '${(bar.value / 1000).toStringAsFixed(1)}k'
-                                          : bar.value.toStringAsFixed(0),
-                                      style: const TextStyle(
-                                          color: mutedColor, fontSize: 7),
-                                      overflow: TextOverflow.visible,
-                                      softWrap: false,
+                            final barWidth =
+                                _selectedTimeframe == ChartTimeframe.d7
+                                    ? 22.0
+                                    : _selectedTimeframe ==
+                                            ChartTimeframe.d30
+                                        ? 8.0
+                                        : _selectedTimeframe ==
+                                                ChartTimeframe.m6
+                                            ? 8.0
+                                            : 12.0;
+
+                            // Scale radius: small bars get less radius
+                            final radius =
+                                (barH * 0.15).clamp(2.0, 5.0);
+
+                            return Expanded(
+                              child: SizedBox(
+                                height: _kTotalH,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.max,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.end,
+                                  children: [
+                                    // ① Value label slot
+                                    SizedBox(
+                                      height: _kValueLabelH,
+                                      child: showValue
+                                          ? Align(
+                                              alignment:
+                                                  Alignment.bottomCenter,
+                                              child: Text(
+                                                bar.value >= 1000
+                                                    ? '${(bar.value / 1000).toStringAsFixed(1)}k'
+                                                    : bar.value
+                                                        .toStringAsFixed(
+                                                            0),
+                                                style: TextStyle(
+                                                  color: barColor ==
+                                                          barEmpty
+                                                      ? mutedColor
+                                                      : barColor
+                                                          .withValues(
+                                                              alpha:
+                                                                  0.85),
+                                                  fontSize:
+                                                      _selectedTimeframe ==
+                                                              ChartTimeframe
+                                                                  .d7
+                                                          ? 9
+                                                          : 7,
+                                                  fontWeight:
+                                                      FontWeight.w600,
+                                                ),
+                                                overflow:
+                                                    TextOverflow.visible,
+                                                softWrap: false,
+                                              ),
+                                            )
+                                          : const SizedBox.shrink(),
                                     ),
-                                  )
-                                : const SizedBox.shrink(),
-                          ),
 
-                          // ② Bar + goal line — fixed height slot
-                          SizedBox(
-                            height: _kBarAreaH,
-                            child: Stack(
-                              alignment: Alignment.bottomCenter,
-                              clipBehavior: Clip.hardEdge,
-                              children: [
-                                // Bar
-                                Align(
-                                  alignment: Alignment.bottomCenter,
-                                  child: AnimatedContainer(
-                                    duration:
-                                        const Duration(milliseconds: 350),
-                                    curve: Curves.easeOut,
-                                    width: barWidth,
-                                    height: barH,
-                                    decoration: BoxDecoration(
-                                      color: barColor,
-                                      borderRadius:
-                                          BorderRadius.circular(3),
-                                    ),
-                                  ),
-                                ),
-                                // Goal dashed line
-                                Positioned(
-                                  bottom: goalH,
-                                  child: Container(
-                                    width: _selectedTimeframe ==
-                                            ChartTimeframe.d7
-                                        ? 26.0
-                                        : barWidth + 2,
-                                    height: 1.5,
-                                    color: goalLine.withValues(alpha: 0.45),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          // ③ X-axis label — fixed height slot
-                          SizedBox(
-                            height: _kXLabelH,
-                            child: showLabel
-                                ? Align(
-                                    alignment: Alignment.topCenter,
-                                    child: Padding(
-                                      padding:
-                                          const EdgeInsets.only(top: 3),
-                                      child: Text(
-                                        bar.label,
-                                        style: const TextStyle(
-                                            color: mutedColor,
-                                            fontSize: 9),
-                                        overflow: TextOverflow.ellipsis,
+                                    // ② Bar — fixed height slot
+                                    SizedBox(
+                                      height: _kBarAreaH,
+                                      child: Align(
+                                        alignment:
+                                            Alignment.bottomCenter,
+                                        child: AnimatedContainer(
+                                          duration: const Duration(
+                                              milliseconds: 380),
+                                          curve: Curves.easeOut,
+                                          width: barWidth,
+                                          height: barH,
+                                          decoration: BoxDecoration(
+                                            color: bar.value == 0
+                                                ? Colors.transparent
+                                                : barColor,
+                                            borderRadius:
+                                                BorderRadius.vertical(
+                                              top: Radius.circular(
+                                                  radius),
+                                            ),
+                                            border: bar.value == 0
+                                                ? Border.all(
+                                                    color: borderColor
+                                                        .withValues(
+                                                            alpha: 0.6),
+                                                    width: 1,
+                                                  )
+                                                : null,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  )
-                                : const SizedBox.shrink(),
-                          ),
-                        ],
+
+                                    // ③ X-axis label slot
+                                    SizedBox(
+                                      height: _kXLabelH,
+                                      child: showLabel
+                                          ? Align(
+                                              alignment:
+                                                  Alignment.topCenter,
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.only(
+                                                        top: 3),
+                                                child: Text(
+                                                  bar.label,
+                                                  style: const TextStyle(
+                                                      color: mutedColor,
+                                                      fontSize: 9),
+                                                  overflow: TextOverflow
+                                                      .ellipsis,
+                                                ),
+                                              ),
+                                            )
+                                          : const SizedBox.shrink(),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
                       ),
                     ),
-                  );
-                }),
-              ),
+                  ),
+                ),
+              ],
             ),
           ),
 
-          // Goal line key
+          // ── Goal line key ─────────────────────────────────────────────────
           const SizedBox(height: 6),
-          Row(children: [
-            Container(
-                width: 18,
-                height: 2,
-                color: goalLine.withValues(alpha: 0.45)),
-            const SizedBox(width: 4),
-            Text(
-              isOxalate
-                  ? 'Goal: ${_oxalateGoal.toStringAsFixed(0)} mg'
-                  : 'Goal: ${_waterGoal.toStringAsFixed(0)} oz',
-              style: const TextStyle(color: mutedColor, fontSize: 10),
-            ),
-          ]),
+          Padding(
+            padding: const EdgeInsets.only(left: _kYAxisW),
+            child: Row(children: [
+              // Mini dashed line swatch
+              SizedBox(
+                width: 20,
+                height: 10,
+                child: CustomPaint(
+                  painter: _DashSwatchPainter(color: goalLine),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                isOxalate
+                    ? 'Goal: ${_oxalateGoal.toStringAsFixed(0)} mg'
+                    : 'Goal: ${_waterGoal.toStringAsFixed(0)} oz',
+                style: const TextStyle(color: mutedColor, fontSize: 10),
+              ),
+            ]),
+          ),
         ],
       ),
     );
@@ -1381,6 +1481,101 @@ class _ChartBar {
   const _ChartBar({required this.label, required this.value, required this.goal});
 }
 
+// ── Grid + dashed goal-line painter ──────────────────────────────────────────
+class _GridPainter extends CustomPainter {
+  final List<double> ticks;
+  final double chartMax;
+  final double barAreaH;
+  final double xLabelH;
+  final double valueLabelH;
+  final double goalFrac;
+  final Color goalLineColor;
+  final Color gridLineColor;
+
+  const _GridPainter({
+    required this.ticks,
+    required this.chartMax,
+    required this.barAreaH,
+    required this.xLabelH,
+    required this.valueLabelH,
+    required this.goalFrac,
+    required this.goalLineColor,
+    required this.gridLineColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final gridPaint = Paint()
+      ..color = gridLineColor
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+
+    final totalH = valueLabelH + barAreaH + xLabelH;
+
+    // Draw horizontal grid lines at each tick
+    for (final tick in ticks) {
+      if (chartMax <= 0) continue;
+      final frac = (tick / chartMax).clamp(0.0, 1.0);
+      final y = totalH - xLabelH - frac * barAreaH;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+
+    // Draw dashed goal line on top
+    final goalY = totalH - xLabelH - goalFrac * barAreaH;
+    final dashPaint = Paint()
+      ..color = goalLineColor.withValues(alpha: 0.7)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    const dashW = 5.0;
+    const gapW  = 4.0;
+    double x = 0;
+    while (x < size.width) {
+      canvas.drawLine(
+        Offset(x, goalY),
+        Offset((x + dashW).clamp(0.0, size.width), goalY),
+        dashPaint,
+      );
+      x += dashW + gapW;
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GridPainter old) =>
+      old.chartMax != chartMax ||
+      old.goalFrac != goalFrac ||
+      old.ticks.length != ticks.length;
+}
+
+// ── Mini dash swatch for the legend ──────────────────────────────────────────
+class _DashSwatchPainter extends CustomPainter {
+  final Color color;
+  const _DashSwatchPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color.withValues(alpha: 0.7)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+    const dashW = 4.0;
+    const gapW  = 3.0;
+    double x = 0;
+    final y = size.height / 2;
+    while (x < size.width) {
+      canvas.drawLine(
+        Offset(x, y),
+        Offset((x + dashW).clamp(0.0, size.width), y),
+        paint,
+      );
+      x += dashW + gapW;
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashSwatchPainter old) => old.color != color;
+}
+
 // ── Achievement Unlock Modal ──────────────────────────────────────────────────
 class _AchievementModal extends StatefulWidget {
   final Map<String, dynamic> badge;
@@ -1495,9 +1690,9 @@ class _AchievementModalState extends State<_AchievementModal>
                       borderRadius: BorderRadius.circular(14)),
                   elevation: 0,
                 ),
-                child: const Text('Awesome! 🙌',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16)),
+                child: const Text('Awesome!',
+                    style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ),
             ),
           ],
