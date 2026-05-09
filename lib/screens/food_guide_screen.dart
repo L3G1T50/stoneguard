@@ -18,7 +18,6 @@ class FoodGuideScreen extends StatefulWidget {
 
 class _FoodGuideScreenState extends State<FoodGuideScreen>
     with SingleTickerProviderStateMixin {
-  // ── state ────────────────────────────────────────────────────────────────
   String         _searchQuery      = '';
   OxalateLevel?  _filterLevel;
   bool           _showFavoritesOnly = false;
@@ -27,7 +26,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
 
   static const String _favKey = 'food_favorites';
 
-  // ── lifecycle ────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
@@ -41,7 +39,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
     super.dispose();
   }
 
-  // ── persistence ──────────────────────────────────────────────────────────
   Future<void> _loadFavorites() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -61,7 +58,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
     await prefs.setStringList(_favKey, _favorites.toList());
   }
 
-  // ── log food + show snackbar ─────────────────────────────────────────────
   void _logFood(BuildContext context, double mg, String name) {
     if (widget.onLogFood == null) return;
     widget.onLogFood!(mg, name);
@@ -87,117 +83,14 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
     );
   }
 
-  // ── quick-add bottom sheet ─────────────────────────────────────────────
-  void _showQuickAdd(BuildContext context) {
-    final nameCtrl = TextEditingController();
-    final mgCtrl   = TextEditingController();
-    final formKey  = GlobalKey<FormState>();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppDynamic.surface(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 20, right: 20, top: 20,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-        ),
-        child: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.add_circle_outline,
-                      color: Color(0xFF01696F), size: 22),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Quick Add Food',
-                    style: TextStyle(
-                      color: AppDynamic.textPrimary(ctx),
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: nameCtrl,
-                style: TextStyle(color: AppDynamic.textPrimary(ctx)),
-                decoration: InputDecoration(
-                  labelText: 'Food name',
-                  labelStyle: TextStyle(color: AppDynamic.textSecond(ctx)),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Enter a food name' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: mgCtrl,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                style: TextStyle(color: AppDynamic.textPrimary(ctx)),
-                decoration: InputDecoration(
-                  labelText: 'Oxalate amount (mg)',
-                  labelStyle: TextStyle(color: AppDynamic.textSecond(ctx)),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Enter mg amount';
-                  if (double.tryParse(v.trim()) == null) return 'Enter a number';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF01696F),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () {
-                    if (formKey.currentState!.validate()) {
-                      final mg = double.parse(mgCtrl.text.trim());
-                      final name = nameCtrl.text.trim();
-                      Navigator.pop(ctx);
-                      _logFood(context, mg, name);
-                    }
-                  },
-                  child: const Text('Log Food',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   // ── helpers ───────────────────────────────────────────────────────────────
   List<FoodItem> get _filteredFoods {
     return foodItems.where((food) {
       final matchesSearch = _searchQuery.isEmpty ||
           food.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           food.category.toLowerCase().contains(_searchQuery.toLowerCase());
-      final matchesLevel =
-          _filterLevel == null || food.level == _filterLevel;
-      final matchesFavorite =
-          !_showFavoritesOnly || _favorites.contains(food.name);
+      final matchesLevel   = _filterLevel == null || food.level == _filterLevel;
+      final matchesFavorite = !_showFavoritesOnly || _favorites.contains(food.name);
       return matchesSearch && matchesLevel && matchesFavorite;
     }).toList();
   }
@@ -244,16 +137,6 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
 
     return Scaffold(
       backgroundColor: bg,
-      floatingActionButton: widget.onLogFood != null
-          ? FloatingActionButton.extended(
-              onPressed: () => _showQuickAdd(context),
-              backgroundColor: const Color(0xFF01696F),
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.add),
-              label: const Text('Quick Add',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-            )
-          : null,
       appBar: AppBar(
         backgroundColor: bg,
         elevation: 0,
@@ -364,8 +247,8 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
           child: foods.isEmpty
               ? _emptyState(textSec)
               : ListView.builder(
-                  padding: const EdgeInsets.only(
-                      left: 12, right: 12, top: 8, bottom: 88),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 8),
                   itemCount: foods.length,
                   itemBuilder: (_, i) => _foodCard(context, foods[i]),
                 ),
@@ -402,8 +285,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
       );
     }
     return ListView.builder(
-      padding: const EdgeInsets.only(
-          left: 12, right: 12, top: 8, bottom: 88),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       itemCount: favs.length,
       itemBuilder: (_, i) => _foodCard(context, favs[i]),
     );
@@ -417,25 +299,21 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
     final lvlEmoji = _levelEmoji(food.level);
 
     return AppCard(
-      onTap: widget.onLogFood != null
-          ? () => _logFood(context, food.oxalateMg, food.name)
-          : null,
       padding: const EdgeInsets.all(14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ─ level dot ────────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.only(top: 3),
+            padding: const EdgeInsets.only(top: 4),
             child: Container(
-              width: 12,
-              height: 12,
+              width: 12, height: 12,
               decoration: BoxDecoration(
-                color: lvlColor,
-                shape: BoxShape.circle,
-              ),
+                  color: lvlColor, shape: BoxShape.circle),
             ),
           ),
           const SizedBox(width: 12),
+          // ─ food details ───────────────────────────────────────────
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -475,9 +353,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
                 Text(
                   food.category,
                   style: TextStyle(
-                    color: AppDynamic.textSecond(context),
-                    fontSize: 12,
-                  ),
+                      color: AppDynamic.textSecond(context), fontSize: 12),
                 ),
                 const SizedBox(height: 6),
                 Row(
@@ -488,9 +364,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
                     Text(
                       '${food.oxalateMg} mg oxalate  •  ${food.serving}',
                       style: TextStyle(
-                        color: AppDynamic.textSecond(context),
-                        fontSize: 12,
-                      ),
+                          color: AppDynamic.textSecond(context), fontSize: 12),
                     ),
                   ],
                 ),
@@ -506,38 +380,38 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
                     ),
                   ),
                 ],
-                if (widget.onLogFood != null) ...[
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(Icons.touch_app_outlined,
-                          size: 11,
-                          color: const Color(0xFF01696F).withValues(alpha: 0.7)),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Tap to log',
-                        style: TextStyle(
-                          color:
-                              const Color(0xFF01696F).withValues(alpha: 0.7),
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
               ],
             ),
           ),
-          GestureDetector(
-            onTap: () => _toggleFavorite(food.name),
-            child: Padding(
-              padding: const EdgeInsets.only(left: 8, top: 2),
-              child: Icon(
-                isFav ? Icons.star : Icons.star_border,
-                color: isFav ? Colors.amber : AppDynamic.textSecond(context),
-                size: 22,
+          const SizedBox(width: 8),
+          // ─ right column: star + add icon ────────────────────────
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // star / favourite
+              GestureDetector(
+                onTap: () => _toggleFavorite(food.name),
+                child: Icon(
+                  isFav ? Icons.star : Icons.star_border,
+                  color: isFav
+                      ? Colors.amber
+                      : AppDynamic.textSecond(context),
+                  size: 22,
+                ),
               ),
-            ),
+              // add / log  (only shown when logging is available)
+              if (widget.onLogFood != null) ...[
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () => _logFood(context, food.oxalateMg, food.name),
+                  child: const Icon(
+                    Icons.add_circle_outline,
+                    color: Color(0xFF01696F),
+                    size: 22,
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),
