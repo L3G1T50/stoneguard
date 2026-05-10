@@ -1,12 +1,12 @@
-// ─── HISTORY SCREEN ───────────────────────────────────────────────────────────────────────────────────
+// ─── HISTORY SCREEN (DAILY WATER & OXALATE) ─────────────────────────────────────────────────────
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../database_helper.dart';
-import '../theme/app_theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-// ═══════════════════════════════════════════════════════════
-// HISTORY SCREEN WIDGET
-// ═══════════════════════════════════════════════════════════
+import '../services/daily_history_service.dart';
+import '../theme/app_theme.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -36,13 +36,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
       _isDark(context) ? AppColors.darkTextSecond : AppColors.textSecond;
 
   // ── state ────────────────────────────────────────────────
-  List<Map<String, dynamic>> _entries  = [];
+  List<Map<String, dynamic>> _entries = [];
   List<Map<String, dynamic>> _filtered = [];
-  bool   _loading  = true;
-  String _search   = '';
-  String _sortBy   = 'date_desc';
+  bool _loading = true;
+  String _search = '';
+  String _sortBy = 'date_desc';
   String _filterType = 'all';
-  int?   _selectedEntryId;
+  String? _selectedDate;
 
   // ── lifecycle ────────────────────────────────────────────
   @override
@@ -51,40 +51,51 @@ class _HistoryScreenState extends State<HistoryScreen> {
     _load();
   }
 
-  // ── data ───────────────────────────────────────────────────
+  // ── data: load from centralized DailyHistoryService ───────────────────────
   Future<void> _load() async {
-    final db = DatabaseHelper.instance;
-    final entries = await db.getAllEntries();
+    final (oxByDate, waterByDate) =
+        await DailyHistoryService.loadDailyHistory();
+
+    // Build a unified list with both water + oxalate per day.
+    final dates = <String>{}
+      ..addAll(oxByDate.keys)
+      ..addAll(waterByDate.keys);
+
+    final entries = dates.map((date) {
+      return <String, dynamic>{
+        'date': date,
+        'water_oz': (waterByDate[date] ?? 0).toDouble(),
+        'oxalate_mg': (oxByDate[date] ?? 0).toDouble(),
+      };
+    }).toList();
+
     setState(() {
-      _entries  = entries;
+      _entries = entries;
       _filtered = _applyFilters(entries);
-      _loading  = false;
+      _loading = false;
     });
   }
 
-  List<Map<String, dynamic>> _applyFilters(
-      List<Map<String, dynamic>> src) {
+  List<Map<String, dynamic>> _applyFilters(List<Map<String, dynamic>> src) {
+    // search by date string
     var list = src.where((e) {
       final q = _search.toLowerCase();
       if (q.isEmpty) return true;
-      return (e['notes'] ?? '').toString().toLowerCase().contains(q) ||
-             (e['date']  ?? '').toString().contains(q);
+      return (e['date'] ?? '').toString().toLowerCase().contains(q);
     }).toList();
 
+    // type filter
     if (_filterType == 'water') {
       list = list.where((e) => (e['water_oz'] ?? 0) > 0).toList();
-    } else if (_filterType == 'pain') {
-      list = list.where((e) => (e['pain_level'] ?? 0) > 0).toList();
     } else if (_filterType == 'oxalate') {
       list = list.where((e) => (e['oxalate_mg'] ?? 0) > 0).toList();
     }
 
+    // sort
     list.sort((a, b) {
       switch (_sortBy) {
         case 'date_asc':
           return (a['date'] ?? '').compareTo(b['date'] ?? '');
-        case 'pain_desc':
-          return (b['pain_level'] ?? 0).compareTo(a['pain_level'] ?? 0);
         case 'water_desc':
           return (b['water_oz'] ?? 0).compareTo(a['water_oz'] ?? 0);
         default:
@@ -95,24 +106,33 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   void _onSearch(String q) =>
-      setState(() { _search = q; _filtered = _applyFilters(_entries); });
+      setState(() {
+        _search = q;
+        _filtered = _applyFilters(_entries);
+      });
 
   void _onSort(String? v) {
     if (v == null) return;
-    setState(() { _sortBy = v; _filtered = _applyFilters(_entries); });
+    setState(() {
+      _sortBy = v;
+      _filtered = _applyFilters(_entries);
+    });
   }
 
   void _onFilter(String v) =>
-      setState(() { _filterType = v; _filtered = _applyFilters(_entries); });
+      setState(() {
+        _filterType = v;
+        _filtered = _applyFilters(_entries);
+      });
 
   // ── build ─────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final bg       = _background(context);
-    final surface  = _surface(context);
-    final borderC  = _border(context);
+    final bg = _background(context);
+    final surface = _surface(context);
+    final borderC = _border(context);
     final textPrim = _textPrimary(context);
-    final textSec  = _textSecond(context);
+    final textSec = _textSecond(context);
 
     return Scaffold(
       backgroundColor: bg,
@@ -138,10 +158,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
               icon: Icon(Icons.sort, color: textSec, size: 20),
               style: TextStyle(color: textSec, fontSize: 13),
               items: const [
-                DropdownMenuItem(value: 'date_desc',  child: Text('Newest first')),
-                DropdownMenuItem(value: 'date_asc',   child: Text('Oldest first')),
-                DropdownMenuItem(value: 'pain_desc',  child: Text('Highest pain')),
-                DropdownMenuItem(value: 'water_desc', child: Text('Most water')),
+                DropdownMenuItem(
+                    value: 'date_desc', child: Text('Newest first')),
+                DropdownMenuItem(
+                    value: 'date_asc', child: Text('Oldest first')),
+                DropdownMenuItem(
+                    value: 'water_desc', child: Text('Most water')),
               ],
               onChanged: _onSort,
             ),
@@ -156,7 +178,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 _buildFilterChips(context, textSec),
                 _buildCharts(context),
                 const Divider(height: 1),
-                Expanded(child: _buildList(context, textPrim, textSec, surface, borderC)),
+                Expanded(
+                  child:
+                      _buildList(context, textPrim, textSec, surface, borderC),
+                ),
               ],
             ),
     );
@@ -181,7 +206,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           onChanged: _onSearch,
           style: TextStyle(color: _textPrimary(context)),
           decoration: InputDecoration(
-            hintText: 'Search by notes or date…',
+            hintText: 'Search by date…',
             hintStyle: TextStyle(color: textSec),
             prefixIcon: Icon(Icons.search, color: textSec),
             border: InputBorder.none,
@@ -196,9 +221,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
   // ── FILTER CHIPS ───────────────────────────────────────────
   Widget _buildFilterChips(BuildContext context, Color textSec) {
     final chips = [
-      ('all',     'All'),
-      ('water',   '💧 Water'),
-      ('pain',    '🟡 Pain'),
+      ('all', 'All'),
+      ('water', '💧 Water'),
       ('oxalate', '🔬 Oxalate'),
     ];
     return Padding(
@@ -211,12 +235,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
             child: GestureDetector(
               onTap: () => _onFilter(c.$1),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: sel ? AppColors.primary : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: sel ? AppColors.primary : textSec.withValues(alpha: 0.4),
+                    color: sel
+                        ? AppColors.primary
+                        : textSec.withValues(alpha: 0.4),
                   ),
                 ),
                 child: Text(
@@ -224,7 +251,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   style: TextStyle(
                     color: sel ? Colors.white : textSec,
                     fontSize: 12,
-                    fontWeight: sel ? FontWeight.bold : FontWeight.normal,
+                    fontWeight:
+                        sel ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
               ),
@@ -242,72 +270,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          Expanded(child: _painTrendChart(context)),
-          const SizedBox(width: 12),
           Expanded(child: _waterBarChart(context)),
+          const SizedBox(width: 12),
+          Expanded(child: _oxalateBarChart(context)),
         ],
       ),
-    );
-  }
-
-  Color _painColor(int level) {
-    if (level <= 2) return Colors.green;
-    if (level <= 5) return Colors.orange;
-    return Colors.red;
-  }
-
-  Widget _painTrendChart(BuildContext context) {
-    final spots = _entries
-        .asMap()
-        .entries
-        .take(14)
-        .map((e) => FlSpot(
-              e.key.toDouble(),
-              (e.value['pain_level'] ?? 0).toDouble(),
-            ))
-        .toList();
-
-    return SizedBox(
-      height: 100,
-      child: LineChart(LineChartData(
-        minY: 0, maxY: 10,
-        gridData: FlGridData(show: false),
-        borderData: FlBorderData(show: false),
-        titlesData: FlTitlesData(
-          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        ),
-        lineBarsData: [LineChartBarData(
-          spots: spots, isCurved: true, curveSmoothness: 0.3,
-          color: AppColors.primary, barWidth: 2.5, isStrokeCapRound: true,
-          dotData: FlDotData(show: true, getDotPainter: (spot, p1, p2, p3) =>
-              FlDotCirclePainter(
-                radius: 4, color: _painColor(spot.y.toInt()),
-                strokeColor: Colors.white, strokeWidth: 1.5)),
-          belowBarData: BarAreaData(
-            show: true,
-            gradient: LinearGradient(
-              begin: Alignment.topCenter, end: Alignment.bottomCenter,
-              colors: [
-                AppColors.primary.withValues(alpha: 0.18),
-                AppColors.primary.withValues(alpha: 0.0),
-              ],
-            ),
-          ),
-        )],
-        lineTouchData: LineTouchData(
-          touchTooltipData: LineTouchTooltipData(
-            getTooltipItems: (spots) => spots.map((s) =>
-              LineTooltipItem(
-                'Pain: ${s.y.toInt()}',
-                const TextStyle(color: Colors.white, fontSize: 11),
-              )
-            ).toList(),
-          ),
-        ),
-      )),
     );
   }
 
@@ -317,37 +284,113 @@ class _HistoryScreenState extends State<HistoryScreen> {
       final oz = (e.value['water_oz'] ?? 0).toDouble();
       return BarChartGroupData(
         x: e.key,
-        barRods: [BarChartRodData(
-          toY: oz,
-          color: oz >= 64 ? Colors.teal : Colors.teal.withValues(alpha: 0.5),
-          width: 10,
-          borderRadius: BorderRadius.circular(4),
-        )],
+        barRods: [
+          BarChartRodData(
+            toY: oz,
+            color: oz >= 64
+                ? Colors.teal
+                : Colors.teal.withValues(alpha: 0.5),
+            width: 10,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ],
       );
     }).toList();
 
     return SizedBox(
       height: 100,
-      child: BarChart(BarChartData(
-        maxY: 120,
-        gridData: FlGridData(show: false),
-        borderData: FlBorderData(show: false),
-        titlesData: FlTitlesData(
-          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        ),
-        barGroups: groups,
-        barTouchData: BarTouchData(
-          touchTooltipData: BarTouchTooltipData(
-            getTooltipItem: (group, p1, rod, p2) => BarTooltipItem(
-              '${rod.toY.toInt()} oz',
-              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+      child: BarChart(
+        BarChartData(
+          maxY: 120,
+          gridData: FlGridData(show: false),
+          borderData: FlBorderData(show: false),
+          titlesData: FlTitlesData(
+            leftTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            bottomTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+          ),
+          barGroups: groups,
+          barTouchData: BarTouchData(
+            touchTooltipData: BarTouchTooltipData(
+              getTooltipItem: (group, p1, rod, p2) => BarTooltipItem(
+                '${rod.toY.toInt()} oz',
+                const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
             ),
           ),
         ),
-      )),
+      ),
+    );
+  }
+
+  Widget _oxalateBarChart(BuildContext context) {
+    final recent = _entries.take(7).toList().reversed.toList();
+    final groups = recent.asMap().entries.map((e) {
+      final mg = (e.value['oxalate_mg'] ?? 0).toDouble();
+      return BarChartGroupData(
+        x: e.key,
+        barRods: [
+          BarChartRodData(
+            toY: mg,
+            color: mg <= 200
+                ? Colors.orange
+                : Colors.orange.withValues(alpha: 0.6),
+            width: 10,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ],
+      );
+    }).toList();
+
+    return SizedBox(
+      height: 100,
+      child: BarChart(
+        BarChartData(
+          maxY: 400,
+          gridData: FlGridData(show: false),
+          borderData: FlBorderData(show: false),
+          titlesData: FlTitlesData(
+            leftTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            bottomTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+          ),
+          barGroups: groups,
+          barTouchData: BarTouchData(
+            touchTooltipData: BarTouchTooltipData(
+              getTooltipItem: (group, p1, rod, p2) => BarTooltipItem(
+                '${rod.toY.toInt()} mg',
+                const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -366,16 +409,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
           children: [
             Icon(Icons.history, size: 56, color: textSec),
             const SizedBox(height: 12),
-            Text('No entries found',
-                style: TextStyle(color: textSec, fontSize: 16)),
+            Text(
+              'No history yet',
+              style: TextStyle(color: textSec, fontSize: 16),
+            ),
           ],
         ),
       );
     }
+
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       itemCount: _filtered.length,
-      itemBuilder: (_, i) => _entryCard(context, _filtered[i], textPrim, textSec),
+      itemBuilder: (_, i) =>
+          _entryCard(context, _filtered[i], textPrim, textSec, borderC),
     );
   }
 
@@ -385,19 +432,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
     Map<String, dynamic> entry,
     Color textPrim,
     Color textSec,
+    Color borderC,
   ) {
-    final id         = entry['id'] as int?;
-    final date       = entry['date']       ?? '—';
-    final painLevel  = (entry['pain_level'] ?? 0) as int;
-    final waterOz    = (entry['water_oz']   ?? 0.0) as double;
-    final oxalateMg  = (entry['oxalate_mg'] ?? 0.0) as double;
-    final notes      = (entry['notes']      ?? '') as String;
-    final isExpanded = _selectedEntryId == id;
-    final painColor  = _painColor(painLevel);
+    final date = entry['date'] as String? ?? '—';
+    final waterOz = (entry['water_oz'] ?? 0.0) as double;
+    final oxalateMg = (entry['oxalate_mg'] ?? 0.0) as double;
+    final isExpanded = _selectedDate == date;
 
     return AppCard(
       onTap: () => setState(() {
-        _selectedEntryId = isExpanded ? null : id;
+        _selectedDate = isExpanded ? null : date;
       }),
       padding: EdgeInsets.zero,
       child: Column(
@@ -421,8 +465,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          _miniStat('🔥', '$painLevel/10', painColor),
-                          const SizedBox(width: 10),
                           _miniStat('💧', '${waterOz.toStringAsFixed(0)} oz',
                               AppColors.primary),
                           const SizedBox(width: 10),
@@ -449,30 +491,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Divider(color: _border(context), height: 1),
+                  Divider(color: borderC, height: 1),
                   const SizedBox(height: 10),
-                  _detailRow('🔥 Pain Level',
-                      '$painLevel / 10', painColor),
                   _detailRow('💧 Water Intake',
                       '${waterOz.toStringAsFixed(1)} oz', AppColors.primary),
                   _detailRow('🔬 Oxalate Intake',
                       '${oxalateMg.toStringAsFixed(1)} mg', Colors.orange),
-                  if (notes.isNotEmpty) ...
-                    [
-                      const SizedBox(height: 8),
-                      Text(
-                        '📝 Notes',
-                        style: TextStyle(
-                            color: textSec,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        notes,
-                        style: TextStyle(color: textSec, fontSize: 13),
-                      ),
-                    ],
                 ],
               ),
             ),
@@ -489,7 +513,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
         Text(
           val,
           style: TextStyle(
-              color: color, fontSize: 11, fontWeight: FontWeight.w600),
+            color: color,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );
@@ -501,15 +528,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label,
-              style: TextStyle(
-                  color: _textSecond(context),
-                  fontSize: 13)),
-          Text(value,
-              style: TextStyle(
-                  color: color,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold)),
+          Text(
+            label,
+            style: TextStyle(
+              color: _textSecond(context),
+              fontSize: 13,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
