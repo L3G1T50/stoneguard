@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/daily_history_service.dart';
 import '../theme/app_theme.dart';
 
 class HistoryScreen extends StatefulWidget {
@@ -50,26 +51,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
     _load();
   }
 
-  // ── data: load from daily_history ─────────────────────────────────────────
+  // ── data: load from centralized DailyHistoryService ───────────────────────
   Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList('daily_history') ?? <String>[];
+    final (oxByDate, waterByDate) =
+        await DailyHistoryService.loadDailyHistory();
 
-    final entries = raw.map<Map<String, dynamic>>((e) {
-      try {
-        final map = Map<String, dynamic>.from(jsonDecode(e));
-        return {
-          'date': map['date'] ?? '—',
-          'water_oz': (map['water_oz'] ?? 0).toDouble(),
-          'oxalate_mg': (map['oxalate_mg'] ?? 0).toDouble(),
-        };
-      } catch (_) {
-        return {
-          'date': '—',
-          'water_oz': 0.0,
-          'oxalate_mg': 0.0,
-        };
-      }
+    // Build a unified list with both water + oxalate per day.
+    final dates = <String>{}
+      ..addAll(oxByDate.keys)
+      ..addAll(waterByDate.keys);
+
+    final entries = dates.map((date) {
+      return <String, dynamic>{
+        'date': date,
+        'water_oz': (waterByDate[date] ?? 0).toDouble(),
+        'oxalate_mg': (oxByDate[date] ?? 0).toDouble(),
+      };
     }).toList();
 
     setState(() {
