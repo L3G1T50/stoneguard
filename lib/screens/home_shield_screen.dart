@@ -9,6 +9,7 @@ import '../widgets/banner_ad_widget.dart';
 import '../main.dart';
 import 'settings_screen.dart';
 import 'history_progress_screen.dart';
+import '../services/daily_history_service.dart';
 
 // ─── WAVE PAINTER ────────────────────────────────────────────────────────────────
 class _WavePainter extends CustomPainter {
@@ -260,23 +261,10 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   }
 
   Future<void> _saveTodayToHistory() async {
-    final prefs = await SharedPreferences.getInstance();
-    final today = DateTime.now();
-    final dateStr =
-        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-    final entry = jsonEncode({
-      'date': dateStr,
-      'water_oz': waterOz,
-      'oxalate_mg': oxalateMg,
-    });
-    final raw = prefs.getStringList('daily_history') ?? [];
-    final updated = raw.where((e) {
-      final map = Map<String, dynamic>.from(jsonDecode(e));
-      return map['date'] != dateStr;
-    }).toList();
-    updated.add(entry);
-    if (updated.length > 730) updated.removeAt(0);
-    await prefs.setStringList('daily_history', updated);
+    await DailyHistoryService.saveToday(
+      waterOz: waterOz,
+      oxalateMg: oxalateMg,
+    );
   }
 
   Future<void> loadData() async {
