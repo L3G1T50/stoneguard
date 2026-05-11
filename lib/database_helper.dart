@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -16,8 +17,13 @@ class DatabaseHelper {
     final existing = await _secureStorage.read(key: _keyName);
     if (existing != null && existing.isNotEmpty) return existing;
 
-    // 32-byte random key as hex string
-    final bytes = List<int>.generate(32, (i) => DateTime.now().millisecondsSinceEpoch % 256);
+    // Generate a cryptographically secure 32-byte key.
+    // Random.secure() delegates to the platform CSPRNG (e.g. /dev/urandom on
+    // Android/Linux), giving each byte a full 0-255 range of independent
+    // entropy. This replaces the previous DateTime % 256 approach which
+    // produced a constant, predictable byte value across all 32 positions.
+    final rng = Random.secure();
+    final bytes = List<int>.generate(32, (_) => rng.nextInt(256));
     final key = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
     await _secureStorage.write(key: _keyName, value: key);
     return key;
