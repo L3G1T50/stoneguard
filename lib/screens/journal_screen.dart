@@ -40,17 +40,39 @@ class _JournalScreenState extends State<JournalScreen> {
 
   Future<void> _loadEntries() async {
     final entries = await DatabaseHelper.instance.getAllEntries();
-    setState(() => _entries = entries);
+    if (mounted) setState(() => _entries = entries);
   }
+
+  // ── Snackbar helpers ───────────────────────────────────────────────────────
+  void _showSuccess(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.primary,
+      ),
+    );
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.danger,
+      ),
+    );
+  }
+
+  // ── CRUD wrappers with sentinel checks ────────────────────────────────────
 
   Future<void> _saveEntry() async {
     if (_noteController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please write a note before saving.')),
-      );
+      _showError('Please write a note before saving.');
       return;
     }
-    await DatabaseHelper.instance.insertEntry({
+
+    final result = await DatabaseHelper.instance.insertEntry({
       'date': DateTime.now().toIso8601String(),
       'pain': _painLevel,
       'note': _noteController.text.trim(),
@@ -58,7 +80,15 @@ class _JournalScreenState extends State<JournalScreen> {
       'stonePassed': _stonePassed,
       'symptoms': _selectedSymptoms.toList(),
     });
+
     if (!mounted) return;
+
+    if (result == -1) {
+      _showError('Could not save entry. Please try again.');
+      return;
+    }
+
+    // Reset form on success
     _noteController.clear();
     setState(() {
       _painLevel = 1;
@@ -66,14 +96,8 @@ class _JournalScreenState extends State<JournalScreen> {
       _stonePassed = false;
       _selectedSymptoms.clear();
     });
-    _loadEntries();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Journal entry saved!'),
-        backgroundColor: AppColors.primary,
-      ),
-    );
+    await _loadEntries();
+    _showSuccess('Journal entry saved!');
   }
 
   Future<void> _deleteEntry(int index) async {
@@ -83,21 +107,47 @@ class _JournalScreenState extends State<JournalScreen> {
         title: const Text('Delete Entry'),
         content: const Text('Are you sure you want to delete this entry?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: AppColors.danger))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete',
+                style: TextStyle(color: AppColors.danger)),
+          ),
         ],
       ),
     );
     if (confirmed != true) return;
+
     final id = _entries[index]['id'] as int;
-    await DatabaseHelper.instance.deleteEntry(id);
-    _loadEntries();
+    final result = await DatabaseHelper.instance.deleteEntry(id);
+
+    if (!mounted) return;
+
+    if (result == -1) {
+      _showError('Could not delete entry. Please try again.');
+      return;
+    }
+
+    await _loadEntries();
+    _showSuccess('Entry deleted.');
   }
 
   Future<void> _updateEntry(int index, Map<String, dynamic> updated) async {
     final id = _entries[index]['id'] as int;
-    await DatabaseHelper.instance.updateEntry(id, updated);
-    _loadEntries();
+    final result = await DatabaseHelper.instance.updateEntry(id, updated);
+
+    if (!mounted) return;
+
+    if (result == -1) {
+      _showError('Could not update entry. Please try again.');
+      return;
+    }
+
+    await _loadEntries();
+    _showSuccess('Entry updated.');
   }
 
   // ── Edit Sheet ──────────────────────────────────────────
@@ -123,11 +173,13 @@ class _JournalScreenState extends State<JournalScreen> {
 
         return StatefulBuilder(
           builder: (ctx, setSheetState) => Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            padding:
+                EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
             child: Container(
               decoration: BoxDecoration(
                 color: sheetBg,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(24)),
               ),
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
               child: SingleChildScrollView(
@@ -137,7 +189,8 @@ class _JournalScreenState extends State<JournalScreen> {
                   children: [
                     Center(
                       child: Container(
-                        width: 40, height: 4,
+                        width: 40,
+                        height: 4,
                         decoration: BoxDecoration(
                           color: borderCol,
                           borderRadius: BorderRadius.circular(2),
@@ -159,12 +212,14 @@ class _JournalScreenState extends State<JournalScreen> {
                               fontWeight: FontWeight.w600)),
                       const Spacer(),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: _painColor(editPain).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Text('$editPain - ${_painLabel(editPain)}',
+                        child: Text(
+                            '$editPain - ${_painLabel(editPain)}',
                             style: TextStyle(
                                 color: _painColor(editPain),
                                 fontWeight: FontWeight.bold,
@@ -173,10 +228,14 @@ class _JournalScreenState extends State<JournalScreen> {
                     ]),
                     Slider(
                       value: editPain.toDouble(),
-                      min: 1, max: 10, divisions: 9,
+                      min: 1,
+                      max: 10,
+                      divisions: 9,
                       activeColor: _painColor(editPain),
-                      inactiveColor: _painColor(editPain).withValues(alpha: 0.15),
-                      onChanged: (v) => setSheetState(() => editPain = v.round()),
+                      inactiveColor:
+                          _painColor(editPain).withValues(alpha: 0.15),
+                      onChanged: (v) =>
+                          setSheetState(() => editPain = v.round()),
                     ),
                     const SizedBox(height: 8),
                     Text('Side',
@@ -194,13 +253,21 @@ class _JournalScreenState extends State<JournalScreen> {
                             color: textMut,
                             fontWeight: FontWeight.w600)),
                     const SizedBox(height: 6),
-                    _buildSymptomChips(editSymptoms, bgCol, borderCol,
+                    _buildSymptomChips(
+                        editSymptoms,
+                        bgCol,
+                        borderCol,
                         (tag, val) => setSheetState(() {
-                          val ? editSymptoms.add(tag) : editSymptoms.remove(tag);
-                        })),
+                              val
+                                  ? editSymptoms.add(tag)
+                                  : editSymptoms.remove(tag);
+                            })),
                     const SizedBox(height: 12),
                     _buildStonePassedToggle(
-                        editStonePassed, bgCol, borderCol, textPri,
+                        editStonePassed,
+                        bgCol,
+                        borderCol,
+                        textPri,
                         (v) => setSheetState(() => editStonePassed = v)),
                     const SizedBox(height: 12),
                     TextField(
@@ -209,7 +276,8 @@ class _JournalScreenState extends State<JournalScreen> {
                       style: TextStyle(color: textPri),
                       decoration: InputDecoration(
                         hintText: 'Notes...',
-                        hintStyle: TextStyle(color: textMut, fontSize: 13),
+                        hintStyle:
+                            TextStyle(color: textMut, fontSize: 13),
                         filled: true,
                         fillColor: bgCol,
                         border: OutlineInputBorder(
@@ -220,7 +288,8 @@ class _JournalScreenState extends State<JournalScreen> {
                             borderSide: BorderSide(color: borderCol)),
                         focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+                            borderSide: const BorderSide(
+                                color: AppColors.primary, width: 1.5)),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -230,23 +299,28 @@ class _JournalScreenState extends State<JournalScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
                         ),
                         onPressed: () async {
                           if (editNote.text.trim().isEmpty) return;
-                          final updated = Map<String, dynamic>.from(entry);
+                          final updated =
+                              Map<String, dynamic>.from(entry);
                           updated['pain'] = editPain;
                           updated['side'] = editSide;
                           updated['stonePassed'] = editStonePassed;
                           updated['symptoms'] = editSymptoms.toList();
                           updated['note'] = editNote.text.trim();
+                          // Close sheet first, then attempt save so the
+                          // SnackBar appears on the main scaffold.
                           Navigator.pop(ctx);
                           await _updateEntry(index, updated);
                         },
                         child: const Text('Save Changes',
-                            style: TextStyle(fontWeight: FontWeight.w600)),
+                            style:
+                                TextStyle(fontWeight: FontWeight.w600)),
                       ),
                     ),
                   ],
@@ -274,17 +348,18 @@ class _JournalScreenState extends State<JournalScreen> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (ctx) {
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
-        final sheetBg = isDark ? AppColors.darkSurface : AppColors.surface;
-        final borderCol = isDark ? AppColors.darkBorder : AppColors.border;
-        final textPri = isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
-        final textMut = isDark ? AppColors.darkTextSecond : AppColors.textSecond;
-        final bgCol = isDark ? AppColors.darkBackground : AppColors.background;
+        final isDark    = Theme.of(ctx).brightness == Brightness.dark;
+        final sheetBg   = isDark ? AppColors.darkSurface   : AppColors.surface;
+        final borderCol = isDark ? AppColors.darkBorder    : AppColors.border;
+        final textPri   = isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
+        final textMut   = isDark ? AppColors.darkTextSecond : AppColors.textSecond;
+        final bgCol     = isDark ? AppColors.darkBackground : AppColors.background;
 
         return Container(
           decoration: BoxDecoration(
             color: sheetBg,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
           child: Column(
@@ -293,7 +368,8 @@ class _JournalScreenState extends State<JournalScreen> {
             children: [
               Center(
                 child: Container(
-                  width: 40, height: 4,
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
                     color: borderCol,
                     borderRadius: BorderRadius.circular(2),
@@ -303,7 +379,8 @@ class _JournalScreenState extends State<JournalScreen> {
               const SizedBox(height: 20),
               Row(children: [
                 Container(
-                  width: 56, height: 56,
+                  width: 56,
+                  height: 56,
                   decoration: BoxDecoration(
                     color: _painColor(pain).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(14),
@@ -322,7 +399,8 @@ class _JournalScreenState extends State<JournalScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: _painColor(pain).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
@@ -349,9 +427,11 @@ class _JournalScreenState extends State<JournalScreen> {
               if (side != 'None' || stonePassed) ...[
                 Wrap(spacing: 8, children: [
                   if (side != 'None')
-                    _infoBadge('$side Side', Icons.location_on_outlined, AppColors.primary),
+                    _infoBadge('$side Side', Icons.location_on_outlined,
+                        AppColors.primary),
                   if (stonePassed)
-                    _infoBadge('Stone Passed', Icons.check_circle_outline, AppColors.success),
+                    _infoBadge('Stone Passed', Icons.check_circle_outline,
+                        AppColors.success),
                 ]),
                 const SizedBox(height: 12),
               ],
@@ -366,19 +446,25 @@ class _JournalScreenState extends State<JournalScreen> {
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
-                  children: symptoms.map((s) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.warning.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
-                    ),
-                    child: Text(s,
-                        style: const TextStyle(
-                            color: AppColors.warning,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500)),
-                  )).toList(),
+                  children: symptoms
+                      .map((s) => Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color:
+                                  AppColors.warning.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                  color: AppColors.warning
+                                      .withValues(alpha: 0.3)),
+                            ),
+                            child: Text(s,
+                                style: const TextStyle(
+                                    color: AppColors.warning,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500)),
+                          ))
+                      .toList(),
                 ),
                 const SizedBox(height: 12),
               ],
@@ -407,12 +493,16 @@ class _JournalScreenState extends State<JournalScreen> {
               Row(children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    icon: const Icon(Icons.delete_outline, color: AppColors.danger, size: 18),
-                    label: const Text('Delete', style: TextStyle(color: AppColors.danger)),
+                    icon: const Icon(Icons.delete_outline,
+                        color: AppColors.danger, size: 18),
+                    label: const Text('Delete',
+                        style: TextStyle(color: AppColors.danger)),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: AppColors.danger),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: () async {
                       Navigator.pop(ctx);
@@ -423,12 +513,16 @@ class _JournalScreenState extends State<JournalScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: OutlinedButton.icon(
-                    icon: const Icon(Icons.edit_outlined, color: AppColors.primary, size: 18),
-                    label: const Text('Edit', style: TextStyle(color: AppColors.primary)),
+                    icon: const Icon(Icons.edit_outlined,
+                        color: AppColors.primary, size: 18),
+                    label: const Text('Edit',
+                        style: TextStyle(color: AppColors.primary)),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: AppColors.primary),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: () {
                       Navigator.pop(ctx);
@@ -442,12 +536,16 @@ class _JournalScreenState extends State<JournalScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Close', style: TextStyle(fontWeight: FontWeight.w600)),
+                    child: const Text('Close',
+                        style:
+                            TextStyle(fontWeight: FontWeight.w600)),
                   ),
                 ),
               ]),
@@ -461,7 +559,8 @@ class _JournalScreenState extends State<JournalScreen> {
   // ── Reusable widgets ────────────────────────────────────────────
   Widget _infoBadge(String label, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
@@ -471,14 +570,16 @@ class _JournalScreenState extends State<JournalScreen> {
         Icon(icon, size: 13, color: color),
         const SizedBox(width: 4),
         Text(label,
-            style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500)),
+            style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w500)),
       ]),
     );
   }
 
-  Widget _buildSideSelector(
-      String currentSide, Color bgCol, Color borderCol,
-      void Function(String) onSelect) {
+  Widget _buildSideSelector(String currentSide, Color bgCol,
+      Color borderCol, void Function(String) onSelect) {
     return Row(
       children: _sideOptions.map((s) {
         final selected = s == currentSide;
@@ -490,17 +591,22 @@ class _JournalScreenState extends State<JournalScreen> {
               margin: const EdgeInsets.only(right: 6),
               padding: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
-                color: selected ? AppColors.primary.withValues(alpha: 0.12) : bgCol,
+                color: selected
+                    ? AppColors.primary.withValues(alpha: 0.12)
+                    : bgCol,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                    color: selected ? AppColors.primary : borderCol, width: 1.5),
+                    color: selected ? AppColors.primary : borderCol,
+                    width: 1.5),
               ),
               child: Center(
                 child: Text(s,
                     style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: selected ? AppColors.primary : AppColors.textMuted)),
+                        color: selected
+                            ? AppColors.primary
+                            : AppColors.textMuted)),
               ),
             ),
           ),
@@ -509,9 +615,8 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  Widget _buildSymptomChips(
-      Set<String> selected, Color bgCol, Color borderCol,
-      void Function(String, bool) onToggle) {
+  Widget _buildSymptomChips(Set<String> selected, Color bgCol,
+      Color borderCol, void Function(String, bool) onToggle) {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -521,9 +626,12 @@ class _JournalScreenState extends State<JournalScreen> {
           onTap: () => onToggle(tag, !active),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 160),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: active ? AppColors.warning.withValues(alpha: 0.12) : bgCol,
+              color: active
+                  ? AppColors.warning.withValues(alpha: 0.12)
+                  : bgCol,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                   color: active
@@ -534,20 +642,24 @@ class _JournalScreenState extends State<JournalScreen> {
                 style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: active ? AppColors.warning : AppColors.textMuted)),
+                    color: active
+                        ? AppColors.warning
+                        : AppColors.textMuted)),
           ),
         );
       }).toList(),
     );
   }
 
-  Widget _buildStonePassedToggle(
-      bool value, Color bgCol, Color borderCol, Color textPri,
-      void Function(bool) onChanged) {
+  Widget _buildStonePassedToggle(bool value, Color bgCol,
+      Color borderCol, Color textPri, void Function(bool) onChanged) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: value ? AppColors.success.withValues(alpha: 0.08) : bgCol,
+        color: value
+            ? AppColors.success.withValues(alpha: 0.08)
+            : bgCol,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
             color: value
@@ -557,20 +669,24 @@ class _JournalScreenState extends State<JournalScreen> {
       child: Row(children: [
         const Text('💎', style: TextStyle(fontSize: 16)),
         const SizedBox(width: 10),
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Stone Passed',
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: textPri)),
-          const Text('Mark if you passed a stone today',
-              style: TextStyle(fontSize: 11, color: AppColors.textHint)),
-        ]),
+        Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Stone Passed',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: textPri)),
+              const Text('Mark if you passed a stone today',
+                  style: TextStyle(
+                      fontSize: 11, color: AppColors.textHint)),
+            ]),
         const Spacer(),
         Switch(
           value: value,
           activeThumbColor: AppColors.success,
-          activeTrackColor: AppColors.success.withValues(alpha: 0.4),
+          activeTrackColor:
+              AppColors.success.withValues(alpha: 0.4),
           onChanged: onChanged,
         ),
       ]),
@@ -580,10 +696,14 @@ class _JournalScreenState extends State<JournalScreen> {
   // ── Pain trend sparkline ──────────────────────────────────────────────────
   Widget _buildPainTrend(bool isDark) {
     if (_entries.length < 2) return const SizedBox.shrink();
-    final recent = _entries.take(7).toList().reversed.toList();
-    final surfaceCol = isDark ? AppColors.darkSurface : AppColors.surface;
-    final borderCol  = isDark ? AppColors.darkBorder  : AppColors.border;
-    final textMut    = isDark ? AppColors.darkTextSecond : AppColors.textSecond;
+    final recent =
+        _entries.take(7).toList().reversed.toList();
+    final surfaceCol =
+        isDark ? AppColors.darkSurface : AppColors.surface;
+    final borderCol =
+        isDark ? AppColors.darkBorder : AppColors.border;
+    final textMut =
+        isDark ? AppColors.darkTextSecond : AppColors.textSecond;
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       padding: const EdgeInsets.all(14),
@@ -605,8 +725,9 @@ class _JournalScreenState extends State<JournalScreen> {
             height: 48,
             child: CustomPaint(
               size: const Size(double.infinity, 48),
-              painter: _SparklinePainter(
-                  recent.map((e) => (e['pain'] as int).toDouble()).toList()),
+              painter: _SparklinePainter(recent
+                  .map((e) => (e['pain'] as int).toDouble())
+                  .toList()),
             ),
           ),
           const SizedBox(height: 6),
@@ -624,7 +745,7 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────
   Color _painColor(int level) {
     if (level <= 3) return AppColors.success;
     if (level <= 6) return AppColors.warning;
@@ -676,8 +797,8 @@ class _JournalScreenState extends State<JournalScreen> {
 
   Widget _buildJournalEmptyState(bool isDark) {
     final isFiltered  = _filterSeverity != 'All';
-    final surfaceCol  = isDark ? AppColors.darkSurface  : AppColors.surface;
-    final borderCol   = isDark ? AppColors.darkBorder   : AppColors.border;
+    final surfaceCol  = isDark ? AppColors.darkSurface     : AppColors.surface;
+    final borderCol   = isDark ? AppColors.darkBorder      : AppColors.border;
     final textPri     = isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
     final textMut     = isDark ? AppColors.darkTextSecond  : AppColors.textSecond;
 
@@ -702,18 +823,25 @@ class _JournalScreenState extends State<JournalScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                height: 84, width: 84,
+                height: 84,
+                width: 84,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppColors.primary.withValues(alpha: 0.10),
                 ),
-                child: const Icon(Icons.edit_note_rounded, size: 42, color: AppColors.primary),
+                child: const Icon(Icons.edit_note_rounded,
+                    size: 42, color: AppColors.primary),
               ),
               const SizedBox(height: 18),
               Text(
-                isFiltered ? 'No matching entries' : 'No journal entries yet',
+                isFiltered
+                    ? 'No matching entries'
+                    : 'No journal entries yet',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPri),
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: textPri),
               ),
               const SizedBox(height: 10),
               Text(
@@ -721,7 +849,8 @@ class _JournalScreenState extends State<JournalScreen> {
                     ? 'Try a different filter to see more entries.'
                     : 'Use Journal to track pain, symptoms, stone events, and notes for your doctor.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, height: 1.5, color: textMut),
+                style:
+                    TextStyle(fontSize: 14, height: 1.5, color: textMut),
               ),
               const SizedBox(height: 18),
               SizedBox(
@@ -733,22 +862,28 @@ class _JournalScreenState extends State<JournalScreen> {
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Fill out the form above to create your first journal entry.'),
+                          content: Text(
+                              'Fill out the form above to create your first journal entry.'),
                           backgroundColor: AppColors.primary,
                         ),
                       );
                     }
                   },
-                  icon: Icon(isFiltered ? Icons.filter_alt_off_rounded : Icons.edit_rounded),
+                  icon: Icon(isFiltered
+                      ? Icons.filter_alt_off_rounded
+                      : Icons.edit_rounded),
                   label: Text(
                     isFiltered ? 'Clear filter' : 'Write my first note',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    style:
+                        const TextStyle(fontWeight: FontWeight.w600),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
                 ),
@@ -760,7 +895,7 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────────────
+  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final isDark     = Theme.of(context).brightness == Brightness.dark;
@@ -774,7 +909,7 @@ class _JournalScreenState extends State<JournalScreen> {
     final body = CustomScrollView(
       slivers: [
 
-        // ── 1. Entry form ──────────────────────────────────────────
+        // ── 1. Entry form ────────────────────────────────────────────────
         SliverToBoxAdapter(
           child: Container(
             margin: const EdgeInsets.all(16),
@@ -809,12 +944,15 @@ class _JournalScreenState extends State<JournalScreen> {
                           fontWeight: FontWeight.w600)),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
-                      color: _painColor(_painLevel).withValues(alpha: 0.12),
+                      color:
+                          _painColor(_painLevel).withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text('$_painLevel - ${_painLabel(_painLevel)}',
+                    child: Text(
+                        '$_painLevel - ${_painLabel(_painLevel)}',
                         style: TextStyle(
                             color: _painColor(_painLevel),
                             fontWeight: FontWeight.bold,
@@ -823,39 +961,56 @@ class _JournalScreenState extends State<JournalScreen> {
                 ]),
                 Slider(
                   value: _painLevel.toDouble(),
-                  min: 1, max: 10, divisions: 9,
+                  min: 1,
+                  max: 10,
+                  divisions: 9,
                   label: '$_painLevel',
                   activeColor: _painColor(_painLevel),
-                  inactiveColor: _painColor(_painLevel).withValues(alpha: 0.15),
-                  onChanged: (v) => setState(() => _painLevel = v.round()),
+                  inactiveColor:
+                      _painColor(_painLevel).withValues(alpha: 0.15),
+                  onChanged: (v) =>
+                      setState(() => _painLevel = v.round()),
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('1 - No pain', style: TextStyle(fontSize: 11, color: textMut)),
-                    Text('10 - Extreme', style: TextStyle(fontSize: 11, color: textMut)),
+                    Text('1 - No pain',
+                        style:
+                            TextStyle(fontSize: 11, color: textMut)),
+                    Text('10 - Extreme',
+                        style:
+                            TextStyle(fontSize: 11, color: textMut)),
                   ],
                 ),
                 const SizedBox(height: 14),
                 Text('Pain Side',
                     style: TextStyle(
-                        fontSize: 13, color: textMut, fontWeight: FontWeight.w600)),
+                        fontSize: 13,
+                        color: textMut,
+                        fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 _buildSideSelector(_side, bgCol, borderCol,
                     (s) => setState(() => _side = s)),
                 const SizedBox(height: 14),
                 Text('Symptoms',
                     style: TextStyle(
-                        fontSize: 13, color: textMut, fontWeight: FontWeight.w600)),
+                        fontSize: 13,
+                        color: textMut,
+                        fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 _buildSymptomChips(
-                    _selectedSymptoms, bgCol, borderCol,
-                    (tag, val) => setState(() =>
-                    val ? _selectedSymptoms.add(tag)
+                    _selectedSymptoms,
+                    bgCol,
+                    borderCol,
+                    (tag, val) => setState(() => val
+                        ? _selectedSymptoms.add(tag)
                         : _selectedSymptoms.remove(tag))),
                 const SizedBox(height: 14),
                 _buildStonePassedToggle(
-                    _stonePassed, bgCol, borderCol, textPri,
+                    _stonePassed,
+                    bgCol,
+                    borderCol,
+                    textPri,
                     (v) => setState(() => _stonePassed = v)),
                 const SizedBox(height: 14),
                 TextField(
@@ -863,8 +1018,10 @@ class _JournalScreenState extends State<JournalScreen> {
                   maxLines: 3,
                   style: TextStyle(color: textPri),
                   decoration: InputDecoration(
-                    hintText: 'Notes — symptoms, water intake, diet, mood...',
-                    hintStyle: TextStyle(color: textMut, fontSize: 13),
+                    hintText:
+                        'Notes — symptoms, water intake, diet, mood...',
+                    hintStyle:
+                        TextStyle(color: textMut, fontSize: 13),
                     filled: true,
                     fillColor: bgCol,
                     border: OutlineInputBorder(
@@ -875,7 +1032,8 @@ class _JournalScreenState extends State<JournalScreen> {
                         borderSide: BorderSide(color: borderCol)),
                     focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+                        borderSide: const BorderSide(
+                            color: AppColors.primary, width: 1.5)),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -884,11 +1042,13 @@ class _JournalScreenState extends State<JournalScreen> {
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.save_outlined),
                     label: const Text('Save Entry',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 14),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
@@ -900,10 +1060,10 @@ class _JournalScreenState extends State<JournalScreen> {
           ),
         ),
 
-        // ── 2. Pain trend sparkline ─────────────────────────────────────
+        // ── 2. Pain trend sparkline ──────────────────────────────────────
         SliverToBoxAdapter(child: _buildPainTrend(isDark)),
 
-        // ── 3. Past entries header + filter ──────────────────────────────
+        // ── 3. Past entries header + filter ─────────────────────────────
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -918,7 +1078,8 @@ class _JournalScreenState extends State<JournalScreen> {
                           color: textPri)),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
@@ -937,33 +1098,48 @@ class _JournalScreenState extends State<JournalScreen> {
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
-                    children: ['All', 'Mild', 'Moderate', 'Severe'].map((f) {
+                    children: ['All', 'Mild', 'Moderate', 'Severe']
+                        .map((f) {
                       final active = _filterSeverity == f;
                       Color chipColor;
                       switch (f) {
-                        case 'Mild':     chipColor = AppColors.success; break;
-                        case 'Moderate': chipColor = AppColors.warning; break;
-                        case 'Severe':   chipColor = AppColors.danger; break;
-                        default:         chipColor = AppColors.primary;
+                        case 'Mild':
+                          chipColor = AppColors.success;
+                          break;
+                        case 'Moderate':
+                          chipColor = AppColors.warning;
+                          break;
+                        case 'Severe':
+                          chipColor = AppColors.danger;
+                          break;
+                        default:
+                          chipColor = AppColors.primary;
                       }
                       return GestureDetector(
-                        onTap: () => setState(() => _filterSeverity = f),
+                        onTap: () =>
+                            setState(() => _filterSeverity = f),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 160),
                           margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 6),
                           decoration: BoxDecoration(
-                            color: active ? chipColor.withValues(alpha: 0.12) : bgCol,
+                            color: active
+                                ? chipColor.withValues(alpha: 0.12)
+                                : bgCol,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                                color: active ? chipColor : borderCol,
+                                color:
+                                    active ? chipColor : borderCol,
                                 width: 1.5),
                           ),
                           child: Text(f,
                               style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: active ? chipColor : textMut)),
+                                  color: active
+                                      ? chipColor
+                                      : textMut)),
                         ),
                       );
                     }).toList(),
@@ -985,19 +1161,23 @@ class _JournalScreenState extends State<JournalScreen> {
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, i) {
-                      final e           = filtered[i];
-                      final pain        = e['pain'] as int;
-                      final note        = e['note'] as String;
-                      final dateStr     = _formatDate(e['date'] as String);
-                      final stonePassed = (e['stonePassed'] as bool?) ?? false;
-                      final symptoms    = List<String>.from(
+                      final e = filtered[i];
+                      final pain = e['pain'] as int;
+                      final note = e['note'] as String;
+                      final dateStr =
+                          _formatDate(e['date'] as String);
+                      final stonePassed =
+                          (e['stonePassed'] as bool?) ?? false;
+                      final symptoms = List<String>.from(
                           (e['symptoms'] as List<dynamic>?) ?? []);
                       final masterIndex = _entries.indexOf(e);
 
                       return GestureDetector(
-                        onTap: () => _showEntryDetail(e, masterIndex),
+                        onTap: () =>
+                            _showEntryDetail(e, masterIndex),
                         child: Container(
-                          margin: const EdgeInsets.only(bottom: 10),
+                          margin:
+                              const EdgeInsets.only(bottom: 10),
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             color: surfaceCol,
@@ -1005,7 +1185,8 @@ class _JournalScreenState extends State<JournalScreen> {
                             border: Border.all(color: borderCol),
                             boxShadow: [
                               BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.03),
+                                  color: Colors.black
+                                      .withValues(alpha: 0.03),
                                   blurRadius: 6,
                                   offset: const Offset(0, 2)),
                             ],
@@ -1013,10 +1194,13 @@ class _JournalScreenState extends State<JournalScreen> {
                           child: Row(
                             children: [
                               Container(
-                                width: 48, height: 48,
+                                width: 48,
+                                height: 48,
                                 decoration: BoxDecoration(
-                                  color: _painColor(pain).withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(12),
+                                  color: _painColor(pain)
+                                      .withValues(alpha: 0.12),
+                                  borderRadius:
+                                      BorderRadius.circular(12),
                                 ),
                                 child: Center(
                                   child: Text('$pain',
@@ -1029,39 +1213,57 @@ class _JournalScreenState extends State<JournalScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
                                   children: [
                                     Row(children: [
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        padding: const EdgeInsets
+                                            .symmetric(
+                                            horizontal: 8,
+                                            vertical: 2),
                                         decoration: BoxDecoration(
-                                          color: _painColor(pain).withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(10),
+                                          color: _painColor(pain)
+                                              .withValues(alpha: 0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(
+                                                  10),
                                         ),
-                                        child: Text(_painLabel(pain),
+                                        child: Text(
+                                            _painLabel(pain),
                                             style: TextStyle(
                                                 color: _painColor(pain),
                                                 fontSize: 11,
-                                                fontWeight: FontWeight.bold)),
+                                                fontWeight:
+                                                    FontWeight.bold)),
                                       ),
                                       if (stonePassed) ...[
                                         const SizedBox(width: 6),
-                                        const Text('💎', style: TextStyle(fontSize: 13)),
+                                        const Text('💎',
+                                            style: TextStyle(
+                                                fontSize: 13)),
                                       ],
                                       if (symptoms.isNotEmpty) ...[
                                         const SizedBox(width: 6),
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          padding: const EdgeInsets
+                                              .symmetric(
+                                              horizontal: 6,
+                                              vertical: 2),
                                           decoration: BoxDecoration(
-                                            color: AppColors.warning.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(8),
+                                            color: AppColors.warning
+                                                .withValues(alpha: 0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(
+                                                    8),
                                           ),
                                           child: Text(
                                             '+${symptoms.length} symptom${symptoms.length > 1 ? 's' : ''}',
                                             style: const TextStyle(
                                                 color: AppColors.warning,
                                                 fontSize: 10,
-                                                fontWeight: FontWeight.w600),
+                                                fontWeight:
+                                                    FontWeight.w600),
                                           ),
                                         ),
                                       ],
@@ -1069,17 +1271,26 @@ class _JournalScreenState extends State<JournalScreen> {
                                     const SizedBox(height: 4),
                                     Text(note,
                                         maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(color: textPri, fontSize: 13)),
+                                        overflow:
+                                            TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                            color: textPri,
+                                            fontSize: 13)),
                                     const SizedBox(height: 2),
                                     Text(dateStr,
-                                        style: TextStyle(color: textMut, fontSize: 11)),
+                                        style: TextStyle(
+                                            color: textMut,
+                                            fontSize: 11)),
                                   ],
                                 ),
                               ),
-                              Icon(Icons.chevron_right,
-                                  color: isDark ? AppColors.darkTextHint : AppColors.textFaint,
-                                  size: 20),
+                              Icon(
+                                Icons.chevron_right,
+                                color: isDark
+                                    ? AppColors.darkTextHint
+                                    : AppColors.textFaint,
+                                size: 20,
+                              ),
                             ],
                           ),
                         ),
@@ -1096,11 +1307,13 @@ class _JournalScreenState extends State<JournalScreen> {
       title: 'Pain Journal',
       actions: [
         IconButton(
-          icon: const Icon(Icons.settings_outlined, color: Colors.white, size: 22),
+          icon: const Icon(Icons.settings_outlined,
+              color: Colors.white, size: 22),
           tooltip: 'Settings',
           onPressed: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            MaterialPageRoute(
+                builder: (_) => const SettingsScreen()),
           ),
         ),
       ],
@@ -1109,7 +1322,7 @@ class _JournalScreenState extends State<JournalScreen> {
   }
 }
 
-// ── Sparkline painter ────────────────────────────────────────────────────────────────────────
+// ── Sparkline painter ─────────────────────────────────────────────────────────
 class _SparklinePainter extends CustomPainter {
   final List<double> values;
   _SparklinePainter(this.values);
@@ -1137,7 +1350,8 @@ class _SparklinePainter extends CustomPainter {
     canvas.drawPath(path, paint);
 
     final lastX = size.width.toDouble();
-    final lastY = size.height - (values.last - minV) / range * size.height;
+    final lastY =
+        size.height - (values.last - minV) / range * size.height;
     canvas.drawCircle(
       Offset(lastX, lastY),
       4,
@@ -1146,5 +1360,6 @@ class _SparklinePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_SparklinePainter old) => old.values != values;
+  bool shouldRepaint(_SparklinePainter old) =>
+      old.values != values;
 }
