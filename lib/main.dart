@@ -16,6 +16,7 @@ import 'screens/shop_screen.dart';
 import 'screens/settings_screen.dart';
 import 'theme/app_theme.dart';
 import 'widgets/gradient_scaffold.dart';
+import 'hydration_repository.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -116,20 +117,9 @@ class _MainShellState extends State<MainShell> {
     setState(() => _currentIndex = index);
   }
 
-  void _onLogFood(double mg, String name) async {
-    final prefs = await SharedPreferences.getInstance();
-    final now = DateTime.now();
-    final logKey = 'oxalate_log_${now.year}_${now.month}_${now.day}';
-    final oxKey  = 'oxalate_${now.year}_${now.month}_${now.day}';
-
-    final log = List<String>.from(prefs.getStringList(logKey) ?? []);
-    log.add('$name|$mg');
-    await prefs.setStringList(logKey, log);
-
-    final current = prefs.getDouble(oxKey) ?? 0.0;
-    await prefs.setDouble(oxKey, current + mg);
-
-    // Shield refreshes via its own loadData(); no need to rebuild MainShell.
+  Future<void> _onLogFood(double mg, String name) async {
+    // All prefs writes go through HydrationRepository — no direct key access here.
+    await HydrationRepository.instance.logFood(mg, name);
     _shieldKey.currentState?.loadData();
   }
 

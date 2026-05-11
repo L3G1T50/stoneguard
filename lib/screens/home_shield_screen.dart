@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../widgets/banner_ad_widget.dart';
 import '../main.dart';
-import '../history_storage.dart';
+import '../hydration_repository.dart';
 import 'settings_screen.dart';
 import 'history_progress_screen.dart';
 
@@ -189,7 +189,8 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   double goalOz = 80;
   double goalMg = 200;
 
-  final HistoryStorage _historyStorage = HistoryStorage();
+  // All hydration/oxalate persistence goes through the repository.
+  final _repo = HydrationRepository.instance;
 
   Set<String> _celebratedBadges = {};
   int get _unlockedCount => _kAllBadges
@@ -204,11 +205,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
 
   String _userName = '';
   String _avatarPath = '';
-
-  String get _todayKey {
-    final now = DateTime.now();
-    return '${now.year}_${now.month}_${now.day}';
-  }
 
   Future<void> _requestNotificationPermission() async {
     final plugin = flutterLocalNotificationsPlugin
@@ -260,40 +256,25 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   // didChangeDependencies here caused extra SharedPreferences reads and
   // unnecessary setState calls on every theme / media-query change.
 
-  Future<void> _saveTodayToHistory() async {
-    final today = DateTime.now();
-    final dateStr =
-        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-
-    final existing = await _historyStorage.loadHistory();
-    final filtered = existing.where((e) => e['date'] != dateStr).toList();
-    filtered.add({
-      'date': dateStr,
-      'water_oz': waterOz,
-      'oxalate_mg': oxalateMg,
-    });
-    if (filtered.length > 730) filtered.removeAt(0);
-    await _historyStorage.saveHistory(filtered);
-  }
-
   Future<void> loadData() async {
+    // Read hydration totals via the repository (single source of truth).
+    final snapshot = await _repo.readToday();
+
+    // Read non-hydration prefs (name, avatar, badges) directly — these
+    // are not managed by HydrationRepository.
     final prefs = await SharedPreferences.getInstance();
-    final savedWater = prefs.getDouble('water_$_todayKey') ?? 0;
-    final savedOxalate = prefs.getDouble('oxalate_$_todayKey') ?? 0;
-    final savedGoalOz = prefs.getDouble('goal_water') ?? 80;
-    final savedGoalMg = prefs.getDouble('goal_oxalate') ?? 200;
     final celebratedList = prefs.getStringList('celebrated_badges') ?? [];
 
     if (!mounted) return;
     setState(() {
-      waterOz = savedWater;
-      oxalateMg = savedOxalate;
-      goalOz = savedGoalOz;
-      goalMg = savedGoalMg;
-      _userName = prefs.getString('user_name') ?? '';
-      _avatarPath = prefs.getString('avatar_path') ?? '';
+      waterOz   = snapshot.waterOz;
+      oxalateMg = snapshot.oxalateMg;
+      goalOz    = snapshot.goalOz;
+      goalMg    = snapshot.goalMg;
+      _userName    = prefs.getString('user_name')    ?? '';
+      _avatarPath  = prefs.getString('avatar_path')  ?? '';
       _celebratedBadges = celebratedList.toSet();
-      final visualFill = (savedWater / savedGoalOz).clamp(0.0, 1.0);
+      final visualFill = (snapshot.waterOz / snapshot.goalOz).clamp(0.0, 1.0);
       _fillAnimation =
           Tween<double>(begin: visualFill, end: visualFill)
               .animate(CurvedAnimation(
@@ -302,8 +283,10 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   }
 
   Future<void> _addWater(double oz) async {
-    final prefs = await SharedPreferences.getInstance();
-    final newOz = (waterOz + oz).clamp(0.0, double.infinity);
+    // Delegate the write to the repository; it handles prefs + history.
+    final newOz = await _repo.addWater(oz);
+    if (newOz < 0) return; // repository logged the error
+
     final currentAnimProg = _fillAnimation.value;
     final newVisualFill = (newOz / goalOz).clamp(0.0, 1.0);
     _fillAnimation =
@@ -312,8 +295,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                 parent: _fillController, curve: Curves.easeInOutCubic));
     _fillController.forward(from: 0);
     setState(() { waterOz = newOz; });
-    await prefs.setDouble('water_$_todayKey', newOz);
-    await _saveTodayToHistory();
     if (newOz >= goalOz) {
       _pulseController.forward(from: 0).then((_) => _pulseController.reverse());
     }
@@ -341,20 +322,18 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     );
     if (confirmed != true) return;
 
-    final prefs = await SharedPreferences.getInstance();
+    // Delegate the reset to the repository.
+    await _repo.resetToday();
+
     final currentAnimProg = _fillAnimation.value;
     _fillAnimation =
         Tween<double>(begin: currentAnimProg, end: 0).animate(CurvedAnimation(
             parent: _fillController, curve: Curves.easeInOutCubic));
     _fillController.forward(from: 0);
     setState(() {
-      waterOz = 0;
+      waterOz   = 0;
       oxalateMg = 0;
     });
-    await prefs.setDouble('water_$_todayKey', 0);
-    await prefs.setDouble('oxalate_$_todayKey', 0);
-    await prefs.setStringList('oxalate_log_$_todayKey', []);
-    await _saveTodayToHistory();
   }
 
   Color _lerpShieldColor(double p) {
@@ -552,7 +531,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
       body: SafeArea(
