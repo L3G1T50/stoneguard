@@ -71,10 +71,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     super.dispose();
   }
 
-  // NOTE: uses 'seen_onboarding' to match the key preserved in _clearAllData()
+  // Fix: use 'has_seen_onboarding' to match the key checked in splash_screen.dart
   Future<void> _finishOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('seen_onboarding', true);
+    await prefs.setBool('has_seen_onboarding', true);
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
