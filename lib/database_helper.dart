@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -13,22 +14,27 @@ class DatabaseHelper {
   static const _keyName = 'stoneguard_db_key';
   static const _secureStorage = FlutterSecureStorage();
 
+  // ── Key management ──────────────────────────────────────────────────────
+  // Generates a cryptographically secure 32-byte key on first run and
+  // stores it in FlutterSecureStorage. Subsequent calls return the stored
+  // value. Throws on failure so _initDB surfaces the error clearly.
   Future<String> _getOrCreateKey() async {
-    final existing = await _secureStorage.read(key: _keyName);
-    if (existing != null && existing.isNotEmpty) return existing;
+    try {
+      final existing = await _secureStorage.read(key: _keyName);
+      if (existing != null && existing.isNotEmpty) return existing;
 
-    // Generate a cryptographically secure 32-byte key.
-    // Random.secure() delegates to the platform CSPRNG (e.g. /dev/urandom on
-    // Android/Linux), giving each byte a full 0-255 range of independent
-    // entropy. This replaces the previous DateTime % 256 approach which
-    // produced a constant, predictable byte value across all 32 positions.
-    final rng = Random.secure();
-    final bytes = List<int>.generate(32, (_) => rng.nextInt(256));
-    final key = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-    await _secureStorage.write(key: _keyName, value: key);
-    return key;
+      final rng = Random.secure();
+      final bytes = List<int>.generate(32, (_) => rng.nextInt(256));
+      final key = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+      await _secureStorage.write(key: _keyName, value: key);
+      return key;
+    } catch (e, st) {
+      debugPrint('[DatabaseHelper] _getOrCreateKey error: $e\n$st');
+      rethrow; // intentional: a missing key should surface, not be swallowed
+    }
   }
 
+  // ── Database accessor ────────────────────────────────────────────────────
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDB(_dbName);
@@ -39,7 +45,6 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
     final key = await _getOrCreateKey();
-
     return await openDatabase(path,
         password: key, version: 1, onCreate: _createDB);
   }
@@ -58,57 +63,91 @@ class DatabaseHelper {
     ''');
   }
 
+  // ── CRUD ─────────────────────────────────────────────────────────────────
+
+  /// Returns the new row id, or -1 on failure.
   Future<int> insertEntry(Map<String, dynamic> entry) async {
-    final db = await instance.database;
-    return await db.insert('journal_entries', {
-      'date': entry['date'],
-      'pain': entry['pain'],
-      'note': entry['note'],
-      'side': entry['side'] ?? 'None',
-      'stone_passed': (entry['stonePassed'] == true) ? 1 : 0,
-      'symptoms': (entry['symptoms'] as List).join(','),
-    });
-  }
-
-  Future<List<Map<String, dynamic>>> getAllEntries() async {
-    final db = await instance.database;
-    final rows = await db.query('journal_entries', orderBy: 'date DESC');
-    return rows.map((row) => {
-      'id': row['id'],
-      'date': row['date'],
-      'pain': row['pain'],
-      'note': row['note'],
-      'side': row['side'],
-      'stonePassed': row['stone_passed'] == 1,
-      'symptoms': row['symptoms'].toString().isEmpty
-          ? <String>[]
-          : row['symptoms'].toString().split(','),
-    }).toList();
-  }
-
-  Future<int> updateEntry(int id, Map<String, dynamic> entry) async {
-    final db = await instance.database;
-    return await db.update(
-      'journal_entries',
-      {
+    try {
+      final db = await instance.database;
+      return await db.insert('journal_entries', {
+        'date': entry['date'],
         'pain': entry['pain'],
         'note': entry['note'],
         'side': entry['side'] ?? 'None',
         'stone_passed': (entry['stonePassed'] == true) ? 1 : 0,
         'symptoms': (entry['symptoms'] as List).join(','),
-      },
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+      });
+    } catch (e, st) {
+      debugPrint('[DatabaseHelper] insertEntry error: $e\n$st');
+      return -1;
+    }
   }
 
+  /// Returns all journal entries, or [] on failure.
+  Future<List<Map<String, dynamic>>> getAllEntries() async {
+    try {
+      final db = await instance.database;
+      final rows = await db.query('journal_entries', orderBy: 'date DESC');
+      return rows.map((row) => {
+        'id': row['id'],
+        'date': row['date'],
+        'pain': row['pain'],
+        'note': row['note'],
+        'side': row['side'],
+        'stonePassed': row['stone_passed'] == 1,
+        'symptoms': row['symptoms'].toString().isEmpty
+            ? <String>[]
+            : row['symptoms'].toString().split(','),
+      }).toList();
+    } catch (e, st) {
+      debugPrint('[DatabaseHelper] getAllEntries error: $e\n$st');
+      return [];
+    }
+  }
+
+  /// Returns the number of rows updated, or -1 on failure.
+  Future<int> updateEntry(int id, Map<String, dynamic> entry) async {
+    try {
+      final db = await instance.database;
+      return await db.update(
+        'journal_entries',
+        {
+          'pain': entry['pain'],
+          'note': entry['note'],
+          'side': entry['side'] ?? 'None',
+          'stone_passed': (entry['stonePassed'] == true) ? 1 : 0,
+          'symptoms': (entry['symptoms'] as List).join(','),
+        },
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    } catch (e, st) {
+      debugPrint('[DatabaseHelper] updateEntry error: $e\n$st');
+      return -1;
+    }
+  }
+
+  /// Returns the number of rows deleted, or -1 on failure.
   Future<int> deleteEntry(int id) async {
-    final db = await instance.database;
-    return await db.delete('journal_entries', where: 'id = ?', whereArgs: [id]);
+    try {
+      final db = await instance.database;
+      return await db.delete(
+        'journal_entries',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    } catch (e, st) {
+      debugPrint('[DatabaseHelper] deleteEntry error: $e\n$st');
+      return -1;
+    }
   }
 
-  Future closeDB() async {
-    final db = await instance.database;
-    db.close();
+  Future<void> closeDB() async {
+    try {
+      final db = await instance.database;
+      await db.close();
+    } catch (e, st) {
+      debugPrint('[DatabaseHelper] closeDB error: $e\n$st');
+    }
   }
 }

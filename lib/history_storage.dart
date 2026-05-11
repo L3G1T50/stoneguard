@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:encrypt/encrypt.dart' as enc;
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -16,68 +17,79 @@ class HistoryStorage {
   static const _secure        = FlutterSecureStorage();
 
   // ── Key management ────────────────────────────────────────────────────────
-  // Returns the base64url-encoded 32-byte AES key, creating it on first run.
-  // Random.secure() uses the platform CSPRNG (/dev/urandom on Android).
   Future<enc.Key> _getOrCreateKey() async {
     final existing = await _secure.read(key: _keyEncKey);
     if (existing != null && existing.isNotEmpty) {
       return enc.Key(base64Url.decode(existing));
     }
-
     final rng   = Random.secure();
-    final bytes = Uint8List.fromList(List<int>.generate(32, (_) => rng.nextInt(256)));
+    final bytes = Uint8List.fromList(
+        List<int>.generate(32, (_) => rng.nextInt(256)));
     await _secure.write(key: _keyEncKey, value: base64UrlEncode(bytes));
     return enc.Key(bytes);
   }
 
   // ── Save ──────────────────────────────────────────────────────────────────
+  /// Encrypts [entries] with AES-256-CBC and writes to SharedPreferences.
+  /// Logs and swallows any error so a failed save never crashes the app.
   Future<void> saveHistory(List<Map<String, dynamic>> entries) async {
-    final prefs = await SharedPreferences.getInstance();
-    final key   = await _getOrCreateKey();
+    try {
+      final prefs     = await SharedPreferences.getInstance();
+      final key       = await _getOrCreateKey();
+      final iv        = enc.IV.fromSecureRandom(16);
+      final encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
+      final encrypted = encrypter.encrypt(jsonEncode(entries), iv: iv);
 
-    // Fresh random IV on every save so identical data never yields the
-    // same ciphertext (semantic security).
-    final iv        = enc.IV.fromSecureRandom(16);
-    final encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
-    final encrypted = encrypter.encrypt(jsonEncode(entries), iv: iv);
+      // Store as base64( iv_bytes || cipher_bytes )
+      final combined = Uint8List(16 + encrypted.bytes.length)
+        ..setRange(0,  16,                          iv.bytes)
+        ..setRange(16, 16 + encrypted.bytes.length, encrypted.bytes);
 
-    // Store as base64( iv_bytes || cipher_bytes )
-    final combined = Uint8List(16 + encrypted.bytes.length)
-      ..setRange(0,  16,                    iv.bytes)
-      ..setRange(16, 16 + encrypted.bytes.length, encrypted.bytes);
-
-    await prefs.setString(_keyHistoryEnc, base64UrlEncode(combined));
-    await prefs.remove(_keyHistory); // remove legacy plaintext key if present
+      await prefs.setString(_keyHistoryEnc, base64UrlEncode(combined));
+      await prefs.remove(_keyHistory); // remove legacy plaintext key if present
+    } catch (e, st) {
+      debugPrint('[HistoryStorage] saveHistory error: $e\n$st');
+      // Do not rethrow — a failed save should not crash the app.
+    }
   }
 
   // ── Load ──────────────────────────────────────────────────────────────────
+  /// Decrypts and returns stored history.
+  /// Returns [] on any error so the UI always gets a valid (empty) list.
   Future<List<Map<String, dynamic>>> loadHistory() async {
-    final prefs = await SharedPreferences.getInstance();
+    try {
+      final prefs  = await SharedPreferences.getInstance();
+      final encStr = prefs.getString(_keyHistoryEnc);
 
-    // ── New encrypted format ──
-    final encStr = prefs.getString(_keyHistoryEnc);
-    if (encStr != null && encStr.isNotEmpty) {
-      final key      = await _getOrCreateKey();
-      final combined = base64Url.decode(encStr);
+      // ── New AES-encrypted format ──
+      if (encStr != null && encStr.isNotEmpty) {
+        try {
+          final key        = await _getOrCreateKey();
+          final combined   = base64Url.decode(encStr);
+          final iv         = enc.IV(Uint8List.fromList(combined.sublist(0, 16)));
+          final cipherBytes = Uint8List.fromList(combined.sublist(16));
+          final encrypter  = enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
+          final plain      = encrypter.decrypt(enc.Encrypted(cipherBytes), iv: iv);
+          return (jsonDecode(plain) as List<dynamic>).cast<Map<String, dynamic>>();
+        } catch (e, st) {
+          debugPrint('[HistoryStorage] loadHistory decrypt error: $e\n$st');
+          return [];
+        }
+      }
 
-      // Split IV (first 16 bytes) from ciphertext (rest)
-      final iv         = enc.IV(Uint8List.fromList(combined.sublist(0, 16)));
-      final cipherBytes = Uint8List.fromList(combined.sublist(16));
-
-      final encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
-      final plain     = encrypter.decrypt(
-        enc.Encrypted(cipherBytes),
-        iv: iv,
-      );
-
-      final list = jsonDecode(plain) as List<dynamic>;
-      return list.cast<Map<String, dynamic>>();
+      // ── Legacy plaintext fallback ──
+      try {
+        final legacy = prefs.getStringList(_keyHistory) ?? [];
+        return legacy
+            .map((e) => jsonDecode(e) as Map<String, dynamic>)
+            .toList();
+      } catch (e, st) {
+        debugPrint('[HistoryStorage] loadHistory legacy decode error: $e\n$st');
+        return [];
+      }
+    } catch (e, st) {
+      debugPrint('[HistoryStorage] loadHistory error: $e\n$st');
+      return [];
     }
-
-    // ── Legacy plaintext fallback (users upgrading from older builds) ──
-    final legacy = prefs.getStringList(_keyHistory) ?? [];
-    return legacy
-        .map((e) => jsonDecode(e) as Map<String, dynamic>)
-        .toList();
   }
 }
