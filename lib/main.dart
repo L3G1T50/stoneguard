@@ -58,40 +58,40 @@ Future<void> requestExactAlarmPermission() async {
   }
 }
 
-class MyApp extends StatefulWidget {
+// ─── MyApp ────────────────────────────────────────────────────────────────────
+// ThemeNotifierProvider (defined in app_theme.dart) owns the single listener
+// on themeNotifier. It calls setState on its own State when the theme changes,
+// which rebuilds the _ThemeNotifierScope InheritedWidget and causes MaterialApp
+// below it to pick up the new themeMode.
+//
+// Previously _MyAppState ALSO added its own listener and called setState, which
+// created a second unnecessary rebuild cycle on every theme toggle. That
+// duplicate listener has been removed. _MyAppState is now a plain StatelessWidget.
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  @override
-  void initState() {
-    super.initState();
-    themeNotifier.addListener(_onThemeChange);
-  }
-
-  @override
-  void dispose() {
-    themeNotifier.removeListener(_onThemeChange);
-    super.dispose();
-  }
-
-  void _onThemeChange() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
     return ThemeNotifierProvider(
       notifier: themeNotifier,
-      child: MaterialApp(
-        title: 'StoneGuard',
-        debugShowCheckedModeBanner: false,
-        theme: buildAppTheme(),
-        darkTheme: buildDarkTheme(),
-        themeMode: themeNotifier.mode,
-        home: const SplashScreen(),
-      ),
+      child: _ThemeConsumer(),
+    );
+  }
+}
+
+// Reads the current mode from the InheritedWidget so MaterialApp always
+// reflects the latest theme without _MyAppState needing its own listener.
+class _ThemeConsumer extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final notifier = ThemeNotifier.of(context);
+    return MaterialApp(
+      title: 'StoneGuard',
+      debugShowCheckedModeBanner: false,
+      theme: buildAppTheme(),
+      darkTheme: buildDarkTheme(),
+      themeMode: notifier.mode,
+      home: const SplashScreen(),
     );
   }
 }
@@ -121,6 +121,9 @@ class _MainShellState extends State<MainShell> {
     // All prefs writes go through HydrationRepository — no direct key access here.
     await HydrationRepository.instance.logFood(mg, name);
     _shieldKey.currentState?.loadData();
+    // No setState here — the shield refreshes itself via loadData above.
+    // Rebuilding MainShell (NavigationBar + IndexedStack) is not needed
+    // just because a food was logged.
   }
 
   @override
