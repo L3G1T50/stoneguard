@@ -129,8 +129,8 @@ class _MainShellState extends State<MainShell> {
     final current = prefs.getDouble(oxKey) ?? 0.0;
     await prefs.setDouble(oxKey, current + mg);
 
+    // Shield refreshes via its own loadData(); no need to rebuild MainShell.
     _shieldKey.currentState?.loadData();
-    if (mounted) setState(() {});
   }
 
   @override

@@ -255,11 +255,10 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     if (state == AppLifecycleState.resumed) loadData();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    loadData();
-  }
+  // didChangeDependencies intentionally removed — loadData is already called
+  // in initState and didChangeAppLifecycleState(resumed). Overriding
+  // didChangeDependencies here caused extra SharedPreferences reads and
+  // unnecessary setState calls on every theme / media-query change.
 
   Future<void> _saveTodayToHistory() async {
     final today = DateTime.now();
