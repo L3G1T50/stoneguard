@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — StoneGuard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --teal:        #01696f;
+      --teal-dark:   #00474d;
+      --teal-light:  #e0f2f1;
+      --bg:          #f4f6f8;
+      --surface:     #ffffff;
+      --border:      #dde3e7;
+      --text:        #1a2530;
+      --text-muted:  #546e7a;
+      --text-faint:  #90a4ae;
+      --radius:      12px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:         #0f1419;
+        --surface:    #1a2332;
+        --border:     #2e4055;
+        --text:       #e8edf2;
+        --text-muted: #8fa8be;
+        --text-faint: #4a6478;
+        --teal:       #4f98a3;
+        --teal-light: #0d2b28;
+      }
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: var(--text);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--teal);
+      color: #fff;
+      padding: 48px 24px 40px;
+      text-align: center;
+    }
+
+    .logo-mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 56px;
+      height: 56px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 16px;
+      margin-bottom: 16px;
+    }
+
+    header h1 {
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+
+    header p {
+      font-size: 0.95rem;
+      opacity: 0.85;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    /* ── Meta bar ── */
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 20px;
+      margin-bottom: 40px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .meta span { display: flex; align-items: center; gap: 6px; }
+
+    .badge {
+      background: var(--teal-light);
+      color: var(--teal);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 99px;
+      letter-spacing: 0.3px;
+    }
+
+    /* ── Section cards ── */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 28px 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .section-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: var(--teal-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--teal);
+    }
+
+    h2 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.2px;
+    }
+
+    p { color: var(--text-muted); margin-bottom: 12px; }
+    p:last-child { margin-bottom: 0; }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 10px 0 0;
+    }
+
+    ul li {
+      display: flex;
+      gap: 10px;
+      color: var(--text-muted);
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.95rem;
+    }
+
+    ul li:last-child { border-bottom: none; }
+
+    ul li::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--teal);
+      margin-top: 8px;
+      flex-shrink: 0;
+    }
+
+    /* ── Highlight box ── */
+    .highlight {
+      background: var(--teal-light);
+      border-left: 3px solid var(--teal);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 14px 18px;
+      margin: 14px 0;
+      font-size: 0.93rem;
+      color: var(--text);
+    }
+
+    /* ── Contact card ── */
+    .contact-card {
+      background: var(--teal);
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-top: 32px;
+      text-align: center;
+    }
+
+    .contact-card h2 { color: #fff; margin-bottom: 8px; font-size: 1.1rem; }
+    .contact-card p { color: rgba(255,255,255,0.85); margin-bottom: 16px; }
+
+    .contact-card a {
+      display: inline-block;
+      background: #fff;
+      color: var(--teal-dark);
+      font-weight: 700;
+      font-size: 0.9rem;
+      padding: 10px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+
+    .contact-card a:hover { opacity: 0.92; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      font-size: 0.82rem;
+      color: var(--text-faint);
+      padding: 0 24px 40px;
+    }
+
+    footer a { color: var(--teal); text-decoration: none; }
+
+    @media (max-width: 480px) {
+      .section { padding: 20px 18px; }
+      header { padding: 36px 18px 30px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    </svg>
+  </div>
+  <h1>StoneGuard Privacy Policy</h1>
+  <p>Your health data stays on your device. Always.</p>
+</header>
+
+<div class="container">
+
+  <div class="meta">
+    <span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Effective date: May 11, 2026
+    </span>
+    <span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Developer: Nicholas Haliday
+    </span>
+    <span class="badge">Android</span>
+    <span class="badge">Health App</span>
+  </div>
+
+  <!-- 1. Overview -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+      <h2>Overview</h2>
+    </div>
+    <p>StoneGuard (&ldquo;the App&rdquo;) is a kidney stone prevention companion built by Nicholas Haliday (&ldquo;Developer,&rdquo; &ldquo;we,&rdquo; &ldquo;us&rdquo;). This policy explains what data the App accesses, how it is stored, and your rights over it.</p>
+    <div class="highlight">
+      &#128274; StoneGuard does <strong>not</strong> transmit your health data to any server. All personal health information is stored locally on your device and encrypted at rest.
+    </div>
+  </div>
+
+  <!-- 2. Data We Collect -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+      </div>
+      <h2>Data You Enter (Stored Locally Only)</h2>
+    </div>
+    <p>The following data is entered voluntarily by you and stored only on your device. It is never uploaded or shared:</p>
+    <ul>
+      <li>Daily water intake logs</li>
+      <li>Dietary oxalate intake and food logs</li>
+      <li>Pain journal entries (pain level, side, notes, symptoms)</li>
+      <li>Stone-passed events</li>
+      <li>Historical progress data</li>
+      <li>App preferences (dark mode, daily hydration goal, notification settings)</li>
+    </ul>
+  </div>
+
+  <!-- 3. How Data Is Stored -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <h2>How Your Data Is Protected</h2>
+    </div>
+    <p>Your health data is protected using industry-standard encryption:</p>
+    <ul>
+      <li><strong>Journal entries</strong> are stored in an AES-256 encrypted SQLite database (SQLCipher). The encryption key is generated using a cryptographically secure random number generator and stored in Android&rsquo;s secure hardware-backed Keystore via FlutterSecureStorage.</li>
+      <li><strong>Daily history data</strong> is encrypted with AES-256-CBC using a fresh random IV on every save. The key is also stored in the secure Keystore.</li>
+      <li><strong>Preferences</strong> (non-sensitive: theme, goal settings) are stored in SharedPreferences in plaintext.</li>
+    </ul>
+    <div class="highlight">
+      Your encryption keys never leave your device and are not accessible to the Developer.
+    </div>
+  </div>
+
+  <!-- 4. Third-Party Services -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      </div>
+      <h2>Third-Party Services</h2>
+    </div>
+    <p>StoneGuard uses the following third-party SDKs. Each has its own privacy policy linked below:</p>
+    <ul>
+      <li>
+        <div>
+          <strong>Google AdMob</strong> &mdash; displays ads to support the free version of the app. AdMob may collect device identifiers and usage data to serve relevant ads. You can opt out of personalized ads in your device settings under <em>Google &rsaquo; Ads</em>.<br>
+          <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" style="color: var(--teal); font-size:0.88rem;">Google Privacy Policy &rarr;</a>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Google Fonts (Inter)</strong> &mdash; fonts are bundled with the app and loaded locally. No network requests are made for fonts at runtime.
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Flutter Local Notifications</strong> &mdash; schedules and displays reminders entirely on-device. No data leaves your device.
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 5. Permissions -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </div>
+      <h2>App Permissions</h2>
+    </div>
+    <p>StoneGuard requests only the permissions it needs:</p>
+    <ul>
+      <li><strong>Schedule Exact Alarms</strong> &mdash; required to deliver hydration reminders at the times you set. Used only for local notifications.</li>
+      <li><strong>Post Notifications</strong> &mdash; required to show reminder notifications on Android 13+. No notifications are sent without your permission.</li>
+      <li><strong>Internet</strong> &mdash; required solely for AdMob to load ads. Your health data is never transmitted over the internet.</li>
+    </ul>
+  </div>
+
+  <!-- 6. Children -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <h2>Children&rsquo;s Privacy (COPPA)</h2>
+    </div>
+    <p>StoneGuard is intended for users aged 13 and older. We do not knowingly collect personal information from children under 13. If you believe a child under 13 has used the app, please contact us and we will provide guidance on deleting any locally stored data.</p>
+  </div>
+
+  <!-- 7. Data Deletion -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </div>
+      <h2>Deleting Your Data</h2>
+    </div>
+    <p>Because all data is stored locally on your device, you have full control over it at all times:</p>
+    <ul>
+      <li>You can delete individual journal entries from within the app.</li>
+      <li>You can reset all daily data from the Settings screen.</li>
+      <li>Uninstalling StoneGuard permanently removes all app data from your device.</li>
+    </ul>
+  </div>
+
+  <!-- 8. Changes -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </div>
+      <h2>Changes to This Policy</h2>
+    </div>
+    <p>We may update this Privacy Policy from time to time. When we do, we will update the effective date at the top of this page. Continued use of the app after any changes constitutes your acceptance of the updated policy.</p>
+    <p>For significant changes, we will notify you via an in-app message or Play Store update notes.</p>
+  </div>
+
+  <!-- Contact -->
+  <div class="contact-card">
+    <h2>Questions or Concerns?</h2>
+    <p>We&rsquo;re happy to answer any questions about this policy or your data.</p>
+    <a href="mailto:djxl3g1t@gmail.com">djxl3g1t@gmail.com</a>
+  </div>
+
+</div>
+
+<footer>
+  <p>StoneGuard &copy; 2026 Nicholas Haliday &nbsp;&middot;&nbsp; <a href="https://github.com/L3G1T50/stoneguard" target="_blank" rel="noopener noreferrer">GitHub</a></p>
+</footer>
+
+</body>
+</html>
