@@ -358,4 +358,416 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     await _saveTodayToHistory();
   }
 
-  // ... rest of file unchanged ...
+  Color _lerpShieldColor(double p) {
+    const stops = [
+      (t: 0.00, c: Color(0xFF78909C)),
+      (t: 0.25, c: Color(0xFFFFA726)),
+      (t: 0.50, c: Color(0xFFFFEE58)),
+      (t: 0.75, c: Color(0xFF66BB6A)),
+      (t: 1.00, c: Color(0xFF00BCD4)),
+    ];
+    for (int i = 0; i < stops.length - 1; i++) {
+      if (p <= stops[i + 1].t) {
+        final t = (p - stops[i].t) / (stops[i + 1].t - stops[i].t);
+        return Color.lerp(stops[i].c, stops[i + 1].c, t)!;
+      }
+    }
+    return stops.last.c;
+  }
+
+  Color _oxalateColor(double mg) {
+    if (mg >= goalMg) return const Color(0xFFE53935);
+    if (mg >= goalMg * 0.75) return const Color(0xFFFFA726);
+    if (mg >= goalMg * 0.50) return const Color(0xFFFFEE58);
+    return const Color(0xFF66BB6A);
+  }
+
+  String _oxalateStatus(double mg) {
+    if (mg >= goalMg) return '⛔ Daily limit reached — no more high-oxalate foods!';
+    if (mg >= goalMg * 0.75) return '⚠️ Getting close to your limit — be careful!';
+    if (mg >= goalMg * 0.50) return '🟡 Moderate intake — watch your next meal';
+    return '✅ Great job — staying well within your limit!';
+  }
+
+  String _motivationalText(double oz) {
+    if (oz >= goalOz * 1.25) return '🌊 Super-hydrated! You\'re crushing it today!';
+    if (oz >= goalOz) return '🎉 Daily goal reached! Keep going — more is great!';
+    if (oz >= goalOz * 0.75) return '💪 Almost there — keep it up!';
+    if (oz >= goalOz * 0.50) return '👍 Halfway there, great progress!';
+    if (oz >= goalOz * 0.25) return '💧 Good start — keep drinking!';
+    return '🛡️ Start hydrating to build your shield!';
+  }
+
+  Widget _waterButton(int oz) {
+    return ElevatedButton(
+      onPressed: () => _addWater(oz.toDouble()),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.teal,
+        foregroundColor: Colors.white,
+        elevation: 2,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      child: Text('+$oz oz',
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+    );
+  }
+
+  Widget _buildWaterMeter() {
+    return AnimatedBuilder(
+      animation:
+          Listenable.merge([_fillAnimation, _waveController, _pulseAnimation]),
+      builder: (context, _) {
+        final fillProg = _fillAnimation.value.clamp(0.0, 1.0);
+        final ringColor = _lerpShieldColor(fillProg);
+        final wavePhase = _waveController.value * 2 * pi;
+        final displayOz = waterOz;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+
+        return ScaleTransition(
+          scale: _pulseAnimation,
+          child: SizedBox(
+            height: 230,
+            width: 230,
+            child: Stack(alignment: Alignment.center, children: [
+              SizedBox(
+                height: 230,
+                width: 230,
+                child: CustomPaint(
+                  painter: _GlowRingPainter(
+                    progress: fillProg,
+                    color: ringColor,
+                    strokeWidth: 18,
+                    isGlow: true,
+                  ),
+                ),
+              ),
+              SizedBox(
+                height: 230,
+                width: 230,
+                child: CustomPaint(
+                  painter: _GlowRingPainter(
+                    progress: fillProg,
+                    color: ringColor,
+                    strokeWidth: 14,
+                  ),
+                ),
+              ),
+              ClipOval(
+                child: SizedBox(
+                  height: 190,
+                  width: 190,
+                  child: CustomPaint(
+                    painter: _WavePainter(
+                      fillLevel: fillProg,
+                      wavePhase: wavePhase,
+                      waterColor: ringColor,
+                    ),
+                  ),
+                ),
+              ),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '${displayOz.toStringAsFixed(displayOz == displayOz.roundToDouble() ? 0 : 1)} oz',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  Text(
+                    'of ${goalOz.toInt()} oz',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? Colors.white54 : Colors.black45,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${(fillProg * 100).toInt()}%',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: ringColor,
+                    ),
+                  ),
+                ],
+              ),
+            ]),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildOxalateCard(bool isDark) {
+    final progress = (oxalateMg / goalMg).clamp(0.0, 1.0);
+    final oxColor = _oxalateColor(oxalateMg);
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Oxalate Intake',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                Text(
+                  '${oxalateMg.toStringAsFixed(1)} / ${goalMg.toInt()} mg',
+                  style: TextStyle(
+                      fontSize: 14,
+                      color: oxColor,
+                      fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 10,
+                backgroundColor: isDark ? Colors.white12 : Colors.black12,
+                valueColor: AlwaysStoppedAnimation<Color>(oxColor),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              _oxalateStatus(oxalateMg),
+              style: TextStyle(fontSize: 13, color: oxColor),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ── Top bar ──
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
+                  // Avatar
+                  GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const SettingsScreen()),
+                    ).then((_) => loadData()),
+                    child: CircleAvatar(
+                      radius: 22,
+                      backgroundColor: Colors.teal.withValues(alpha: 0.2),
+                      backgroundImage: _avatarPath.isNotEmpty
+                          ? FileImage(File(_avatarPath))
+                          : null,
+                      child: _avatarPath.isEmpty
+                          ? const Icon(Icons.person, color: Colors.teal)
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _userName.isNotEmpty
+                              ? 'Hi, $_userName 👋'
+                              : 'StoneGuard',
+                          style: const TextStyle(
+                              fontSize: 17, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          _motivationalText(waterOz),
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? Colors.white54
+                                  : Colors.black54),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Badges chip
+                  GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const HistoryProgressScreen()),
+                    ).then((_) => loadData()),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        children: [
+                          const Text('🏅', style: TextStyle(fontSize: 14)),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$_unlockedCount/${_kAllBadges.length}',
+                            style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.teal),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Reset button
+                  IconButton(
+                    icon: const Icon(Icons.refresh_rounded),
+                    tooltip: 'Reset today',
+                    onPressed: _resetAll,
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Scrollable body ──
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 8),
+
+                    // Water meter
+                    Center(child: _buildWaterMeter()),
+
+                    const SizedBox(height: 20),
+
+                    // Quick-add water buttons
+                    GridView.count(
+                      crossAxisCount: 4,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 8,
+                      childAspectRatio: 2.0,
+                      children: [8, 12, 16, 20]
+                          .map((oz) => _waterButton(oz))
+                          .toList(),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Oxalate card
+                    _buildOxalateCard(isDark),
+
+                    const SizedBox(height: 16),
+
+                    // Navigation cards row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _NavCard(
+                            icon: Icons.history_rounded,
+                            label: 'History',
+                            color: Colors.indigo,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      const HistoryProgressScreen()),
+                            ).then((_) => loadData()),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _NavCard(
+                            icon: Icons.settings_rounded,
+                            label: 'Settings',
+                            color: Colors.blueGrey,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const SettingsScreen()),
+                            ).then((_) => loadData()),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Banner ad
+                    const BannerAdWidget(),
+
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── SMALL NAV CARD ───────────────────────────────────────────────────────────
+class _NavCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _NavCard({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Card(
+        elevation: 2,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: color, size: 28),
+              const SizedBox(height: 6),
+              Text(label,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                      fontSize: 13)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
