@@ -1,5 +1,6 @@
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -7,16 +8,34 @@ class DatabaseHelper {
 
   DatabaseHelper._init();
 
+  static const _dbName = 'stoneguard.db';
+  static const _keyName = 'stoneguard_db_key';
+  static const _secureStorage = FlutterSecureStorage();
+
+  Future<String> _getOrCreateKey() async {
+    final existing = await _secureStorage.read(key: _keyName);
+    if (existing != null && existing.isNotEmpty) return existing;
+
+    // 32-byte random key as hex string
+    final bytes = List<int>.generate(32, (i) => DateTime.now().millisecondsSinceEpoch % 256);
+    final key = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    await _secureStorage.write(key: _keyName, value: key);
+    return key;
+  }
+
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('stoneguard.db');
+    _database = await _initDB(_dbName);
     return _database!;
   }
 
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+    final key = await _getOrCreateKey();
+
+    return await openDatabase(path,
+        password: key, version: 1, onCreate: _createDB);
   }
 
   Future _createDB(Database db, int version) async {
