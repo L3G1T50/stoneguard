@@ -10,20 +10,20 @@
     <!-- Required alongside CALL_PHONE so app works on tablets/devices without a SIM -->
     <uses-feature android:name="android.hardware.telephony" android:required="false"/>
 
+    <!--
+        Fix 10: android:allowBackup="false" disables system backup so Android cannot
+        copy app data to cloud or adb without the user explicitly exporting it.
+        This protects encrypted DB and prefs on older Android versions where backup
+        extracts raw files before encryption is applied.
+
+        Fix 10: android:networkSecurityConfig enforces HTTPS-only network traffic.
+        Prevents accidental plain-HTTP calls leaking data in transit.
+    -->
     <application
         android:label="StoneGuard"
         android:icon="@mipmap/ic_launcher"
-
-        <!-- Fix 10: Disable system backup so Android cannot copy app data
-             to cloud or adb without the user explicitly exporting it.
-             This protects encrypted DB and prefs on older Android versions
-             where backup extracts raw files before encryption is applied. -->
         android:allowBackup="false"
         android:fullBackupContent="false"
-
-        <!-- Fix 10: Enforce HTTPS-only network traffic.
-             Prevents accidental plain-HTTP calls (e.g. from a future SDK
-             or misconfigured AdMob test endpoint) leaking data in transit. -->
         android:networkSecurityConfig="@xml/network_security_config">
 
         <!-- AdMob App ID -->
