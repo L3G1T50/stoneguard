@@ -8,6 +8,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import '../screens/about_screen.dart';
 import '../screens/doctor_view_screen.dart';
+import '../screens/privacy_policy_screen.dart';  // Fix 11
+import '../consent_manager.dart';                 // Fix 11
 import '../main.dart';
 import 'paywall_screen.dart';
 import '../theme/app_theme.dart';
@@ -30,6 +32,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   int    _userAge      = 0;
   String _stoneType    = 'Unknown / Not diagnosed';
   bool   _darkMode     = false;
+  bool   _adsConsented = false; // Fix 11: track consent state for display
 
   // ── Quiet Hours ──
   bool _quietHoursEnabled = false;
@@ -53,6 +56,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
+    final consented = await ConsentManager.hasConsented(); // Fix 11
     setState(() {
       _waterGoal            = prefs.getDouble('goal_water')          ?? 80;
       _oxalateGoal          = prefs.getDouble('goal_oxalate')        ?? 200;
@@ -65,6 +69,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _userAge              = prefs.getInt('user_age')               ?? 0;
       _stoneType            = prefs.getString('stone_type')          ?? 'Unknown / Not diagnosed';
       _darkMode             = prefs.getBool('dark_mode')             ?? false;
+      _adsConsented         = consented;                              // Fix 11
       _quietStart = TimeOfDay(
         hour:   prefs.getInt('quiet_start_hour')   ?? 22,
         minute: prefs.getInt('quiet_start_minute') ?? 0,
@@ -380,6 +385,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final p = await SharedPreferences.getInstance();
       await p.setString('avatar_path', picked.path);
       setState(() => _avatarPath = picked.path);
+    }
+  }
+
+  // Fix 11: Revoke ad consent from Settings → Privacy
+  Future<void> _revokeAdConsent() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Revoke Ad Consent?'),
+        content: const Text(
+          'Ads will no longer be shown. You can re-enable them from this '
+          'screen at any time.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Revoke'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await ConsentManager.revokeConsent();
+      if (!mounted) return;
+      setState(() => _adsConsented = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ad consent revoked. Ads will not appear.')),
+      );
     }
   }
 
@@ -999,6 +1036,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ],
                           ),
                         ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ── PRIVACY ── (Fix 11)
+                const AppSectionHeader('Privacy'),
+                AppCard(
+                  child: Column(
+                    children: [
+                      _row(
+                        Icons.privacy_tip_outlined,
+                        AppColors.teal,
+                        'Privacy Policy',
+                        'How your health data is stored and protected',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const PrivacyPolicyScreen()),
+                        ),
+                      ),
+                      const Divider(height: 24),
+                      _row(
+                        Icons.ads_click_outlined,
+                        _adsConsented
+                            ? AppColors.teal
+                            : AppColors.textHint,
+                        'Ad Preferences',
+                        _adsConsented
+                            ? 'Personalised ads: On — tap to revoke'
+                            : 'Ads declined — no ad tracking active',
+                        onTap: _adsConsented ? _revokeAdConsent : null,
                       ),
                     ],
                   ),
