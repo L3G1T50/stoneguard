@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Fix 10: Network Security Config
+  Enforces HTTPS-only for all network traffic in StoneGuard.
+  Plain HTTP (cleartext) is completely blocked.
+  This prevents any SDK, ad network, or future integration from
+  accidentally sending data over unencrypted connections.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <!-- Trust the standard system CA store only.
+                 No user-installed or custom certificates are trusted,
+                 which prevents man-in-the-middle attacks via custom CAs. -->
+            <certificates src="system"/>
+        </trust-anchors>
+    </base-config>
+</network-security-config>
