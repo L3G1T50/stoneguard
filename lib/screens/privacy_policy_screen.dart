@@ -4,10 +4,6 @@
 // This screen is linked from SettingsScreen > Privacy Policy.
 // It must match the actual data practices described in your Google Play
 // store listing and external privacy policy URL.
-//
-// UPDATE THE PLACEHOLDERS before submitting to Play Store:
-//   [YOUR EMAIL]  → your support/privacy contact email
-//   [YOUR NAME / COMPANY]  → your legal name or business name
 
 import 'package:flutter/material.dart';
 
@@ -165,8 +161,8 @@ class _PolicyBody extends StatelessWidget {
         smallSpacer,
         const Text(
           'Questions about this policy? Contact us at:\n'
-          '[YOUR EMAIL]\n\n'
-          'Developer: [YOUR NAME / COMPANY]',
+          'L3G1T.Trades@gmail.com\n\n'
+          'Developer: Nicola Lacaprara',
           style: body,
         ),
         spacer,
