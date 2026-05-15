@@ -1,19 +1,48 @@
 // ─── HYDRATION REPOSITORY ────────────────────────────────────────────────────
 // Single source of truth for all hydration and oxalate data.
-// All current-day values (water_*, oxalate_*, oxalate_log_*, goal_*) are
-// stored via SecurePrefs (AES-256-CBC) instead of plain SharedPreferences.
 //
-// Batch 2 additions:
-//   Fix 2 — _writeLock mutex serialises all writes so rapid taps never
-//            cause a double-write / lost-update race condition.
-//   Fix 6 — Input validation guards at the top of every write method.
+// Batch 2 (already merged):
+//   Fix 2 — _writeLock mutex serialises all writes.
+//   Fix 6 — Input validation guards at every write method.
+//
+// Batch 3 additions:
+//   Fix 3 — All debugPrint calls replaced with AppLogger.error() so release
+//            builds produce zero log output (no stack traces, no PHI).
+//   Fix 5 — addWater and logFood now return SaveResult<double> instead of a
+//            raw double so UI callers can easily detect and surface failures.
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'history_storage.dart';
 import 'secure_prefs.dart';
+import 'app_logger.dart';
 
-/// Holds the current day's hydration snapshot.
+// ─── SaveResult ───────────────────────────────────────────────────────────────
+/// Sealed result type returned by write operations.
+/// Pattern-match in the UI to decide whether to show a snackbar.
+///
+/// Example:
+///   final result = await HydrationRepository.instance.addWater(8);
+///   if (result is SaveFailure) {
+///     ScaffoldMessenger.of(context).showSnackBar(
+///       const SnackBar(content: Text('Could not save — please try again.')),
+///     );
+///   }
+sealed class SaveResult<T> {
+  const SaveResult();
+}
+
+final class SaveSuccess<T> extends SaveResult<T> {
+  final T value;
+  const SaveSuccess(this.value);
+}
+
+final class SaveFailure<T> extends SaveResult<T> {
+  final String reason;
+  const SaveFailure(this.reason);
+}
+
+// ─── HydrationSnapshot ────────────────────────────────────────────────────────
 class HydrationSnapshot {
   final double waterOz;
   final double oxalateMg;
@@ -28,30 +57,24 @@ class HydrationSnapshot {
   });
 }
 
+// ─── HydrationRepository ─────────────────────────────────────────────────────
 class HydrationRepository {
-  // Singleton — one instance for the whole app lifetime.
   static final HydrationRepository instance = HydrationRepository._();
   HydrationRepository._();
 
   final HistoryStorage _history = HistoryStorage();
   final SecurePrefs    _secure  = SecurePrefs.instance;
 
-  // ── Write-lock mutex (Fix 2) ───────────────────────────────────────────────
-  // All write operations chain onto this Future so they are serialised.
-  // Example: if the user taps +8 oz twice very fast, the second call waits
-  // for the first to finish before reading the current value — preventing
-  // a lost-update where both reads see the same stale number.
+  // ── Write-lock mutex (Fix 2) ──────────────────────────────────────────────
   Future<void> _writeLock = Future.value();
 
   Future<T> _locked<T>(Future<T> Function() action) {
     final result = _writeLock.then((_) => action());
-    // Swallow errors on the lock chain so one failure doesn't block all
-    // future writes.  The action itself still returns -1 / rethrows.
     _writeLock = result.then((_) {}, onError: (_) {});
     return result;
   }
 
-  // ── Key helpers ────────────────────────────────────────────────────────────
+  // ── Key helpers ───────────────────────────────────────────────────────────
   String _todayKey() {
     final now = DateTime.now();
     return '${now.year}_${now.month}_${now.day}';
@@ -61,9 +84,7 @@ class HydrationRepository {
   String get _oxalateKey => 'oxalate_${_todayKey()}';
   String get _oxLogKey   => 'oxalate_log_${_todayKey()}';
 
-  // ── Read ───────────────────────────────────────────────────────────────────
-  /// Returns the full hydration snapshot for today.
-  /// Reads are not locked — they are always safe to run concurrently.
+  // ── Read ──────────────────────────────────────────────────────────────────
   Future<HydrationSnapshot> readToday() async {
     try {
       return HydrationSnapshot(
@@ -73,23 +94,22 @@ class HydrationRepository {
         goalMg:    await _secure.getDouble('goal_oxalate', defaultValue: 200.0),
       );
     } catch (e, st) {
-      debugPrint('[HydrationRepository] readToday error: $e\n$st');
+      AppLogger.error('HydrationRepository', 'readToday failed', e, st);
       return const HydrationSnapshot(
           waterOz: 0, oxalateMg: 0, goalOz: 80, goalMg: 200);
     }
   }
 
-  // ── Add water ──────────────────────────────────────────────────────────────
-  /// Adds [oz] ounces to today's water total and persists to history.
-  /// Returns the new running total, or -1 on failure / invalid input.
-  ///
-  /// Fix 2: runs inside _locked() so rapid taps are serialised.
+  // ── Add water ─────────────────────────────────────────────────────────────
+  /// Returns SaveSuccess(newTotal) or SaveFailure(reason).
+  /// Fix 2: serialised via _locked().
+  /// Fix 3: logging via AppLogger (release = no-op).
+  /// Fix 5: SaveResult return type lets UI show a snackbar on failure.
   /// Fix 6: rejects oz <= 0.
-  Future<double> addWater(double oz) {
-    // Validation (Fix 6)
+  Future<SaveResult<double>> addWater(double oz) {
     if (oz <= 0) {
-      debugPrint('[HydrationRepository] addWater ignored: oz must be > 0 (got $oz)');
-      return Future.value(-1);
+      AppLogger.debug('HydrationRepository', 'addWater ignored: oz must be > 0');
+      return Future.value(const SaveFailure('Invalid amount'));
     }
 
     return _locked(() async {
@@ -98,29 +118,28 @@ class HydrationRepository {
         final newVal  = (current + oz).clamp(0.0, double.infinity);
         await _secure.setDouble(_waterKey, newVal);
         await _persistHistory();
-        return newVal;
+        return SaveSuccess(newVal);
       } catch (e, st) {
-        debugPrint('[HydrationRepository] addWater error: $e\n$st');
-        return -1.0;
+        AppLogger.error('HydrationRepository', 'addWater failed', e, st);
+        return const SaveFailure('Storage error');
       }
     });
   }
 
-  // ── Log food ───────────────────────────────────────────────────────────────
-  /// Records [mg] oxalate from [foodName] and adds it to today's running
-  /// total. Returns the new oxalate total, or -1 on failure / invalid input.
-  ///
-  /// Fix 2: runs inside _locked() so concurrent food-log taps are serialised.
-  /// Fix 6: rejects mg <= 0 or an empty foodName.
-  Future<double> logFood(double mg, String foodName) {
-    // Validation (Fix 6)
+  // ── Log food ──────────────────────────────────────────────────────────────
+  /// Returns SaveSuccess(newOxalateTotal) or SaveFailure(reason).
+  /// Fix 2: serialised via _locked().
+  /// Fix 3: logging via AppLogger.
+  /// Fix 5: SaveResult return type.
+  /// Fix 6: rejects mg <= 0 or empty foodName.
+  Future<SaveResult<double>> logFood(double mg, String foodName) {
     if (mg <= 0) {
-      debugPrint('[HydrationRepository] logFood ignored: mg must be > 0 (got $mg)');
-      return Future.value(-1);
+      AppLogger.debug('HydrationRepository', 'logFood ignored: mg must be > 0');
+      return Future.value(const SaveFailure('Invalid amount'));
     }
     if (foodName.trim().isEmpty) {
-      debugPrint('[HydrationRepository] logFood ignored: foodName must not be empty');
-      return Future.value(-1);
+      AppLogger.debug('HydrationRepository', 'logFood ignored: empty food name');
+      return Future.value(const SaveFailure('Food name required'));
     }
 
     return _locked(() async {
@@ -134,22 +153,17 @@ class HydrationRepository {
         await _secure.setDouble(_oxalateKey, newVal);
         await _secure.setStringList(_oxLogKey, log);
         await _persistHistory();
-        return newVal;
+        return SaveSuccess(newVal);
       } catch (e, st) {
-        debugPrint('[HydrationRepository] logFood error: $e\n$st');
-        return -1.0;
+        AppLogger.error('HydrationRepository', 'logFood failed', e, st);
+        return const SaveFailure('Storage error');
       }
     });
   }
 
-  // ── Save goals ─────────────────────────────────────────────────────────────
-  /// Persists the user's daily water and oxalate goals (encrypted).
-  ///
-  /// Fix 2: runs inside _locked().
-  /// Fix 6: clamps goalOz to 8–300 oz and goalMg to 10–2000 mg so no
-  ///        nonsensical goal value can ever reach storage.
+  // ── Save goals ────────────────────────────────────────────────────────────
+  /// Fix 2: serialised. Fix 3: AppLogger. Fix 6: clamps to sane ranges.
   Future<void> saveGoals({required double goalOz, required double goalMg}) {
-    // Clamp to sane physiological ranges (Fix 6)
     final safeOz = goalOz.clamp(8.0,   300.0);
     final safeMg = goalMg.clamp(10.0, 2000.0);
 
@@ -158,14 +172,13 @@ class HydrationRepository {
         await _secure.setDouble('goal_water',   safeOz);
         await _secure.setDouble('goal_oxalate', safeMg);
       } catch (e, st) {
-        debugPrint('[HydrationRepository] saveGoals error: $e\n$st');
+        AppLogger.error('HydrationRepository', 'saveGoals failed', e, st);
       }
     });
   }
 
-  // ── Reset today ────────────────────────────────────────────────────────────
-  /// Clears all of today's water, oxalate, and food-log data.
-  /// Fix 2: runs inside _locked().
+  // ── Reset today ───────────────────────────────────────────────────────────
+  /// Fix 2: serialised. Fix 3: AppLogger.
   Future<void> resetToday() {
     return _locked(() async {
       try {
@@ -174,13 +187,12 @@ class HydrationRepository {
         await _secure.setStringList(_oxLogKey, []);
         await _persistHistory();
       } catch (e, st) {
-        debugPrint('[HydrationRepository] resetToday error: $e\n$st');
+        AppLogger.error('HydrationRepository', 'resetToday failed', e, st);
       }
     });
   }
 
-  // ── Private: push today's totals into HistoryStorage ───────────────────────
-  // Called inside _locked() so it always sees a consistent, just-written value.
+  // ── Private: push today into HistoryStorage ───────────────────────────────
   Future<void> _persistHistory() async {
     try {
       final waterOz   = await _secure.getDouble(_waterKey,   defaultValue: 0.0);
@@ -196,40 +208,38 @@ class HydrationRepository {
       if (filtered.length > 730) filtered.removeAt(0);
       await _history.saveHistory(filtered);
     } catch (e, st) {
-      debugPrint('[HydrationRepository] _persistHistory error: $e\n$st');
+      AppLogger.error('HydrationRepository', '_persistHistory failed', e, st);
     }
   }
 
-  // ── Legacy migration helper ─────────────────────────────────────────────────
-  /// Call once on app startup to migrate any existing plain-text
-  /// SharedPreferences values into SecurePrefs.
-  /// Safe to call even if no legacy data exists — it's a no-op in that case.
+  // ── Legacy migration helper ───────────────────────────────────────────────
+  /// Migrates existing plain-text SharedPreferences into SecurePrefs.
+  /// Safe to call on every startup — no-op if nothing to migrate.
   Future<void> migrateLegacyPlainTextPrefs() async {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      if (prefs.containsKey(_waterKey)) {
-        await _secure.setDouble(_waterKey, prefs.getDouble(_waterKey) ?? 0.0);
-        await prefs.remove(_waterKey);
+      Future<void> move(String key, double fallback) async {
+        if (prefs.containsKey(key)) {
+          await _secure.setDouble(key, prefs.getDouble(key) ?? fallback);
+          await prefs.remove(key);
+        }
       }
-      if (prefs.containsKey(_oxalateKey)) {
-        await _secure.setDouble(_oxalateKey, prefs.getDouble(_oxalateKey) ?? 0.0);
-        await prefs.remove(_oxalateKey);
+
+      Future<void> moveList(String key) async {
+        if (prefs.containsKey(key)) {
+          await _secure.setStringList(key, prefs.getStringList(key) ?? []);
+          await prefs.remove(key);
+        }
       }
-      if (prefs.containsKey(_oxLogKey)) {
-        await _secure.setStringList(_oxLogKey, prefs.getStringList(_oxLogKey) ?? []);
-        await prefs.remove(_oxLogKey);
-      }
-      if (prefs.containsKey('goal_water')) {
-        await _secure.setDouble('goal_water', prefs.getDouble('goal_water') ?? 80.0);
-        await prefs.remove('goal_water');
-      }
-      if (prefs.containsKey('goal_oxalate')) {
-        await _secure.setDouble('goal_oxalate', prefs.getDouble('goal_oxalate') ?? 200.0);
-        await prefs.remove('goal_oxalate');
-      }
+
+      await move(_waterKey,     0.0);
+      await move(_oxalateKey,   0.0);
+      await moveList(_oxLogKey);
+      await move('goal_water',   80.0);
+      await move('goal_oxalate', 200.0);
     } catch (e, st) {
-      debugPrint('[HydrationRepository] migrateLegacyPlainTextPrefs error: $e\n$st');
+      AppLogger.error('HydrationRepository', 'migration failed', e, st);
     }
   }
 }

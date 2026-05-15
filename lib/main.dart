@@ -1,4 +1,14 @@
 // ─── MAIN ENTRY POINT ─────────────────────────────────────────────────────────
+//
+// Batch 3 — Fix 12: Global crash handler
+//   • FlutterError.onError routes framework errors through AppLogger.flutterError()
+//     so release builds stay silent while debug builds still dump to console.
+//   • runZonedGuarded wraps runApp to catch all unhandled async errors that
+//     would otherwise crash the app silently or show a red-screen in release.
+//   • Neither handler logs PHI. Both are wired to a TODO slot for a future
+//     privacy-respecting crash reporter (e.g. Crashlytics with scrubbing).
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -17,6 +27,7 @@ import 'screens/settings_screen.dart';
 import 'theme/app_theme.dart';
 import 'widgets/gradient_scaffold.dart';
 import 'hydration_repository.dart';
+import 'app_logger.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -25,31 +36,50 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 final ThemeNotifier themeNotifier = ThemeNotifier(ThemeMode.light);
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  // ── Fix 12: Route Flutter framework errors through AppLogger ──────────────
+  // In debug: dumps full details to console (same as default behaviour).
+  // In release: completely silent — no stack traces reach logcat.
+  FlutterError.onError = AppLogger.flutterError;
 
-  // Load saved theme preference
-  final prefs = await SharedPreferences.getInstance();
-  final savedDark = prefs.getBool('dark_mode') ?? false;
-  themeNotifier.setMode(savedDark ? ThemeMode.dark : ThemeMode.light);
+  // ── Fix 12: Catch all unhandled async/zone errors ─────────────────────────
+  // runZonedGuarded is the outermost safety net. Any Future that is never
+  // awaited and throws, or any isolate-level exception, is caught here.
+  runZonedGuarded(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
 
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    systemNavigationBarColor: AppColors.navBg,
-    systemNavigationBarIconBrightness: Brightness.dark,
-  ));
+      // Load saved theme preference
+      final prefs = await SharedPreferences.getInstance();
+      final savedDark = prefs.getBool('dark_mode') ?? false;
+      themeNotifier.setMode(savedDark ? ThemeMode.dark : ThemeMode.light);
 
-  MobileAds.instance.initialize();
-  tz.initializeTimeZones();
+      SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: AppColors.navBg,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ));
 
-  const AndroidInitializationSettings androidSettings =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
-  const InitializationSettings initSettings =
-      InitializationSettings(android: androidSettings);
-  await flutterLocalNotificationsPlugin.initialize(initSettings);
-  await requestExactAlarmPermission();
+      MobileAds.instance.initialize();
+      tz.initializeTimeZones();
 
-  runApp(const MyApp());
+      const AndroidInitializationSettings androidSettings =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
+      const InitializationSettings initSettings =
+          InitializationSettings(android: androidSettings);
+      await flutterLocalNotificationsPlugin.initialize(initSettings);
+      await requestExactAlarmPermission();
+
+      runApp(const MyApp());
+    },
+    // ── Zone error handler ───────────────────────────────────────────────────
+    // Called whenever an unhandled error escapes the zone.
+    // We log it (debug only) and leave the app running rather than crashing.
+    (Object error, StackTrace stack) {
+      AppLogger.error('ZoneHandler', 'Unhandled async error', error, stack);
+      // TODO(release): forward non-PHI metadata to crash reporter here.
+    },
+  );
 }
 
 Future<void> requestExactAlarmPermission() async {
@@ -59,14 +89,6 @@ Future<void> requestExactAlarmPermission() async {
 }
 
 // ─── MyApp ────────────────────────────────────────────────────────────────────
-// ThemeNotifierProvider (defined in app_theme.dart) owns the single listener
-// on themeNotifier. It calls setState on its own State when the theme changes,
-// which rebuilds the _ThemeNotifierScope InheritedWidget and causes MaterialApp
-// below it to pick up the new themeMode.
-//
-// Previously _MyAppState ALSO added its own listener and called setState, which
-// created a second unnecessary rebuild cycle on every theme toggle. That
-// duplicate listener has been removed. _MyAppState is now a plain StatelessWidget.
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -79,8 +101,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Reads the current mode from the InheritedWidget so MaterialApp always
-// reflects the latest theme without _MyAppState needing its own listener.
 class _ThemeConsumer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -117,13 +137,24 @@ class _MainShellState extends State<MainShell> {
     setState(() => _currentIndex = index);
   }
 
+  // ── Fix 5: surface save failures to the user ─────────────────────────────
+  // logFood now returns SaveResult<double>. If it comes back as SaveFailure,
+  // the app shows a snackbar so the user knows their entry didn't save.
   Future<void> _onLogFood(double mg, String name) async {
-    // All prefs writes go through HydrationRepository — no direct key access here.
-    await HydrationRepository.instance.logFood(mg, name);
+    final result = await HydrationRepository.instance.logFood(mg, name);
+    if (result is SaveFailure) {
+      // Context may have changed during the async gap — guard with mounted.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not save food entry — please try again.'),
+          backgroundColor: Colors.redAccent,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
     _shieldKey.currentState?.loadData();
-    // No setState here — the shield refreshes itself via loadData above.
-    // Rebuilding MainShell (NavigationBar + IndexedStack) is not needed
-    // just because a food was logged.
   }
 
   @override
