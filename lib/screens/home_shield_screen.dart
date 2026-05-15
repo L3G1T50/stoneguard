@@ -189,7 +189,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   double goalOz = 80;
   double goalMg = 200;
 
-  // All hydration/oxalate persistence goes through the repository.
   final _repo = HydrationRepository.instance;
 
   Set<String> _celebratedBadges = {};
@@ -251,17 +250,8 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     if (state == AppLifecycleState.resumed) loadData();
   }
 
-  // didChangeDependencies intentionally removed — loadData is already called
-  // in initState and didChangeAppLifecycleState(resumed). Overriding
-  // didChangeDependencies here caused extra SharedPreferences reads and
-  // unnecessary setState calls on every theme / media-query change.
-
   Future<void> loadData() async {
-    // Read hydration totals via the repository (single source of truth).
     final snapshot = await _repo.readToday();
-
-    // Read non-hydration prefs (name, avatar, badges) directly — these
-    // are not managed by HydrationRepository.
     final prefs = await SharedPreferences.getInstance();
     final celebratedList = prefs.getStringList('celebrated_badges') ?? [];
 
@@ -283,9 +273,19 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   }
 
   Future<void> _addWater(double oz) async {
-    // Delegate the write to the repository; it handles prefs + history.
-    final newOz = await _repo.addWater(oz);
-    if (newOz < 0) return; // repository logged the error
+    final result = await _repo.addWater(oz);
+
+    // Fix 5: unwrap SaveResult — show snackbar on failure, update UI on success.
+    if (result is SaveFailure<double>) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not save — please try again.')),
+      );
+      return;
+    }
+
+    final newOz = (result as SaveSuccess<double>).value;
+    if (!mounted) return;
 
     final currentAnimProg = _fillAnimation.value;
     final newVisualFill = (newOz / goalOz).clamp(0.0, 1.0);
@@ -322,7 +322,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     );
     if (confirmed != true) return;
 
-    // Delegate the reset to the repository.
     await _repo.resetToday();
 
     final currentAnimProg = _fillAnimation.value;
@@ -536,13 +535,11 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
       body: SafeArea(
         child: Column(
           children: [
-            // ── Top bar ──
             Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Row(
                 children: [
-                  // Avatar
                   GestureDetector(
                     onTap: () => Navigator.push(
                       context,
@@ -585,7 +582,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                       ],
                     ),
                   ),
-                  // Badges chip
                   GestureDetector(
                     onTap: () => Navigator.push(
                       context,
@@ -615,7 +611,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // Reset button
                   IconButton(
                     icon: const Icon(Icons.refresh_rounded),
                     tooltip: 'Reset today',
@@ -625,20 +620,14 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
               ),
             ),
 
-            // ── Scrollable body ──
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   children: [
                     const SizedBox(height: 8),
-
-                    // Water meter
                     Center(child: _buildWaterMeter()),
-
                     const SizedBox(height: 20),
-
-                    // Quick-add water buttons
                     GridView.count(
                       crossAxisCount: 4,
                       shrinkWrap: true,
@@ -650,15 +639,9 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                           .map((oz) => _waterButton(oz))
                           .toList(),
                     ),
-
                     const SizedBox(height: 16),
-
-                    // Oxalate card
                     _buildOxalateCard(isDark),
-
                     const SizedBox(height: 16),
-
-                    // Navigation cards row
                     Row(
                       children: [
                         Expanded(
@@ -689,12 +672,8 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 16),
-
-                    // Banner ad
                     const BannerAdWidget(),
-
                     const SizedBox(height: 24),
                   ],
                 ),
