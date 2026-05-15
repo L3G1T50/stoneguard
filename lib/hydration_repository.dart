@@ -1,11 +1,13 @@
 // ─── HYDRATION REPOSITORY ────────────────────────────────────────────────────
-// Single source of truth for all hydration and oxalate SharedPreferences
-// keys. Every read/write to water_*, oxalate_*, and oxalate_log_* must
-// go through this class so there is never more than one writer per key.
+// Single source of truth for all hydration and oxalate data.
+// All current-day values (water_*, oxalate_*, oxalate_log_*, goal_*) are
+// stored via SecurePrefs (AES-256-CBC) instead of plain SharedPreferences.
+// This closes the last plain-text PHI storage gap for current-day data.
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'history_storage.dart';
+import 'secure_prefs.dart';
 
 /// Holds the current day's hydration snapshot.
 class HydrationSnapshot {
@@ -28,6 +30,7 @@ class HydrationRepository {
   HydrationRepository._();
 
   final HistoryStorage _history = HistoryStorage();
+  final SecurePrefs    _secure  = SecurePrefs.instance;
 
   // ── Key helpers ────────────────────────────────────────────────────────────
   String _todayKey() {
@@ -35,20 +38,20 @@ class HydrationRepository {
     return '${now.year}_${now.month}_${now.day}';
   }
 
-  String get _waterKey    => 'water_${_todayKey()}';
-  String get _oxalateKey  => 'oxalate_${_todayKey()}';
-  String get _oxLogKey    => 'oxalate_log_${_todayKey()}';
+  String get _waterKey   => 'water_${_todayKey()}';
+  String get _oxalateKey => 'oxalate_${_todayKey()}';
+  String get _oxLogKey   => 'oxalate_log_${_todayKey()}';
 
   // ── Read ───────────────────────────────────────────────────────────────────
   /// Returns the full hydration snapshot for today.
+  /// All values are read from encrypted storage via SecurePrefs.
   Future<HydrationSnapshot> readToday() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
       return HydrationSnapshot(
-        waterOz:   prefs.getDouble(_waterKey)   ?? 0.0,
-        oxalateMg: prefs.getDouble(_oxalateKey) ?? 0.0,
-        goalOz:    prefs.getDouble('goal_water')   ?? 80.0,
-        goalMg:    prefs.getDouble('goal_oxalate') ?? 200.0,
+        waterOz:   await _secure.getDouble(_waterKey,   defaultValue: 0.0),
+        oxalateMg: await _secure.getDouble(_oxalateKey, defaultValue: 0.0),
+        goalOz:    await _secure.getDouble('goal_water',   defaultValue: 80.0),
+        goalMg:    await _secure.getDouble('goal_oxalate', defaultValue: 200.0),
       );
     } catch (e, st) {
       debugPrint('[HydrationRepository] readToday error: $e\n$st');
@@ -62,11 +65,10 @@ class HydrationRepository {
   /// Returns the new running total, or -1 on failure.
   Future<double> addWater(double oz) async {
     try {
-      final prefs   = await SharedPreferences.getInstance();
-      final current = prefs.getDouble(_waterKey) ?? 0.0;
+      final current = await _secure.getDouble(_waterKey, defaultValue: 0.0);
       final newVal  = (current + oz).clamp(0.0, double.infinity);
-      await prefs.setDouble(_waterKey, newVal);
-      await _persistHistory(prefs);
+      await _secure.setDouble(_waterKey, newVal);
+      await _persistHistory();
       return newVal;
     } catch (e, st) {
       debugPrint('[HydrationRepository] addWater error: $e\n$st');
@@ -79,16 +81,15 @@ class HydrationRepository {
   /// total. Returns the new oxalate total, or -1 on failure.
   Future<double> logFood(double mg, String foodName) async {
     try {
-      final prefs   = await SharedPreferences.getInstance();
-      final current = prefs.getDouble(_oxalateKey) ?? 0.0;
+      final current = await _secure.getDouble(_oxalateKey, defaultValue: 0.0);
       final newVal  = current + mg;
 
-      final log = List<String>.from(prefs.getStringList(_oxLogKey) ?? []);
+      final log = await _secure.getStringList(_oxLogKey);
       log.add('$foodName|$mg');
 
-      await prefs.setDouble(_oxalateKey, newVal);
-      await prefs.setStringList(_oxLogKey, log);
-      await _persistHistory(prefs);
+      await _secure.setDouble(_oxalateKey, newVal);
+      await _secure.setStringList(_oxLogKey, log);
+      await _persistHistory();
       return newVal;
     } catch (e, st) {
       debugPrint('[HydrationRepository] logFood error: $e\n$st');
@@ -96,28 +97,39 @@ class HydrationRepository {
     }
   }
 
+  // ── Save goals ─────────────────────────────────────────────────────────────
+  /// Persists the user's daily water and oxalate goals (encrypted).
+  Future<void> saveGoals({required double goalOz, required double goalMg}) async {
+    try {
+      await _secure.setDouble('goal_water',   goalOz);
+      await _secure.setDouble('goal_oxalate', goalMg);
+    } catch (e, st) {
+      debugPrint('[HydrationRepository] saveGoals error: $e\n$st');
+    }
+  }
+
   // ── Reset today ────────────────────────────────────────────────────────────
   /// Clears all of today's water, oxalate, and food-log data.
   Future<void> resetToday() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setDouble(_waterKey,  0.0);
-      await prefs.setDouble(_oxalateKey, 0.0);
-      await prefs.setStringList(_oxLogKey, []);
-      await _persistHistory(prefs);
+      await _secure.setDouble(_waterKey,   0.0);
+      await _secure.setDouble(_oxalateKey, 0.0);
+      await _secure.setStringList(_oxLogKey, []);
+      await _persistHistory();
     } catch (e, st) {
       debugPrint('[HydrationRepository] resetToday error: $e\n$st');
     }
   }
 
   // ── Private: push today's totals into HistoryStorage ───────────────────────
-  Future<void> _persistHistory(SharedPreferences prefs) async {
+  Future<void> _persistHistory() async {
     try {
-      final waterOz   = prefs.getDouble(_waterKey)   ?? 0.0;
-      final oxalateMg = prefs.getDouble(_oxalateKey) ?? 0.0;
+      final waterOz   = await _secure.getDouble(_waterKey,   defaultValue: 0.0);
+      final oxalateMg = await _secure.getDouble(_oxalateKey, defaultValue: 0.0);
       final today     = DateTime.now();
       final dateStr   =
-          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-'
+          '${today.day.toString().padLeft(2, '0')}';
 
       final existing = await _history.loadHistory();
       final filtered = existing.where((e) => e['date'] != dateStr).toList();
@@ -126,6 +138,54 @@ class HydrationRepository {
       await _history.saveHistory(filtered);
     } catch (e, st) {
       debugPrint('[HydrationRepository] _persistHistory error: $e\n$st');
+    }
+  }
+
+  // ── Legacy migration helper ─────────────────────────────────────────────────
+  /// Call once on app startup (in main.dart or splash screen) to migrate any
+  /// existing plain-text SharedPreferences values into SecurePrefs.
+  /// Safe to call even if no legacy data exists — it's a no-op in that case.
+  Future<void> migrateLegacyPlainTextPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Migrate current-day water
+      final legacyWaterKey = _waterKey;
+      if (prefs.containsKey(legacyWaterKey)) {
+        final val = prefs.getDouble(legacyWaterKey) ?? 0.0;
+        await _secure.setDouble(legacyWaterKey, val);
+        await prefs.remove(legacyWaterKey);
+      }
+
+      // Migrate current-day oxalate
+      final legacyOxKey = _oxalateKey;
+      if (prefs.containsKey(legacyOxKey)) {
+        final val = prefs.getDouble(legacyOxKey) ?? 0.0;
+        await _secure.setDouble(legacyOxKey, val);
+        await prefs.remove(legacyOxKey);
+      }
+
+      // Migrate current-day food log
+      final legacyLogKey = _oxLogKey;
+      if (prefs.containsKey(legacyLogKey)) {
+        final val = prefs.getStringList(legacyLogKey) ?? [];
+        await _secure.setStringList(legacyLogKey, val);
+        await prefs.remove(legacyLogKey);
+      }
+
+      // Migrate goals
+      if (prefs.containsKey('goal_water')) {
+        final val = prefs.getDouble('goal_water') ?? 80.0;
+        await _secure.setDouble('goal_water', val);
+        await prefs.remove('goal_water');
+      }
+      if (prefs.containsKey('goal_oxalate')) {
+        final val = prefs.getDouble('goal_oxalate') ?? 200.0;
+        await _secure.setDouble('goal_oxalate', val);
+        await prefs.remove('goal_oxalate');
+      }
+    } catch (e, st) {
+      debugPrint('[HydrationRepository] migrateLegacyPlainTextPrefs error: $e\n$st');
     }
   }
 }
