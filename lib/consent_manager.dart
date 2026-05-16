@@ -8,6 +8,11 @@
 //   4. AdMob is initialised ONLY if the user accepted.
 //   5. BannerAdWidget checks hasConsented() before loading any ad.
 //
+// Batch F fixes:
+//   • Dialog title corrected from 'StoneGuard' → 'KidneyShield' (branding bug).
+//   • AdConfig.applyRequestConfiguration() now called inside _initAdMob() so
+//     emulator/device is registered as a test device in debug/profile builds.
+//
 // To comply with Google's EU consent requirements you should also integrate
 // the full Google User Messaging Platform (UMP) SDK for EEA users. This
 // ConsentManager is a lightweight first-party gate that works for all regions
@@ -16,6 +21,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'ad_config.dart';
 import 'app_logger.dart';
 
 class ConsentManager {
@@ -73,6 +79,10 @@ class ConsentManager {
   static Future<void> _initAdMob() async {
     try {
       await MobileAds.instance.initialize();
+      // Batch F: apply test-device configuration immediately after init so
+      // debug/profile builds register the emulator and never track real
+      // impressions. In release this is a no-op (see AdConfig).
+      await AdConfig.applyRequestConfiguration();
       AppLogger.debug('ConsentManager', 'AdMob initialised after consent.');
     } catch (e, st) {
       AppLogger.error('ConsentManager', 'AdMob init failed', e, st);
@@ -109,20 +119,21 @@ class _ConsentDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Support StoneGuard with Ads'),
+      // Batch F: was 'Support StoneGuard with Ads' — corrected to KidneyShield.
+      title: const Text('Support KidneyShield with Ads'),
       content: const SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'StoneGuard is free to use. To keep it running, we show '
+              'KidneyShield is free to use. To keep it running, we show '
               'ads provided by Google AdMob.',
             ),
             SizedBox(height: 12),
             Text(
               'If you allow personalised ads, Google may use limited '
               'device information (such as your ad ID) to show you '
-              'relevant ads. No health data from StoneGuard is ever '
+              'relevant ads. No health data from KidneyShield is ever '
               'shared with advertisers.',
             ),
             SizedBox(height: 12),

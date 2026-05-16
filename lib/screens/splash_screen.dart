@@ -4,7 +4,7 @@
 //   • When the user is a returning user going to MainShell, we show the
 //     consent dialog exactly once (ConsentManager gates repeat showings).
 //   • New users see onboarding/setup first; consent is shown on their
-//     first arrival at MainShell instead, so it doesn’t interrupt the
+//     first arrival at MainShell instead, so it doesn't interrupt the
 //     onboarding flow.
 //   • If consent was already given/declined in a prior session, the call
 //     is a no-op (returns immediately without showing a dialog).
@@ -14,6 +14,13 @@
 //     returns false.  The dialog is shown HERE instead of via a
 //     postFrameCallback in main(), because context is guaranteed to
 //     exist once _SplashScreenState is mounted.
+//
+// Batch F: Consent gap fix
+//   • ConsentManager.showIfNeeded() is now called in ALL paths that lead
+//     to MainShell (returning user AND post-setup). Previously new users
+//     who completed setup reached MainShell without ever seeing the consent
+//     dialog, so BannerAdWidget silently rendered nothing and they could
+//     never opt in to ads.
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
@@ -86,10 +93,16 @@ class _SplashScreenState extends State<SplashScreen>
     Widget nextScreen;
 
     if (!hasSeenOnboarding) {
+      // Brand-new user — send to onboarding. Consent shown after setup.
       nextScreen = const OnboardingScreen();
     } else if (!hasCompletedSetup) {
+      // User saw onboarding but hasn't finished setup. Consent shown after setup.
       nextScreen = const SetupScreen();
     } else {
+      // Returning user OR user who just finished setup (SetupScreen pops back
+      // here via Navigator.pushReplacement). Show consent if not yet asked.
+      // Batch F: this was the only path that called showIfNeeded().
+      // The setup-completion path now also calls it (see SetupScreen).
       await ConsentManager.showIfNeeded(context);
       if (!mounted) return;
       nextScreen = const MainShell();
@@ -108,7 +121,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   /// One-time dialog shown when the AES key was wiped (app-data clear,
   /// OS Keystore rotation, device restore). Blocks navigation until
-  /// the user acknowledges so they aren’t confused by missing data.
+  /// the user acknowledges so they aren't confused by missing data.
   Future<void> _showKeyLossDialog() async {
     await showDialog<void>(
       context: context,
