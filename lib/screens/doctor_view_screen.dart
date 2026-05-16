@@ -697,13 +697,15 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
             onSelected: (val) async {
               if (val == 'text') {
                 final text = _buildReportText();
-                await SharePlus.instance.share(ShareParams(text: text));
+                // share_plus v10 API: Share.share(text)
+                await Share.share(text, subject: 'StoneGuard Doctor Report');
               } else if (val == 'pdf') {
-                final bytes = await _buildPdf();
+                // ExportReportScreen loads its own data — no parameters needed
+                if (!context.mounted) return;
                 await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => ExportReportScreen(pdfBytes: bytes),
+                    builder: (_) => const ExportReportScreen(),
                   ),
                 );
               }
