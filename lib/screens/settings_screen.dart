@@ -1,4 +1,19 @@
-// ─── SETTINGS SCREEN ─────────────────────────────────────────────────────────
+// ─── SETTINGS SCREEN ───────────────────────────────────────────────
+//
+// Fix 3: Route health-related fields through SecurePrefs (AES-256 encrypted)
+//   Fields migrated OFF plain SharedPreferences:
+//     • user_name      — now SecurePrefs.setString / getString
+//     • avatar_path    — now SecurePrefs.setString / getString
+//     • goal_water     — now SecurePrefs.setDouble / getDouble
+//     • goal_oxalate   — now SecurePrefs.setDouble / getDouble
+//     • stone_type     — now SecurePrefs.setString / getString
+//     • user_age       — now SecurePrefs.setInt    / getInt
+//
+//   Non-health fields that remain in plain SharedPreferences (safe):
+//     • dark_mode, notifications_enabled, reminder_interval, is_premium
+//     • quiet_hours_*, has_seen_onboarding, has_completed_setup
+//
+// Fix 11: Privacy section with ad consent revocation and privacy policy link.
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,8 +23,9 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import '../screens/about_screen.dart';
 import '../screens/doctor_view_screen.dart';
-import '../screens/privacy_policy_screen.dart';  // Fix 11
-import '../consent_manager.dart';                 // Fix 11
+import '../screens/privacy_policy_screen.dart';
+import '../consent_manager.dart';
+import '../secure_prefs.dart'; // Fix 3: encrypted storage helper
 import '../main.dart';
 import 'paywall_screen.dart';
 import '../theme/app_theme.dart';
@@ -22,19 +38,22 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  // Health-related state — loaded from SecurePrefs
   double _waterGoal    = 80;
   double _oxalateGoal  = 200;
   String _userName     = '';
   String _avatarPath   = '';
+  int    _userAge      = 0;
+  String _stoneType    = 'Unknown / Not diagnosed';
+
+  // Non-health state — loaded from plain SharedPreferences
   bool   _notificationsEnabled = false;
   bool   _isPremium    = false;
   int    _reminderInterval = 2;
-  int    _userAge      = 0;
-  String _stoneType    = 'Unknown / Not diagnosed';
   bool   _darkMode     = false;
-  bool   _adsConsented = false; // Fix 11: track consent state for display
+  bool   _adsConsented = false;
 
-  // ── Quiet Hours ──
+  // Quiet Hours
   bool _quietHoursEnabled = false;
   TimeOfDay _quietStart = const TimeOfDay(hour: 22, minute: 0);
   TimeOfDay _quietEnd   = const TimeOfDay(hour: 7,  minute: 0);
@@ -55,21 +74,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadSettings() async {
+    // ── Fix 3: Health fields from SecurePrefs ─────────────────────────────
+    final secure = SecurePrefs.instance;
+    final userName    = await secure.getString('user_name')    ?? '';
+    final avatarPath  = await secure.getString('avatar_path')  ?? '';
+    final waterGoal   = await secure.getDouble('goal_water')   ?? 80.0;
+    final oxalateGoal = await secure.getDouble('goal_oxalate') ?? 200.0;
+    final stoneType   = await secure.getString('stone_type')   ?? 'Unknown / Not diagnosed';
+    final userAge     = await secure.getInt('user_age')        ?? 0;
+
+    // ── Non-health fields from plain SharedPreferences ───────────────────
     final prefs = await SharedPreferences.getInstance();
-    final consented = await ConsentManager.hasConsented(); // Fix 11
+    final consented = await ConsentManager.hasConsented();
+
     setState(() {
-      _waterGoal            = prefs.getDouble('goal_water')          ?? 80;
-      _oxalateGoal          = prefs.getDouble('goal_oxalate')        ?? 200;
-      _userName             = prefs.getString('user_name')           ?? '';
-      _avatarPath           = prefs.getString('avatar_path')         ?? '';
+      _userName             = userName;
+      _avatarPath           = avatarPath;
+      _waterGoal            = waterGoal;
+      _oxalateGoal          = oxalateGoal;
+      _stoneType            = stoneType;
+      _userAge              = userAge;
       _notificationsEnabled = prefs.getBool('notifications_enabled') ?? false;
       _reminderInterval     = prefs.getInt('reminder_interval')      ?? 2;
       _isPremium            = prefs.getBool('is_premium')            ?? false;
       _quietHoursEnabled    = prefs.getBool('quiet_hours_enabled')   ?? false;
-      _userAge              = prefs.getInt('user_age')               ?? 0;
-      _stoneType            = prefs.getString('stone_type')          ?? 'Unknown / Not diagnosed';
       _darkMode             = prefs.getBool('dark_mode')             ?? false;
-      _adsConsented         = consented;                              // Fix 11
+      _adsConsented         = consented;
       _quietStart = TimeOfDay(
         hour:   prefs.getInt('quiet_start_hour')   ?? 22,
         minute: prefs.getInt('quiet_start_minute') ?? 0,
@@ -108,11 +138,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!_quietHoursEnabled) return false;
     final s = _quietStart.hour;
     final e = _quietEnd.hour;
-    if (s < e) {
-      return hour >= s && hour < e;
-    } else {
-      return hour >= s || hour < e;
-    }
+    if (s < e) return hour >= s && hour < e;
+    return hour >= s || hour < e;
   }
 
   Future<void> _pickQuietTime({required bool isStart}) async {
@@ -150,15 +177,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (result == true) await _loadSettings();
   }
 
+  // ── Fix 3: Goals now written to SecurePrefs ──────────────────────────────
   Future<void> _saveWaterGoal(double v) async {
-    final p = await SharedPreferences.getInstance();
-    await p.setDouble('goal_water', v);
+    await SecurePrefs.instance.setDouble('goal_water', v);
     setState(() => _waterGoal = v);
   }
 
   Future<void> _saveOxalateGoal(double v) async {
-    final p = await SharedPreferences.getInstance();
-    await p.setDouble('goal_oxalate', v);
+    await SecurePrefs.instance.setDouble('goal_oxalate', v);
     setState(() => _oxalateGoal = v);
   }
 
@@ -190,8 +216,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
     if (result != null) {
-      final p = await SharedPreferences.getInstance();
-      await p.setString('user_name', result);
+      // Fix 3: user_name written to SecurePrefs, not plain SharedPreferences
+      await SecurePrefs.instance.setString('user_name', result);
       setState(() => _userName = result);
     }
   }
@@ -227,8 +253,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     if (result != null) {
       final age = int.tryParse(result) ?? 0;
-      final p = await SharedPreferences.getInstance();
-      await p.setInt('user_age', age);
+      // Fix 3: user_age written to SecurePrefs
+      await SecurePrefs.instance.setInt('user_age', age);
       setState(() => _userAge = age);
     }
   }
@@ -334,8 +360,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       },
     );
     if (result != null) {
-      final p = await SharedPreferences.getInstance();
-      await p.setString('stone_type', result);
+      // Fix 3: stone_type written to SecurePrefs
+      await SecurePrefs.instance.setString('stone_type', result);
       setState(() => _stoneType = result);
     }
   }
@@ -363,11 +389,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
     if (confirmed == true) {
+      // Clear plain prefs
       final prefs = await SharedPreferences.getInstance();
       final wasPremium = _isPremium;
       await prefs.clear();
       await prefs.setBool('seen_onboarding', true);
       await prefs.setBool('is_premium', wasPremium);
+
+      // Fix 3: also clear health fields from SecurePrefs
+      final secure = SecurePrefs.instance;
+      await secure.remove('user_name');
+      await secure.remove('avatar_path');
+      await secure.remove('goal_water');
+      await secure.remove('goal_oxalate');
+      await secure.remove('stone_type');
+      await secure.remove('user_age');
+
       await _loadSettings();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -382,13 +419,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final picked = await picker.pickImage(
         source: ImageSource.gallery, imageQuality: 80, maxWidth: 300);
     if (picked != null) {
-      final p = await SharedPreferences.getInstance();
-      await p.setString('avatar_path', picked.path);
+      // Fix 3: avatar_path written to SecurePrefs
+      await SecurePrefs.instance.setString('avatar_path', picked.path);
       setState(() => _avatarPath = picked.path);
     }
   }
 
-  // Fix 11: Revoke ad consent from Settings → Privacy
   Future<void> _revokeAdConsent() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -458,7 +494,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ─── PLUS CARD ────────────────────────────────────────────────────────────────
+  // ─── UI helpers ────────────────────────────────────────────────────────────────
   Widget _plusCard() {
     return AppCard(
       onTap: _isPremium ? null : _openPaywall,
@@ -1041,7 +1077,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
 
-                // ── PRIVACY ── (Fix 11)
+                // ── PRIVACY ──
                 const AppSectionHeader('Privacy'),
                 AppCard(
                   child: Column(
