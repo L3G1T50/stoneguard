@@ -6,6 +6,7 @@
 //   • Nav quick-links use AppCard (ink splash, themed surface, teal icons)
 //   • Reset button wrapped in AppIconBadge for visual weight
 //   • All hardcoded Colors.white/black* replaced with AppDynamic helpers
+// Fix A: Reset dialog destructive button now uses AppColors.danger
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -323,7 +324,8 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            // Fix A: was Colors.redAccent — now uses AppColors.danger token
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
             child: const Text('Reset'),
           ),
         ],
