@@ -14,6 +14,13 @@
 //     • quiet_hours_*, has_seen_onboarding, has_completed_setup
 //
 // Fix 11: Privacy section with ad consent revocation and privacy policy link.
+//
+// Batch E: _loadSettings() parallelised with Future.wait().
+//   Previously the 6 SecurePrefs reads + SharedPreferences.getInstance()
+//   + ConsentManager.hasConsented() were all sequential awaits — 8 serial
+//   async hops on every settings open. Now all 8 fire concurrently inside
+//   a single Future.wait() call so the screen loads in roughly the time of
+//   the slowest single read instead of the sum of all reads.
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -73,19 +80,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadSettings();
   }
 
+  // Batch E: all 8 async reads fire concurrently via Future.wait().
+  // Before: 8 sequential awaits (~8 async hops).
+  // After:  1 Future.wait() — resolves in the time of the slowest single read.
   Future<void> _loadSettings() async {
-    // ── Fix 3: Health fields from SecurePrefs ─────────────────────────────
     final secure = SecurePrefs.instance;
-    final userName    = await secure.getString('user_name')    ?? '';
-    final avatarPath  = await secure.getString('avatar_path')  ?? '';
-    final waterGoal   = await secure.getDouble('goal_water')   ?? 80.0;
-    final oxalateGoal = await secure.getDouble('goal_oxalate') ?? 200.0;
-    final stoneType   = await secure.getString('stone_type')   ?? 'Unknown / Not diagnosed';
-    final userAge     = await secure.getInt('user_age')        ?? 0;
 
-    // ── Non-health fields from plain SharedPreferences ───────────────────
-    final prefs = await SharedPreferences.getInstance();
-    final consented = await ConsentManager.hasConsented();
+    final results = await Future.wait([
+      // indices 0-5: SecurePrefs (encrypted health fields)
+      secure.getString('user_name',    defaultValue: ''),
+      secure.getString('avatar_path',  defaultValue: ''),
+      secure.getDouble('goal_water',   defaultValue: 80.0),
+      secure.getDouble('goal_oxalate', defaultValue: 200.0),
+      secure.getString('stone_type',   defaultValue: 'Unknown / Not diagnosed'),
+      secure.getInt('user_age',        defaultValue: 0),
+      // index 6: plain SharedPreferences
+      SharedPreferences.getInstance(),
+      // index 7: consent flag
+      ConsentManager.hasConsented(),
+    ]);
+
+    final userName    = results[0]  as String;
+    final avatarPath  = results[1]  as String;
+    final waterGoal   = results[2]  as double;
+    final oxalateGoal = results[3]  as double;
+    final stoneType   = results[4]  as String;
+    final userAge     = results[5]  as int;
+    final prefs       = results[6]  as SharedPreferences;
+    final consented   = results[7]  as bool;
 
     setState(() {
       _userName             = userName;
