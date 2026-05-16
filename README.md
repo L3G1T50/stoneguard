@@ -1,98 +1,43 @@
-# 🛡️ StoneGuard
+# KidneyShield
 
-**Your personal kidney stone prevention companion.**
+**Kidney Stone Prevention & Oxalate Tracker**
 
-StoneGuard is a Flutter app designed to help people who suffer from calcium oxalate kidney stones manage their diet, hydration, and daily habits — putting prevention in their hands.
+Built by an 11-time kidney stone survivor who couldn’t find a single app designed specifically for calcium oxalate stone patients — so he built one.
 
----
+## What It Does
 
-## 📱 Features
+- Log foods and instantly see their oxalate content in mg
+- Track daily water intake toward your hydration goal
+- View 7-day and 30-day oxalate and hydration trends
+- Journal symptoms, pain events, and wellness notes
+- Generate a PDF report to share with your urologist or nephrologist
+- Learn what to eat, what to avoid, and why it matters
 
-- **Food Guide** — Browse foods sorted by oxalate level (Low, Moderate, High, Very High) with kidney-stone-friendly recommendations
-- **Food Logging** — Log individual foods to track your real-time daily oxalate intake; entries update the home shield and history tab instantly
-- **Water Tracker** — Log daily water intake and set hydration goals to flush oxalates
-- **Water Reminders** — Customizable notification reminders to stay on top of hydration
-- **Symptom & Stone Logger** — Track kidney stone events, symptoms, and pain levels over time
-- **Diet Tips** — Evidence-based tips for reducing calcium oxalate stone risk
-- **Progress Dashboard** — Visual charts to monitor hydration trends, oxalate history, and habits over time
-- **Export to Doctor** — Generate a clean PDF or shareable summary of your oxalate intake, hydration logs, and stone history to bring to doctor visits and follow-up appointments
-- **Onboarding** — First-time setup lets users pick a display name and a personal avatar; goals can be fully customized before hitting the home screen
-- **Settings** — Personalize your water goal, oxalate goal, reminder frequency, avatar, name, and app theme at any time
+## Privacy
 
----
+All data is stored exclusively on-device using AES-256 encrypted SQLite. No account required. No cloud sync. No data is ever uploaded or sold.
 
-## 🏗️ Tech Stack
+## Medical Disclaimer
 
-| Layer | Technology |
-|---|---|
-| Framework | Flutter (Dart) |
-| State Management | setState / Provider |
-| Local Storage | shared_preferences |
-| Notifications | flutter_local_notifications |
-| Charts | fl_chart |
-| Fonts | google_fonts |
-| Image Picker | image_picker |
-| Sharing / Export | share_plus |
+KidneyShield is a self-tracking tool, not a medical device. It does not diagnose, treat, cure, or replace the advice of a licensed healthcare provider. Always consult your urologist or nephrologist for medical guidance.
 
----
+## Tech Stack
 
-## 🗂️ Project Structure
+- Flutter 3.x (Dart)
+- SQLCipher (sqflite_sqlcipher) — AES-256 encrypted database
+- Flutter Secure Storage — Android Keystore key management
+- Google AdMob — GDPR-gated ad consent
+- Flutter Local Notifications — on-device reminders only
 
-```
-lib/
-├── main.dart
-├── models/
-│   └── food_item.dart
-├── screens/
-│   ├── splash_screen.dart
-│   ├── onboarding_screen.dart
-│   ├── setup_screen.dart
-│   ├── home_shield_screen.dart
-│   ├── food_guide_screen.dart
-│   ├── history_progress_screen.dart
-│   ├── journal_screen.dart
-│   ├── education_screen.dart
-│   └── settings_screen.dart
-├── widgets/
-│   ├── banner_ad_widget.dart
-│   └── gradient_scaffold.dart
-└── theme/
-    └── app_theme.dart
+## Build
+
+```bash
+flutter pub get
+flutter build appbundle --release
 ```
 
----
+Requires `android/key.properties` (keystore credentials) and `android/local.properties` (`admobAppId`) — neither is committed to the repo.
 
-## 📤 Export to Doctor
+## License
 
-The **Export to Doctor** feature lets users share a clean summary of their health data directly from the app. It includes:
-
-- **Oxalate Log** — Daily and weekly food log totals with per-item breakdown
-- **Hydration History** — Water intake vs. goal for the past 7–30 days
-- **Stone & Symptom Journal** — Logged stone events, pain levels, and notes
-- **User Goals** — Daily oxalate and water targets set in the app
-
-The export is generated as a shareable PDF (or text summary) via `share_plus`, so users can send it by email, message, or print it before an appointment. Accessed from the **History** tab or **Settings**.
-
-> ⚕️ *Always bring your StoneGuard report to your urologist or nephrologist to help guide your care.*
-
----
-
-## 🤝 Contributing
-
-This project is under active development. Pull requests and suggestions are welcome! If you suffer from kidney stones and have feature ideas that could help others, feel free to open an issue.
-
----
-
-## ⚠️ Disclaimer
-
-StoneGuard is intended for informational and wellness purposes only. It is **not** a substitute for professional medical advice. Always consult your doctor or urologist for medical guidance regarding kidney stones.
-
----
-
-## 📄 License
-
-This project is open source. See [LICENSE](LICENSE) for details.
-
----
-
-*Built with ❤️ by a kidney stone sufferer, for kidney stone sufferers.*
+MIT © 2026 KidneyShield

@@ -10,7 +10,10 @@
 // Batch C: Legacy migration
 //   • HydrationRepository.migrateLegacyPlainTextPrefs() called on startup.
 //
-// Branding: StoneGuard → KidneyShield throughout.
+// Preflight Batch 2:
+//   • POST_NOTIFICATIONS rationale dialog shown before permission request
+//     (Android 13+ requirement; skipping this is a known soft-rejection trigger).
+//   • Branding: KidneyShield throughout.
 //
 // Fix 12: Global crash handler
 //   • FlutterError.onError routes framework errors through AppLogger.
@@ -71,7 +74,11 @@ Future<void> main() async {
       const InitializationSettings initSettings =
           InitializationSettings(android: androidSettings);
       await flutterLocalNotificationsPlugin.initialize(initSettings);
-      await requestExactAlarmPermission();
+
+      // POST_NOTIFICATIONS rationale is shown contextually inside the app
+      // (see _requestNotificationPermissionWithRationale) rather than at
+      // cold-start, so we do not call requestExactAlarmPermission() here
+      // until the user has seen the rationale.
 
       runApp(MyApp(integrityOk: integrityOk));
     },
@@ -81,7 +88,50 @@ Future<void> main() async {
   );
 }
 
-Future<void> requestExactAlarmPermission() async {
+/// Shows a rationale dialog, then requests POST_NOTIFICATIONS + exact alarm.
+/// Call this from the first screen where notifications add value (e.g. SetupScreen).
+Future<void> requestNotificationPermissionWithRationale(
+    BuildContext context) async {
+  // Android 13+ requires POST_NOTIFICATIONS at runtime.
+  // Google Play 2026: skipping the rationale dialog before requesting is a
+  // soft-rejection trigger. We must explain WHY before calling .request().
+  final status = await Permission.notification.status;
+  if (status.isGranted) {
+    await _requestExactAlarm();
+    return;
+  }
+
+  if (!context.mounted) return;
+
+  final shouldRequest = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Stay on track with reminders'),
+      content: const Text(
+        'KidneyShield uses notifications to send your daily hydration '
+        'reminders and oxalate check-in alerts at times you choose.\n\n'
+        'You can turn these off at any time in Settings.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: const Text('Not now'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: const Text('Allow'),
+        ),
+      ],
+    ),
+  );
+
+  if (shouldRequest == true) {
+    await Permission.notification.request();
+    await _requestExactAlarm();
+  }
+}
+
+Future<void> _requestExactAlarm() async {
   if (await Permission.scheduleExactAlarm.isDenied) {
     await Permission.scheduleExactAlarm.request();
   }
