@@ -1,8 +1,12 @@
-// ─── DOCTOR VIEW SCREEN ────────────────────────────────────────────────
+// ─── DOCTOR VIEW SCREEN ──────────────────────────────────────────────────────
 // Fix 6 changes:
 //   • _loadData() now reads history via HistoryStorage (AES-encrypted).
 //   • user_name, goal_water, goal_oxalate read from SecurePrefs (Fix 3).
 //   • _disclaimer() is now a prominent yellow warning card with icon.
+// Fix C:
+//   • _loadData() now uses SecurePrefs.instance (singleton) instead of
+//     static-style calls that bypassed the AES key lifecycle.
+//   • mounted guard added after Share.share() in the text export path.
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -42,14 +46,17 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
   List<Map<String, dynamic>> _entries     = [];
   List<Map<String, dynamic>> _foodEntries = [];
 
-  static const Color _bg       = Color(0xFFF8F8F8);
-  static const Color _surface  = Color(0xFFFFFFFF);
-  static const Color _border   = Color(0xFFD0D0D8);
-  static const Color _textPri  = Color(0xFF2C2C2C);
+  // Fix C: singleton reference so key lifecycle is always respected.
+  final _secure = SecurePrefs.instance;
+
+  static const Color _bg        = Color(0xFFF8F8F8);
+  static const Color _surface   = Color(0xFFFFFFFF);
+  static const Color _border    = Color(0xFFD0D0D8);
+  static const Color _textPri   = Color(0xFF2C2C2C);
   static const Color _textMuted = Color(0xFF888888);
-  static const Color _appBar   = Color(0xFFE8E8EC);
-  static const Color _teal     = Color(0xFF1A8A9A);
-  static const Color _red      = Color(0xFFD36B6B);
+  static const Color _appBar    = Color(0xFFE8E8EC);
+  static const Color _teal      = Color(0xFF1A8A9A);
+  static const Color _red       = Color(0xFFD36B6B);
 
   @override
   void initState() {
@@ -84,12 +91,12 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     return result;
   }
 
-  // ── Fix 6: load history + goals + name from encrypted storage ────────
+  // ── Fix 6 + Fix C: load history + goals + name from encrypted storage ──
   Future<void> _loadData() async {
-    // Goals and name now read from SecurePrefs (migrated in Fix 3).
-    _waterGoal = await SecurePrefs.getDouble('goal_water')   ?? 80.0;
-    _oxGoal    = await SecurePrefs.getDouble('goal_oxalate') ?? 200.0;
-    _userName  = await SecurePrefs.getString('user_name')    ?? '';
+    // Fix C: use _secure (SecurePrefs.instance) instead of static calls.
+    _waterGoal = await _secure.getDouble('goal_water',    defaultValue: 80.0);
+    _oxGoal    = await _secure.getDouble('goal_oxalate',  defaultValue: 200.0);
+    _userName  = await _secure.getString('user_name');
 
     // is_premium is not PHI — stays in plain SharedPreferences.
     final prefs   = await SharedPreferences.getInstance();
@@ -149,7 +156,7 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     await _loadData();
   }
 
-  // ── stats ───────────────────────────────────────────────────
+  // ── stats ───────────────────────────────────────────────
   Map<String, dynamic> _computeStats() {
     if (_entries.isEmpty) {
       return {
@@ -219,7 +226,7 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
   String _fmt(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-  // ── report text (disclaimer block unchanged) ───────────────────────
+  // ── report text ────────────────────────────────────────────────────────────
   String _buildReportText() {
     final stats    = _computeStats();
     final now      = DateTime.now();
@@ -235,7 +242,7 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     buf.writeln('Period    : $dateFrom → $dateTo ($_daysBack-day window)');
     buf.writeln('Goals     : Water ≥ ${_waterGoal.toStringAsFixed(0)} oz/day  |  Oxalate ≤ ${_oxGoal.toStringAsFixed(0)} mg/day');
     buf.writeln();
-    buf.writeln('─── SUMMARY ────────────────────────');
+    buf.writeln('─── SUMMARY ────────────────────────────────────');
     buf.writeln('Days logged          : ${stats['daysLogged']}');
     buf.writeln('Avg daily water      : ${(stats['avgWater']    as double).toStringAsFixed(1)} oz');
     buf.writeln('Avg daily oxalate    : ${(stats['avgOxalate']  as double).toStringAsFixed(1)} mg');
@@ -246,7 +253,7 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     buf.writeln('Best water day       : ${stats['bestWaterDay']} (${(stats['bestWaterVal'] as double).toStringAsFixed(1)} oz)');
     buf.writeln('Highest oxalate day  : ${stats['worstOxDay']} (${(stats['worstOxVal'] as double).toStringAsFixed(1)} mg)');
     buf.writeln();
-    buf.writeln('─── DAILY LOG ──────────────────────');
+    buf.writeln('─── DAILY LOG ────────────────────────────────────');
     buf.writeln('Date         Water(oz)  Oxalate(mg)  Water✓  Ox✓');
     buf.writeln('──────────────────────────────────────────────────');
     for (final e in _entries) {
@@ -277,7 +284,7 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     return buf.toString();
   }
 
-  // ── pw helper (PDF table cells) ───────────────────────────────
+  // ── pw helper (PDF table cells) ─────────────────────────────────
   static pw.Widget _cell(String text,
       {bool bold = false, PdfColor? color, int colspan = 1}) {
     return pw.Padding(
@@ -293,7 +300,7 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     );
   }
 
-  // ── build ──────────────────────────────────────────────────
+  // ── build ──────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final stats = _computeStats();
@@ -318,7 +325,10 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
             onSelected: (val) async {
               if (val == 'text') {
                 final text = _buildReportText();
+                // Fix C: Share.share is fire-and-forget but we still guard
+                // any post-share work (future-proofing for analytics hooks).
                 await Share.share(text, subject: 'StoneGuard Doctor Report');
+                if (!mounted) return;
               } else if (val == 'pdf') {
                 if (!context.mounted) return;
                 await Navigator.push(
@@ -404,7 +414,7 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
 
   Widget _timeframeRow() => Row(
         children: _timeframes.map((tf) {
-          final selected     = tf['days'] == _daysBack;
+          final selected      = tf['days'] == _daysBack;
           final isPremiumOnly = tf['premium'] == true;
           return Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -457,7 +467,9 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
           children: [
             Text(label,
                 style: const TextStyle(
-                    color: _textMuted, fontSize: 11, fontWeight: FontWeight.w500)),
+                    color: _textMuted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500)),
             const SizedBox(height: 4),
             Text(value,
                 style: TextStyle(
@@ -531,7 +543,7 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
   }) {
     final values  = entries.map((e) => e[valueKey] as double).toList();
     if (values.isEmpty) return const SizedBox.shrink();
-    final maxVal  = values.fold(0.0, (m, v) => v > m ? v : m);
+    final maxVal   = values.fold(0.0, (m, v) => v > m ? v : m);
     final scaleMax = (goal > maxVal ? goal : maxVal) * 1.15;
 
     return Container(
@@ -633,7 +645,8 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
           ),
           const Divider(height: 1),
           ...top.map((f) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 child: Row(
                   children: [
                     Expanded(
@@ -642,7 +655,8 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
                               color: Color(0xFF2C2C2C), fontSize: 13)),
                     ),
                     Text(f['date'] as String,
-                        style: const TextStyle(color: _textMuted, fontSize: 11)),
+                        style:
+                            const TextStyle(color: _textMuted, fontSize: 11)),
                     const SizedBox(width: 12),
                     Text(
                         '${(f['oxalate_mg'] as double).toStringAsFixed(1)} mg',
@@ -665,7 +679,7 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
   Widget _disclaimer() => Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFFBEB),   // warm amber tint
+          color: const Color(0xFFFFFBEB),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: const Color(0xFFD4A017), width: 1.5),
         ),
