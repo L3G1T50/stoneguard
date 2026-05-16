@@ -1,16 +1,25 @@
-// ─── HOME SHIELD SCREEN ────────────────────────────────────────────────────────────────────────────────
+// ─── HOME SHIELD SCREEN ───────────────────────────────────────────────────────
+// Batch G: UI polish
+//   • Branding fix: header fallback 'StoneGuard' → 'KidneyShield'
+//   • Water buttons use AppColors tokens + dark-mode-aware ink response
+//   • Oxalate card uses AppCard + AppTextStyles
+//   • Nav quick-links use AppCard (ink splash, themed surface, teal icons)
+//   • Reset button wrapped in AppIconBadge for visual weight
+//   • All hardcoded Colors.white/black* replaced with AppDynamic helpers
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../widgets/banner_ad_widget.dart';
 import '../main.dart';
 import '../hydration_repository.dart';
 import '../secure_prefs.dart';
+import '../theme/app_theme.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'settings_screen.dart';
 import 'history_progress_screen.dart';
 
-// ─── WAVE PAINTER ────────────────────────────────────────────────────────────────
+// ─── WAVE PAINTER ────────────────────────────────────────────────────────────
 class _WavePainter extends CustomPainter {
   final double fillLevel;
   final double wavePhase;
@@ -81,7 +90,7 @@ class _WavePainter extends CustomPainter {
       old.waterColor != waterColor;
 }
 
-// ─── RING PAINTER (glow arc) ──────────────────────────────────────────────────────
+// ─── RING PAINTER ─────────────────────────────────────────────────────────────
 class _GlowRingPainter extends CustomPainter {
   final double progress;
   final Color color;
@@ -158,24 +167,24 @@ class _GlowRingPainter extends CustomPainter {
       old.progress != progress || old.color != color;
 }
 
-// ─── ALL BADGE DEFINITIONS (must match progress_screen.dart) ────────────────────────
+// ─── BADGE DEFINITIONS ────────────────────────────────────────────────────────
 const List<Map<String, dynamic>> _kAllBadges = [
-  {'id': 'first_log',    'icon': '🥇', 'milestone': false},
-  {'id': 'streak_3',     'icon': '🔥', 'milestone': false},
+  {'id': 'first_log',     'icon': '🥇', 'milestone': false},
+  {'id': 'streak_3',      'icon': '🔥', 'milestone': false},
   {'id': 'hydration_hero','icon': '💧', 'milestone': false},
   {'id': 'stone_guardian','icon': '🛡️', 'milestone': false},
-  {'id': 'champ_7',      'icon': '🏆', 'milestone': true},
-  {'id': 'logger_14',    'icon': '📅', 'milestone': false},
-  {'id': 'habit_21',     'icon': '🌟', 'milestone': false},
-  {'id': 'warrior_30',   'icon': '🥈', 'milestone': true},
-  {'id': 'streak_30',    'icon': '⚡', 'milestone': true},
-  {'id': 'guardian_90',  'icon': '🎖️', 'milestone': true},
-  {'id': 'defender_180', 'icon': '🥉', 'milestone': true},
-  {'id': 'legend_365',   'icon': '👑', 'milestone': true},
-  {'id': 'diamond_730',  'icon': '💎', 'milestone': true},
+  {'id': 'champ_7',       'icon': '🏆', 'milestone': true},
+  {'id': 'logger_14',     'icon': '📅', 'milestone': false},
+  {'id': 'habit_21',      'icon': '🌟', 'milestone': false},
+  {'id': 'warrior_30',    'icon': '🥈', 'milestone': true},
+  {'id': 'streak_30',     'icon': '⚡', 'milestone': true},
+  {'id': 'guardian_90',   'icon': '🎖️', 'milestone': true},
+  {'id': 'defender_180',  'icon': '🥉', 'milestone': true},
+  {'id': 'legend_365',    'icon': '👑', 'milestone': true},
+  {'id': 'diamond_730',   'icon': '💎', 'milestone': true},
 ];
 
-// ─── MAIN SCREEN ────────────────────────────────────────────────────────────────────────────────
+// ─── MAIN SCREEN ──────────────────────────────────────────────────────────────
 class HomeShieldScreen extends StatefulWidget {
   const HomeShieldScreen({super.key});
   @override
@@ -184,27 +193,25 @@ class HomeShieldScreen extends StatefulWidget {
 
 class HomeShieldScreenState extends State<HomeShieldScreen>
     with TickerProviderStateMixin, WidgetsBindingObserver {
-  double waterOz = 0;
+  double waterOz   = 0;
   double oxalateMg = 0;
-  double goalOz = 80;
-  double goalMg = 200;
+  double goalOz    = 80;
+  double goalMg    = 200;
 
   final _repo   = HydrationRepository.instance;
-  // Fix 1: use SecurePrefs for all PHI reads — no more raw SharedPreferences.
   final _secure = SecurePrefs.instance;
 
   Set<String> _celebratedBadges = {};
-  int get _unlockedCount => _kAllBadges
-      .where((b) => _celebratedBadges.contains(b['id']))
-      .length;
+  int get _unlockedCount =>
+      _kAllBadges.where((b) => _celebratedBadges.contains(b['id'])).length;
 
   late AnimationController _fillController;
-  late Animation<double> _fillAnimation;
+  late Animation<double>   _fillAnimation;
   late AnimationController _waveController;
   late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
+  late Animation<double>   _pulseAnimation;
 
-  String _userName = '';
+  String _userName   = '';
   String _avatarPath = '';
 
   Future<void> _requestNotificationPermission() async {
@@ -252,13 +259,11 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     if (state == AppLifecycleState.resumed) loadData();
   }
 
-  // Fix 1: All prefs read through SecurePrefs — user_name, avatar_path,
-  // and celebrated_badges are no longer read from plain SharedPreferences.
   Future<void> loadData() async {
-    final snapshot        = await _repo.readToday();
-    final userName        = await _secure.getString('user_name');
-    final avatarPath      = await _secure.getString('avatar_path');
-    final celebratedList  = await _secure.getStringList('celebrated_badges');
+    final snapshot       = await _repo.readToday();
+    final userName       = await _secure.getString('user_name');
+    final avatarPath     = await _secure.getString('avatar_path');
+    final celebratedList = await _secure.getStringList('celebrated_badges');
 
     if (!mounted) return;
     setState(() {
@@ -271,8 +276,8 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
       _celebratedBadges = celebratedList.toSet();
       final visualFill = (snapshot.waterOz / snapshot.goalOz).clamp(0.0, 1.0);
       _fillAnimation =
-          Tween<double>(begin: visualFill, end: visualFill)
-              .animate(CurvedAnimation(
+          Tween<double>(begin: visualFill, end: visualFill).animate(
+              CurvedAnimation(
                   parent: _fillController, curve: Curves.easeInOutCubic));
     });
   }
@@ -292,11 +297,10 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     if (!mounted) return;
 
     final currentAnimProg = _fillAnimation.value;
-    final newVisualFill = (newOz / goalOz).clamp(0.0, 1.0);
-    _fillAnimation =
-        Tween<double>(begin: currentAnimProg, end: newVisualFill).animate(
-            CurvedAnimation(
-                parent: _fillController, curve: Curves.easeInOutCubic));
+    final newVisualFill   = (newOz / goalOz).clamp(0.0, 1.0);
+    _fillAnimation = Tween<double>(begin: currentAnimProg, end: newVisualFill)
+        .animate(CurvedAnimation(
+            parent: _fillController, curve: Curves.easeInOutCubic));
     _fillController.forward(from: 0);
     setState(() { waterOz = newOz; });
     if (newOz >= goalOz) {
@@ -310,7 +314,8 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
       builder: (ctx) => AlertDialog(
         title: const Text('Reset Today?'),
         content: const Text(
-            'This will clear all water and oxalate data for today. This cannot be undone.'),
+            'This will clear all water and oxalate data for today. '
+            'This cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -327,7 +332,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     if (confirmed != true) return;
 
     await _repo.resetToday();
-
     if (!mounted) return;
 
     final currentAnimProg = _fillAnimation.value;
@@ -340,7 +344,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
       oxalateMg = 0;
     });
 
-    // Fix 1b: confirm the reset completed so user isn't left wondering.
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Today's data has been reset.")),
     );
@@ -364,53 +367,63 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   }
 
   Color _oxalateColor(double mg) {
-    if (mg >= goalMg) return const Color(0xFFE53935);
-    if (mg >= goalMg * 0.75) return const Color(0xFFFFA726);
-    if (mg >= goalMg * 0.50) return const Color(0xFFFFEE58);
+    if (mg >= goalMg)            return const Color(0xFFE53935);
+    if (mg >= goalMg * 0.75)     return const Color(0xFFFFA726);
+    if (mg >= goalMg * 0.50)     return const Color(0xFFFFEE58);
     return const Color(0xFF66BB6A);
   }
 
   String _oxalateStatus(double mg) {
-    if (mg >= goalMg) return '⛔ Daily limit reached — no more high-oxalate foods!';
-    if (mg >= goalMg * 0.75) return '⚠️ Getting close to your limit — be careful!';
-    if (mg >= goalMg * 0.50) return '🟡 Moderate intake — watch your next meal';
+    if (mg >= goalMg)            return '⛔ Daily limit reached — no more high-oxalate foods!';
+    if (mg >= goalMg * 0.75)     return '⚠️ Getting close to your limit — be careful!';
+    if (mg >= goalMg * 0.50)     return '🟡 Moderate intake — watch your next meal';
     return '✅ Great job — staying well within your limit!';
   }
 
   String _motivationalText(double oz) {
     if (oz >= goalOz * 1.25) return '🌊 Super-hydrated! You\'re crushing it today!';
-    if (oz >= goalOz) return '🎉 Daily goal reached! Keep going — more is great!';
+    if (oz >= goalOz)        return '🎉 Daily goal reached! Keep going!';
     if (oz >= goalOz * 0.75) return '💪 Almost there — keep it up!';
     if (oz >= goalOz * 0.50) return '👍 Halfway there, great progress!';
     if (oz >= goalOz * 0.25) return '💧 Good start — keep drinking!';
     return '🛡️ Start hydrating to build your shield!';
   }
 
+  // ── Water quick-add buttons — themed, dark-mode aware ──────────────────────
   Widget _waterButton(int oz) {
-    return ElevatedButton(
-      onPressed: () => _addWater(oz.toDouble()),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.teal,
-        foregroundColor: Colors.white,
-        elevation: 2,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    return Material(
+      color: AppColors.teal,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _addWater(oz.toDouble()),
+        splashColor: Colors.white.withValues(alpha: 0.18),
+        highlightColor: Colors.white.withValues(alpha: 0.10),
+        child: Container(
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Text(
+            '+$oz oz',
+            style: GoogleFonts.inter(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+        ),
       ),
-      child: Text('+$oz oz',
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
     );
   }
 
-  Widget _buildWaterMeter() {
+  // ── Water meter ────────────────────────────────────────────────────────────
+  Widget _buildWaterMeter(BuildContext context) {
     return AnimatedBuilder(
       animation:
           Listenable.merge([_fillAnimation, _waveController, _pulseAnimation]),
       builder: (context, _) {
-        final fillProg = _fillAnimation.value.clamp(0.0, 1.0);
+        final fillProg  = _fillAnimation.value.clamp(0.0, 1.0);
         final ringColor = _lerpShieldColor(fillProg);
         final wavePhase = _waveController.value * 2 * pi;
-        final displayOz = waterOz;
-        final isDark = Theme.of(context).brightness == Brightness.dark;
 
         return ScaleTransition(
           scale: _pulseAnimation,
@@ -418,6 +431,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
             height: 230,
             width: 230,
             child: Stack(alignment: Alignment.center, children: [
+              // Glow ring
               SizedBox(
                 height: 230,
                 width: 230,
@@ -430,6 +444,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                   ),
                 ),
               ),
+              // Progress ring
               SizedBox(
                 height: 230,
                 width: 230,
@@ -441,6 +456,7 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                   ),
                 ),
               ),
+              // Wave fill
               ClipOval(
                 child: SizedBox(
                   height: 190,
@@ -454,28 +470,29 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                   ),
                 ),
               ),
+              // Center text
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    '${displayOz.toStringAsFixed(displayOz == displayOz.roundToDouble() ? 0 : 1)} oz',
-                    style: TextStyle(
+                    '${waterOz.toStringAsFixed(waterOz == waterOz.roundToDouble() ? 0 : 1)} oz',
+                    style: GoogleFonts.inter(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : Colors.black87,
+                      color: AppDynamic.textPrimary(context),
                     ),
                   ),
                   Text(
                     'of ${goalOz.toInt()} oz',
-                    style: TextStyle(
+                    style: GoogleFonts.inter(
                       fontSize: 13,
-                      color: isDark ? Colors.white54 : Colors.black45,
+                      color: AppDynamic.textSecond(context),
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${(fillProg * 100).toInt()}%',
-                    style: TextStyle(
+                    style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: ringColor,
@@ -490,50 +507,47 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     );
   }
 
-  Widget _buildOxalateCard(bool isDark) {
+  // ── Oxalate card — uses AppCard + AppTextStyles ────────────────────────────
+  Widget _buildOxalateCard(BuildContext context) {
     final progress = (oxalateMg / goalMg).clamp(0.0, 1.0);
-    final oxColor = _oxalateColor(oxalateMg);
+    final oxColor  = _oxalateColor(oxalateMg);
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Oxalate Intake',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                Text(
-                  '${oxalateMg.toStringAsFixed(1)} / ${goalMg.toInt()} mg',
-                  style: TextStyle(
-                      fontSize: 14,
-                      color: oxColor,
-                      fontWeight: FontWeight.w600),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Oxalate Intake',
+                  style: AppTextStyles.itemTitleOf(context)),
+              Text(
+                '${oxalateMg.toStringAsFixed(1)} / ${goalMg.toInt()} mg',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: oxColor,
                 ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 10,
-                backgroundColor: isDark ? Colors.white12 : Colors.black12,
-                valueColor: AlwaysStoppedAnimation<Color>(oxColor),
               ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 12,
+              // Softer track — uses theme border color instead of black12
+              backgroundColor: AppDynamic.border(context),
+              valueColor: AlwaysStoppedAnimation<Color>(oxColor),
             ),
-            const SizedBox(height: 10),
-            Text(
-              _oxalateStatus(oxalateMg),
-              style: TextStyle(fontSize: 13, color: oxColor),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            _oxalateStatus(oxalateMg),
+            style: GoogleFonts.inter(fontSize: 13, color: oxColor),
+          ),
+        ],
       ),
     );
   }
@@ -546,11 +560,13 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
       body: SafeArea(
         child: Column(
           children: [
+            // ── Header row ────────────────────────────────────────────────
             Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Row(
                 children: [
+                  // Avatar → Settings
                   GestureDetector(
                     onTap: () => Navigator.push(
                       context,
@@ -559,16 +575,18 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                     ).then((_) => loadData()),
                     child: CircleAvatar(
                       radius: 22,
-                      backgroundColor: Colors.teal.withValues(alpha: 0.2),
+                      backgroundColor:
+                          AppColors.teal.withValues(alpha: 0.18),
                       backgroundImage: _avatarPath.isNotEmpty
                           ? FileImage(File(_avatarPath))
                           : null,
                       child: _avatarPath.isEmpty
-                          ? const Icon(Icons.person, color: Colors.teal)
+                          ? const Icon(Icons.person, color: AppColors.teal)
                           : null,
                     ),
                   ),
                   const SizedBox(width: 10),
+                  // Greeting + motivational text
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -576,69 +594,88 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                         Text(
                           _userName.isNotEmpty
                               ? 'Hi, $_userName 👋'
-                              : 'StoneGuard',
-                          style: const TextStyle(
-                              fontSize: 17, fontWeight: FontWeight.bold),
+                              : 'KidneyShield',  // Batch G: was 'StoneGuard'
+                          style: GoogleFonts.inter(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: AppDynamic.textPrimary(context),
+                          ),
                         ),
                         Text(
                           _motivationalText(waterOz),
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: isDark
-                                  ? Colors.white54
-                                  : Colors.black54),
-                          maxLines: 1,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: AppDynamic.textSecond(context),
+                          ),
+                          // Batch G: was maxLines:1 — short motivational
+                          // strings with emojis were truncating on small phones
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
+                  // Badge chip → History
                   GestureDetector(
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => const HistoryProgressScreen()),
+                          builder: (_) =>
+                              const HistoryProgressScreen()),
                     ).then((_) => loadData()),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.teal.withValues(alpha: 0.12),
+                        color: AppColors.teal.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
                         children: [
-                          const Text('🏅', style: TextStyle(fontSize: 14)),
+                          const Text('🏅',
+                              style: TextStyle(fontSize: 14)),
                           const SizedBox(width: 4),
                           Text(
                             '$_unlockedCount/${_kAllBadges.length}',
-                            style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.teal),
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.teal,
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.refresh_rounded),
-                    tooltip: 'Reset today',
-                    onPressed: _resetAll,
+                  // Reset button — AppIconBadge gives it visual weight
+                  GestureDetector(
+                    onTap: _resetAll,
+                    child: Tooltip(
+                      message: 'Reset today',
+                      child: AppIconBadge(
+                        icon: Icons.refresh_rounded,
+                        color: isDark
+                            ? AppColors.darkTextSecond
+                            : AppColors.textSecond,
+                        size: 20,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
 
+            // ── Scrollable body ────────────────────────────────────────────
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   children: [
                     const SizedBox(height: 8),
-                    Center(child: _buildWaterMeter()),
+                    Center(child: _buildWaterMeter(context)),
                     const SizedBox(height: 20),
+                    // Water quick-add buttons
                     GridView.count(
                       crossAxisCount: 4,
                       shrinkWrap: true,
@@ -651,34 +688,74 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
                           .toList(),
                     ),
                     const SizedBox(height: 16),
-                    _buildOxalateCard(isDark),
+                    _buildOxalateCard(context),
                     const SizedBox(height: 16),
+                    // Quick-nav cards — AppCard for ink + themed surface
                     Row(
                       children: [
                         Expanded(
-                          child: _NavCard(
-                            icon: Icons.history_rounded,
-                            label: 'History',
-                            color: Colors.indigo,
+                          child: AppCard(
                             onTap: () => Navigator.push(
                               context,
                               MaterialPageRoute(
                                   builder: (_) =>
                                       const HistoryProgressScreen()),
                             ).then((_) => loadData()),
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 18),
+                            child: Column(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.history_rounded,
+                                  color: AppColors.teal,
+                                  size: 28,
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'History',
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.teal,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: _NavCard(
-                            icon: Icons.settings_rounded,
-                            label: 'Settings',
-                            color: Colors.blueGrey,
+                          child: AppCard(
                             onTap: () => Navigator.push(
                               context,
                               MaterialPageRoute(
-                                  builder: (_) => const SettingsScreen()),
+                                  builder: (_) =>
+                                      const SettingsScreen()),
                             ).then((_) => loadData()),
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 18),
+                            child: Column(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.settings_rounded,
+                                  color: AppColors.teal,
+                                  size: 28,
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Settings',
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.teal,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -691,48 +768,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── SMALL NAV CARD ───────────────────────────────────────────────────────────
-class _NavCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _NavCard({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Card(
-        elevation: 2,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: color, size: 28),
-              const SizedBox(height: 6),
-              Text(label,
-                  style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: color,
-                      fontSize: 13)),
-            ],
-          ),
         ),
       ),
     );

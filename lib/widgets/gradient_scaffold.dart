@@ -1,12 +1,15 @@
-// ─── SHARED GRADIENT SCAFFOLD ────────────────────────────────────────────────────────
+// ─── SHARED GRADIENT SCAFFOLD ─────────────────────────────────────────────────
 // All tabs use this widget so the teal-to-theme gradient stays consistent
 // across the whole app. Supports both light and dark mode automatically.
+//
+// Batch G:
+//   • AppBar title uses AppTextStyles.appBarTitle (18px w700 Inter) in white,
+//     consistent with StoneGuardAppBar typography. Was fontSize:22/bold.
+//   • Gradient top stops replaced with AppColors.teal / AppColors.tealDark
+//     so any future brand-colour change flows through automatically.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
-
-// ignore: unused_element
-const _kHeaderHeight = 112.0;
 
 class GradientScaffold extends StatelessWidget {
   const GradientScaffold({
@@ -30,17 +33,16 @@ class GradientScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Gradient fades into the correct background for the active theme
     final List<Color> gradientColors = isDark
         ? [
-            const Color(0xFF01696F),
-            const Color(0xFF025A60),
+            AppColors.teal,
+            AppColors.tealDark,
             AppColors.darkBackground,
             AppColors.darkBackground,
           ]
         : [
-            const Color(0xFF01696F),
-            const Color(0xFF2A9DA5),
+            AppColors.teal,
+            AppColors.tealDark,
             const Color(0xFFE0F4F5),
             Colors.white,
           ];
@@ -58,7 +60,7 @@ class GradientScaffold extends StatelessWidget {
         bottomSheet: bottomSheet,
         body: Stack(
           children: [
-            // ── Gradient background (full screen) ──
+            // Gradient background (full screen)
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
@@ -72,7 +74,7 @@ class GradientScaffold extends StatelessWidget {
               ),
             ),
 
-            // ── Actual content + custom header ──
+            // Content + custom header
             SafeArea(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -89,7 +91,7 @@ class GradientScaffold extends StatelessWidget {
   }
 }
 
-// ── Slim custom header — white title centered, icons on edges ─────────────────
+// ── Slim custom header ────────────────────────────────────────────────────────
 class _GradientAppBar extends StatelessWidget {
   const _GradientAppBar({required this.title, this.actions});
   final String title;
@@ -104,7 +106,7 @@ class _GradientAppBar extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // ── Centered title ──
+          // Centered title — Batch G: use AppTextStyles.appBarTitle in white
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 56),
             child: Text(
@@ -112,15 +114,14 @@ class _GradientAppBar extends StatelessWidget {
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
+              style: AppTextStyles.appBarTitle.copyWith(
                 color: Colors.white,
+                fontSize: 20,
               ),
             ),
           ),
 
-          // ── Left: back button or spacer ──
+          // Left: back button or spacer
           Positioned(
             left: 0,
             child: canPop
@@ -132,7 +133,7 @@ class _GradientAppBar extends StatelessWidget {
                 : const SizedBox(width: 48),
           ),
 
-          // ── Right: action icons ──
+          // Right: action icons
           if (actions != null)
             Positioned(
               right: 0,
