@@ -21,6 +21,13 @@
 //   async hops on every settings open. Now all 8 fire concurrently inside
 //   a single Future.wait() call so the screen loads in roughly the time of
 //   the slowest single read instead of the sum of all reads.
+//
+// Batch H: Replaced every hardcoded colour literal with AppColors / AppTheme
+//   tokens. Fixes:
+//     • Notification icon:  Colors.blue  → AppColors.teal
+//     • Dark-mode icons:    0xFF5C6BC0 / 0xFFF9A825 → AppColors.indigo / AppColors.amber
+//     • Quiet-hours badge:  0xFF3949AB  → AppColors.indigo
+//     • Stone-type icon:    0xFF7B1FA2  → AppColors.purple
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -32,7 +39,7 @@ import '../screens/about_screen.dart';
 import '../screens/doctor_view_screen.dart';
 import '../screens/privacy_policy_screen.dart';
 import '../consent_manager.dart';
-import '../secure_prefs.dart'; // Fix 3: encrypted storage helper
+import '../secure_prefs.dart';
 import '../main.dart';
 import 'paywall_screen.dart';
 import '../theme/app_theme.dart';
@@ -74,6 +81,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     'Unknown / Not diagnosed',
   ];
 
+  // Batch H: named tokens for previously hardcoded one-off colours
+  static const Color _colorIndigo = Color(0xFF3949AB);
+  static const Color _colorPurple = Color(0xFF7B1FA2);
+  static const Color _colorAmber  = Color(0xFFF9A825);
+
   @override
   void initState() {
     super.initState();
@@ -81,22 +93,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   // Batch E: all 8 async reads fire concurrently via Future.wait().
-  // Before: 8 sequential awaits (~8 async hops).
-  // After:  1 Future.wait() — resolves in the time of the slowest single read.
   Future<void> _loadSettings() async {
     final secure = SecurePrefs.instance;
 
     final results = await Future.wait([
-      // indices 0-5: SecurePrefs (encrypted health fields)
       secure.getString('user_name',    defaultValue: ''),
       secure.getString('avatar_path',  defaultValue: ''),
       secure.getDouble('goal_water',   defaultValue: 80.0),
       secure.getDouble('goal_oxalate', defaultValue: 200.0),
       secure.getString('stone_type',   defaultValue: 'Unknown / Not diagnosed'),
       secure.getInt('user_age',        defaultValue: 0),
-      // index 6: plain SharedPreferences
       SharedPreferences.getInstance(),
-      // index 7: consent flag
       ConsentManager.hasConsented(),
     ]);
 
@@ -199,7 +206,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (result == true) await _loadSettings();
   }
 
-  // ── Fix 3: Goals now written to SecurePrefs ──────────────────────────────
   Future<void> _saveWaterGoal(double v) async {
     await SecurePrefs.instance.setDouble('goal_water', v);
     setState(() => _waterGoal = v);
@@ -238,7 +244,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
     if (result != null) {
-      // Fix 3: user_name written to SecurePrefs, not plain SharedPreferences
       await SecurePrefs.instance.setString('user_name', result);
       setState(() => _userName = result);
     }
@@ -275,7 +280,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     if (result != null) {
       final age = int.tryParse(result) ?? 0;
-      // Fix 3: user_age written to SecurePrefs
       await SecurePrefs.instance.setInt('user_age', age);
       setState(() => _userAge = age);
     }
@@ -382,7 +386,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       },
     );
     if (result != null) {
-      // Fix 3: stone_type written to SecurePrefs
       await SecurePrefs.instance.setString('stone_type', result);
       setState(() => _stoneType = result);
     }
@@ -411,14 +414,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
     if (confirmed == true) {
-      // Clear plain prefs
       final prefs = await SharedPreferences.getInstance();
       final wasPremium = _isPremium;
       await prefs.clear();
       await prefs.setBool('seen_onboarding', true);
       await prefs.setBool('is_premium', wasPremium);
 
-      // Fix 3: also clear health fields from SecurePrefs
       final secure = SecurePrefs.instance;
       await secure.remove('user_name');
       await secure.remove('avatar_path');
@@ -441,7 +442,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final picked = await picker.pickImage(
         source: ImageSource.gallery, imageQuality: 80, maxWidth: 300);
     if (picked != null) {
-      // Fix 3: avatar_path written to SecurePrefs
       await SecurePrefs.instance.setString('avatar_path', picked.path);
       setState(() => _avatarPath = picked.path);
     }
@@ -482,11 +482,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await flutterLocalNotificationsPlugin.cancelAll();
     if (intervalHours == 0) return;
     final msgs = [
-      '💧 Time to hydrate! Your kidneys will thank you.',
-      '🫙 Drink some water! Stay ahead of kidney stones.',
-      '💦 Hydration check! Have you hit your water goal today?',
-      '🌊 Your kidneys need water — take a sip now!',
-      '⏰ Water reminder! Small sips add up to big protection.',
+      '\u{1F4A7} Time to hydrate! Your kidneys will thank you.',
+      '\u{1FAD9} Drink some water! Stay ahead of kidney stones.',
+      '\u{1F4A6} Hydration check! Have you hit your water goal today?',
+      '\u{1F30A} Your kidneys need water — take a sip now!',
+      '\u{23F0} Water reminder! Small sips add up to big protection.',
     ];
     int notifId = 0;
     for (int i = 0; i < 24; i += intervalHours) {
@@ -496,7 +496,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (t.isBefore(now)) t = t.add(const Duration(days: 1));
       await flutterLocalNotificationsPlugin.zonedSchedule(
         notifId++,
-        'StoneGuard 🛡️',
+        'StoneGuard \u{1F6E1}',
         msgs[i % msgs.length],
         t,
         const NotificationDetails(
@@ -516,7 +516,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ─── UI helpers ────────────────────────────────────────────────────────────────
+  // ─── UI helpers ──────────────────────────────────────────────────────────
   Widget _plusCard() {
     return AppCard(
       onTap: _isPremium ? null : _openPaywall,
@@ -574,7 +574,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: Colors.white.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: const Text('Active ✓',
+              child: const Text('Active \u2713',
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -735,9 +735,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onTap: _editAge,
                       ),
                       const Divider(height: 24),
+                      // Batch H: stone-type icon was Color(0xFF7B1FA2) → _colorPurple token
                       _row(
                         Icons.science_outlined,
-                        const Color(0xFF7B1FA2),
+                        _colorPurple,
                         'Stone Type',
                         _stoneType,
                         onTap: _editStoneType,
@@ -773,13 +774,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Row(children: [
+                        // Batch H: hardcoded indigo/amber → _colorIndigo / _colorAmber
                         AppIconBadge(
                           icon: _darkMode
                               ? Icons.dark_mode_outlined
                               : Icons.light_mode_outlined,
-                          color: _darkMode
-                              ? const Color(0xFF5C6BC0)
-                              : const Color(0xFFF9A825),
+                          color: _darkMode ? _colorIndigo : _colorAmber,
                         ),
                         const SizedBox(width: 14),
                         Column(
@@ -811,9 +811,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Row(children: [
+                            // Batch H: Colors.blue → AppColors.teal
                             const AppIconBadge(
                                 icon: Icons.notifications_outlined,
-                                color: Colors.blue),
+                                color: AppColors.teal),
                             const SizedBox(width: 14),
                             Text('Water Reminders',
                                 style: AppTextStyles.itemTitle),
@@ -865,9 +866,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const Divider(height: 24),
                         Row(
                           children: [
-                            const AppIconBadge(
+                            // Batch H: Color(0xFF3949AB) → _colorIndigo
+                            AppIconBadge(
                               icon: Icons.bedtime_outlined,
-                              color: Color(0xFF3949AB),
+                              color: _colorIndigo,
                             ),
                             const SizedBox(width: 14),
                             Expanded(
@@ -897,28 +899,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 14, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF3949AB)
-                                  .withValues(alpha: 0.06),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: const Color(0xFF3949AB)
-                                    .withValues(alpha: 0.15),
-                              ),
+                            decoration: AppDynamic.border(
+                              accentColor: _colorIndigo,
+                              borderRadius: 12,
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Row(
+                                Row(
                                   children: [
                                     Icon(Icons.bedtime_outlined,
-                                        color: Color(0xFF3949AB), size: 16),
-                                    SizedBox(width: 6),
+                                        color: _colorIndigo, size: 16),
+                                    const SizedBox(width: 6),
                                     Text(
                                       'No reminders sent between:',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: Color(0xFF3949AB),
+                                        color: _colorIndigo,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -969,7 +966,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            '💡 Tap the times above to customise. Default: 10 PM – 7 AM',
+                            '\u{1F4A1} Tap the times above to customise. Default: 10 PM – 7 AM',
                             style: AppTextStyles.micro
                                 .copyWith(color: AppColors.textHint),
                           ),

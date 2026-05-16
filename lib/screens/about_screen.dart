@@ -1,16 +1,15 @@
+// ─── ABOUT SCREEN ──────────────────────────────────────────────────
+// Batch H: Migrated from isolated local colour constants to AppTheme
+//   tokens (AppColors, AppTextStyles, AppSpacing, AppCard, AppDynamic).
+//   Removed every hardcoded Color(0xFF...) literal; the screen now
+//   adapts automatically to light / dark mode via the global theme.
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../theme/app_theme.dart';
+import '../widgets/gradient_scaffold.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
-
-  static const Color _bg        = Color(0xFFF8F8F8);
-  static const Color _surface   = Color(0xFFFFFFFF);
-  static const Color _border    = Color(0xFFD0D0D8);
-  static const Color _textPri   = Color(0xFF2C2C2C);
-  static const Color _textMuted = Color(0xFF888888);
-  static const Color _appBar    = Color(0xFFE8E8EC);
-  static const Color _teal      = Color(0xFF1A8A9A);
 
   static const String _privacyUrl =
       'https://www.freeprivacypolicy.com/live/c256b9ff-8fd7-4252-ac3b-2cc80b29633f';
@@ -28,25 +27,16 @@ class AboutScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _bg,
-      appBar: AppBar(
-        backgroundColor: _appBar,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: _textPri),
-        centerTitle: true,
-        title: const Text(
-          'About StoneGuard',
-          style: TextStyle(
-              color: _textPri, fontWeight: FontWeight.bold, fontSize: 20),
-        ),
-      ),
+    return GradientScaffold(
+      title: 'About StoneGuard',
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+        padding: AppSpacing.pagePadding.add(
+            const EdgeInsets.only(bottom: 40)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Hero
+
+            // ── Hero ──────────────────────────────────────────────────
             Center(
               child: Column(
                 children: [
@@ -54,47 +44,42 @@ class AboutScreen extends StatelessWidget {
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: _teal.withValues(alpha: 0.1),
+                      color: AppColors.teal.withValues(alpha: 0.10),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Icon(Icons.shield_rounded,
-                        size: 44, color: _teal),
+                        size: 44, color: AppColors.teal),
                   ),
                   const SizedBox(height: 14),
-                  const Text(
+                  Text(
                     'StoneGuard',
-                    style: TextStyle(
-                        color: _textPri,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 26),
+                    style: AppTextStyles.heading,
                   ),
                   const SizedBox(height: 4),
                   const Text(
                     'Calcium Oxalate Stone Prevention',
                     style: TextStyle(
-                        color: _teal,
+                        color: AppColors.teal,
                         fontWeight: FontWeight.w600,
                         fontSize: 13),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'Built by a survivor, for survivors.',
-                    style: TextStyle(
-                        color: _textMuted,
-                        fontStyle: FontStyle.italic,
-                        fontSize: 13),
+                    style: AppTextStyles.body.copyWith(
+                        fontStyle: FontStyle.italic),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 32),
 
-            // My Story
+            // ── My Story ─────────────────────────────────────────────
             _buildSection(
               icon: Icons.person_outline_rounded,
               title: 'My Story',
               content:
-              'My journey with kidney stones began at just 10 years old '
+                  'My journey with kidney stones began at just 10 years old '
                   '-- a 10/10 pain emergency that landed me in the hospital '
                   'in the middle of the night. Over the years, I have faced '
                   'this battle 11 times and counting. Each stone has reinforced '
@@ -102,14 +87,14 @@ class AboutScreen extends StatelessWidget {
                   'every single day. It is not just a health goal for me '
                   '-- it is a necessity.',
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
-            // Why I Built This
+            // ── Why I Built This ─────────────────────────────────────
             _buildSection(
               icon: Icons.lightbulb_outline_rounded,
               title: 'Why I Built This App',
               content:
-              'I tried other apps, but could not find a single one built '
+                  'I tried other apps, but could not find a single one built '
                   'specifically for calcium oxalate kidney stone sufferers. '
                   'It is hard to remember which foods to avoid every day '
                   'and to stay consistent with drinking enough water. '
@@ -117,14 +102,14 @@ class AboutScreen extends StatelessWidget {
                   'a one-of-a-kind app that benefits not just myself, '
                   'but everyone who deals with stones.',
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
-            // What it does
+            // ── What It Does ─────────────────────────────────────────
             _buildSection(
               icon: Icons.favorite_outline_rounded,
               title: 'What StoneGuard Does',
               content:
-              'StoneGuard is designed to be simple enough to use every day, '
+                  'StoneGuard is designed to be simple enough to use every day, '
                   'while being powerful enough to show you the bigger picture. '
                   'It tracks your hydration, monitors your oxalate intake, '
                   'and helps you understand where you are doing well and '
@@ -134,74 +119,61 @@ class AboutScreen extends StatelessWidget {
                   'Knowledge is prevention -- and StoneGuard puts that '
                   'knowledge in your hands.',
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
 
-            // Quote
-            Container(
+            // ── Quote ────────────────────────────────────────────────
+            AppCard(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: _teal.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: _teal.withValues(alpha: 0.2)),
-              ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.format_quote_rounded, color: _teal, size: 28),
-                  SizedBox(width: 12),
+                  const Icon(Icons.format_quote_rounded,
+                      color: AppColors.teal, size: 28),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'Wondering if you are on track? '
                           'With StoneGuard, you will know for sure.',
-                      style: TextStyle(
-                          color: _textPri,
-                          fontStyle: FontStyle.italic,
-                          fontSize: 13,
-                          height: 1.5),
+                      style: AppTextStyles.body.copyWith(
+                          fontStyle: FontStyle.italic),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
 
-            // Disclaimer
+            // ── Disclaimer ───────────────────────────────────────────
             Container(
               padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF8E1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFFFE082)),
+              decoration: AppDynamic.border(
+                accentColor: AppColors.warning,
+                borderRadius: 12,
+                bgAlpha: 0.07,
+                borderAlpha: 0.30,
               ),
-              child: const Row(
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline_rounded,
-                      color: Color(0xFFF9A825), size: 20),
-                  SizedBox(width: 10),
+                  const Icon(Icons.info_outline_rounded,
+                      color: AppColors.warning, size: 20),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'StoneGuard is a self-tracking and educational tool only. '
                           'It does not replace medical advice, clinical evaluation, '
                           'lab results, or imaging. Always consult your healthcare '
                           'provider for diagnosis and treatment.',
-                      style: TextStyle(
-                          color: Color(0xFF5D4037),
-                          fontSize: 12,
-                          height: 1.5),
+                      style: AppTextStyles.body,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
 
-            // Legal / Info tiles
-            Container(
-              decoration: BoxDecoration(
-                color: _surface,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: _border),
-              ),
+            // ── Legal / info tiles ────────────────────────────────────
+            AppCard(
+              padding: EdgeInsets.zero,
               child: Column(
                 children: [
                   _buildLinkTile(
@@ -211,19 +183,19 @@ class AboutScreen extends StatelessWidget {
                     url: _privacyUrl,
                     isFirst: true,
                   ),
-                  Divider(height: 1, color: _border),
+                  const Divider(height: 1),
                   _buildInfoTile(
                     icon: Icons.shield_outlined,
                     label: 'Data Storage',
                     value: 'On-device only',
                   ),
-                  Divider(height: 1, color: _border),
+                  const Divider(height: 1),
                   _buildInfoTile(
                     icon: Icons.science_outlined,
                     label: 'Stone Type',
                     value: 'Calcium Oxalate (v1)',
                   ),
-                  Divider(height: 1, color: _border),
+                  const Divider(height: 1),
                   _buildInfoTile(
                     icon: Icons.info_outline,
                     label: 'Version',
@@ -233,10 +205,11 @@ class AboutScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            const Center(
+
+            Center(
               child: Text(
-                '2026 StoneGuard. Made with love for stone survivors.',
-                style: TextStyle(color: _textMuted, fontSize: 11),
+                '\u00A9 2026 StoneGuard. Made with love for stone survivors.',
+                style: AppTextStyles.micro,
                 textAlign: TextAlign.center,
               ),
             ),
@@ -251,45 +224,31 @@ class AboutScreen extends StatelessWidget {
     required String title,
     required String content,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _border),
-      ),
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, color: _teal, size: 20),
+              Icon(icon, color: AppColors.teal, size: 20),
               const SizedBox(width: 8),
-              Text(title,
-                  style: const TextStyle(
-                      color: _textPri,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14)),
+              Text(title, style: AppTextStyles.itemTitle),
             ],
           ),
           const SizedBox(height: 10),
-          Text(
-            content,
-            style: const TextStyle(
-                color: _textMuted, fontSize: 13, height: 1.6),
-          ),
+          Text(content, style: AppTextStyles.body),
         ],
       ),
     );
   }
 
   Widget _buildLinkTile(
-      BuildContext context, {
-        required IconData icon,
-        required String label,
-        required String url,
-        bool isFirst = false,
-      }) {
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String url,
+    bool isFirst = false,
+  }) {
     return InkWell(
       borderRadius: isFirst
           ? const BorderRadius.vertical(top: Radius.circular(14))
@@ -299,16 +258,13 @@ class AboutScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            Icon(icon, color: _teal, size: 20),
+            Icon(icon, color: AppColors.teal, size: 20),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(label,
-                  style: const TextStyle(
-                      color: _textPri,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500)),
+              child: Text(label, style: AppTextStyles.itemTitle),
             ),
-            const Icon(Icons.open_in_new_rounded, color: _teal, size: 16),
+            const Icon(Icons.open_in_new_rounded,
+                color: AppColors.teal, size: 16),
           ],
         ),
       ),
@@ -324,14 +280,12 @@ class AboutScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         children: [
-          Icon(icon, color: _textMuted, size: 20),
+          Icon(icon, color: AppColors.textHint, size: 20),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(label,
-                style: const TextStyle(color: _textPri, fontSize: 14)),
+            child: Text(label, style: AppTextStyles.itemTitle),
           ),
-          Text(value,
-              style: const TextStyle(color: _textMuted, fontSize: 13)),
+          Text(value, style: AppTextStyles.body),
         ],
       ),
     );
