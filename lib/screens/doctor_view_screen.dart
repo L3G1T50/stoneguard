@@ -1,5 +1,9 @@
+// ─── DOCTOR VIEW SCREEN ────────────────────────────────────────────────
+// Fix 6 changes:
+//   • _loadData() now reads history via HistoryStorage (AES-encrypted).
+//   • user_name, goal_water, goal_oxalate read from SecurePrefs (Fix 3).
+//   • _disclaimer() is now a prominent yellow warning card with icon.
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -8,8 +12,9 @@ import 'package:share_plus/share_plus.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'export_report_screen.dart';
-
 import 'paywall_screen.dart';
+import '../history_storage.dart';
+import '../secure_prefs.dart';
 
 class DoctorViewScreen extends StatefulWidget {
   const DoctorViewScreen({super.key});
@@ -23,28 +28,28 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
   bool _isPremium = false;
 
   double _waterGoal = 80;
-  double _oxGoal = 200;
-  int _daysBack = 30;
-  String _userName = '';
+  double _oxGoal    = 200;
+  int    _daysBack  = 30;
+  String _userName  = '';
 
   final List<Map<String, dynamic>> _timeframes = [
-    {'label': '30D',  'days': 30,  'premium': false},
-    {'label': '6M',   'days': 180, 'premium': true},
-    {'label': '12M',  'days': 365, 'premium': true},
-    {'label': '2Y',   'days': 730, 'premium': true},
+    {'label': '30D', 'days': 30,  'premium': false},
+    {'label': '6M',  'days': 180, 'premium': true},
+    {'label': '12M', 'days': 365, 'premium': true},
+    {'label': '2Y',  'days': 730, 'premium': true},
   ];
 
-  List<Map<String, dynamic>> _entries = [];
+  List<Map<String, dynamic>> _entries     = [];
   List<Map<String, dynamic>> _foodEntries = [];
 
-  static const Color _bg = Color(0xFFF8F8F8);
-  static const Color _surface = Color(0xFFFFFFFF);
-  static const Color _border = Color(0xFFD0D0D8);
-  static const Color _textPri = Color(0xFF2C2C2C);
+  static const Color _bg       = Color(0xFFF8F8F8);
+  static const Color _surface  = Color(0xFFFFFFFF);
+  static const Color _border   = Color(0xFFD0D0D8);
+  static const Color _textPri  = Color(0xFF2C2C2C);
   static const Color _textMuted = Color(0xFF888888);
-  static const Color _appBar = Color(0xFFE8E8EC);
-  static const Color _teal = Color(0xFF1A8A9A);
-  static const Color _red = Color(0xFFD36B6B);
+  static const Color _appBar   = Color(0xFFE8E8EC);
+  static const Color _teal     = Color(0xFF1A8A9A);
+  static const Color _red      = Color(0xFFD36B6B);
 
   @override
   void initState() {
@@ -52,6 +57,7 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     _loadData();
   }
 
+  // ── food log (still from SharedPreferences — not PHI-sensitive) ─────────
   List<Map<String, dynamic>> _parseFoodLog(
       SharedPreferences prefs, DateTime cutoff) {
     final result = <Map<String, dynamic>>[];
@@ -67,8 +73,8 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
         try {
           final map = jsonDecode(item) as Map<String, dynamic>;
           result.add({
-            'date': dateStr,
-            'food': map['name'] ?? map['food'] ?? 'Unknown',
+            'date':       dateStr,
+            'food':       map['name'] ?? map['food'] ?? 'Unknown',
             'oxalate_mg': (map['oxalate_mg'] as num?)?.toDouble() ?? 0.0,
           });
         } catch (_) {}
@@ -78,32 +84,35 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     return result;
   }
 
+  // ── Fix 6: load history + goals + name from encrypted storage ────────
   Future<void> _loadData() async {
-    final prefs = await SharedPreferences.getInstance();
+    // Goals and name now read from SecurePrefs (migrated in Fix 3).
+    _waterGoal = await SecurePrefs.getDouble('goal_water')   ?? 80.0;
+    _oxGoal    = await SecurePrefs.getDouble('goal_oxalate') ?? 200.0;
+    _userName  = await SecurePrefs.getString('user_name')    ?? '';
 
-    _waterGoal = prefs.getDouble('goal_water') ?? 80.0;
-    _oxGoal = prefs.getDouble('goal_oxalate') ?? 200.0;
-    _userName = prefs.getString('user_name') ?? '';
-    _isPremium = prefs.getBool('is_premium') ?? false;
+    // is_premium is not PHI — stays in plain SharedPreferences.
+    final prefs   = await SharedPreferences.getInstance();
+    _isPremium    = prefs.getBool('is_premium') ?? false;
 
-    final raw = prefs.getStringList('daily_history') ?? [];
-    final now = DateTime.now();
+    // History via HistoryStorage (AES-256-CBC).
+    final storage = HistoryStorage();
+    final rawList = await storage.loadHistory();
+
+    final now    = DateTime.now();
     final cutoff = now.subtract(Duration(days: _daysBack));
 
-    final List<Map<String, dynamic>> entries = [];
-    for (final entry in raw) {
-      try {
-        final map = jsonDecode(entry) as Map<String, dynamic>;
-        final dateStr = map['date'] as String?;
-        if (dateStr == null) continue;
-        final date = DateTime.tryParse(dateStr);
-        if (date == null || date.isBefore(cutoff)) continue;
-        entries.add({
-          'date': date,
-          'water_oz': (map['water_oz'] as num?)?.toDouble() ?? 0.0,
-          'oxalate_mg': (map['oxalate_mg'] as num?)?.toDouble() ?? 0.0,
-        });
-      } catch (_) {}
+    final entries = <Map<String, dynamic>>[];
+    for (final map in rawList) {
+      final dateStr = map['date'] as String?;
+      if (dateStr == null) continue;
+      final date = DateTime.tryParse(dateStr);
+      if (date == null || date.isBefore(cutoff)) continue;
+      entries.add({
+        'date':       date,
+        'water_oz':   (map['water_oz']   as num?)?.toDouble() ?? 0.0,
+        'oxalate_mg': (map['oxalate_mg'] as num?)?.toDouble() ?? 0.0,
+      });
     }
     entries.sort(
         (a, b) => (a['date'] as DateTime).compareTo(b['date'] as DateTime));
@@ -112,9 +121,9 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
 
     if (!mounted) return;
     setState(() {
-      _entries = entries;
+      _entries     = entries;
       _foodEntries = foodEntries;
-      _isLoading = false;
+      _isLoading   = false;
     });
   }
 
@@ -134,27 +143,21 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
       return;
     }
     setState(() {
-      _daysBack = tf['days'] as int;
+      _daysBack  = tf['days'] as int;
       _isLoading = true;
     });
     await _loadData();
   }
 
+  // ── stats ───────────────────────────────────────────────────
   Map<String, dynamic> _computeStats() {
     if (_entries.isEmpty) {
       return {
-        'daysLogged': 0,
-        'avgWater': 0.0,
-        'avgOxalate': 0.0,
-        'waterGoalDays': 0,
-        'oxalateGoalDays': 0,
-        'waterPct': 0,
-        'oxalatePct': 0,
-        'currentStreak': 0,
-        'bestWaterDay': '—',
-        'bestWaterVal': 0.0,
-        'worstOxDay': '—',
-        'worstOxVal': 0.0,
+        'daysLogged': 0, 'avgWater': 0.0, 'avgOxalate': 0.0,
+        'waterGoalDays': 0, 'oxalateGoalDays': 0,
+        'waterPct': 0, 'oxalatePct': 0, 'currentStreak': 0,
+        'bestWaterDay': '—', 'bestWaterVal': 0.0,
+        'worstOxDay': '—', 'worstOxVal': 0.0,
         'trend': 'Not enough data',
       };
     }
@@ -167,50 +170,33 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     String worstOxDay = '—';
 
     for (final e in _entries) {
-      final w = e['water_oz'] as double;
+      final w = e['water_oz']   as double;
       final o = e['oxalate_mg'] as double;
-      tw += w;
-      to += o;
+      tw += w; to += o;
       if (w >= _waterGoal) wg++;
-      if (o <= _oxGoal) og++;
-      if (w > bestWater) {
-        bestWater = w;
-        bestWaterDay = _fmt(e['date'] as DateTime);
-      }
-      if (o > worstOx) {
-        worstOx = o;
-        worstOxDay = _fmt(e['date'] as DateTime);
-      }
+      if (o <= _oxGoal)    og++;
+      if (w > bestWater) { bestWater = w; bestWaterDay = _fmt(e['date'] as DateTime); }
+      if (o > worstOx)   { worstOx  = o; worstOxDay  = _fmt(e['date'] as DateTime); }
     }
 
-    final n = _entries.length;
+    final n    = _entries.length;
     final avgW = tw / n;
-
     String trend = 'Stable';
     if (n >= 14) {
       final recent = _entries.sublist(n - 7);
       final prior  = _entries.sublist(n - 14, n - 7);
       final rAvg = recent.fold(0.0, (s, e) => s + (e['water_oz'] as double)) / 7;
-      final pAvg = prior.fold(0.0, (s, e) => s + (e['water_oz'] as double)) / 7;
-      if (rAvg > pAvg + 5) {
-        trend = '📈 Improving (water intake up)';
-      } else if (rAvg < pAvg - 5) {
-        trend = '📉 Declining (water intake down)';
-      } else {
-        trend = '➡️ Stable';
-      }
+      final pAvg = prior.fold(0.0,  (s, e) => s + (e['water_oz'] as double)) / 7;
+      if      (rAvg > pAvg + 5) trend = '📈 Improving (water intake up)';
+      else if (rAvg < pAvg - 5) trend = '📉 Declining (water intake down)';
+      else                      trend = '➡️ Stable';
     }
 
     int streak = 0;
     for (int i = _entries.length - 1; i >= 0; i--) {
-      final e = _entries[i];
-      final w = e['water_oz'] as double;
-      final o = e['oxalate_mg'] as double;
-      if (w >= _waterGoal && o <= _oxGoal) {
-        streak++;
-      } else {
-        break;
-      }
+      final w = _entries[i]['water_oz']   as double;
+      final o = _entries[i]['oxalate_mg'] as double;
+      if (w >= _waterGoal && o <= _oxGoal) streak++; else break;
     }
 
     return {
@@ -233,14 +219,13 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
   String _fmt(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
+  // ── report text (disclaimer block unchanged) ───────────────────────
   String _buildReportText() {
-    final stats = _computeStats();
-    final now = DateTime.now();
-    final dateFrom =
-        _entries.isNotEmpty ? _fmt(_entries.first['date'] as DateTime) : '—';
-    final dateTo =
-        _entries.isNotEmpty ? _fmt(_entries.last['date'] as DateTime) : '—';
-    final patLine = _userName.isNotEmpty ? 'Patient: $_userName\n' : '';
+    final stats    = _computeStats();
+    final now      = DateTime.now();
+    final dateFrom = _entries.isNotEmpty ? _fmt(_entries.first['date'] as DateTime) : '—';
+    final dateTo   = _entries.isNotEmpty ? _fmt(_entries.last['date']  as DateTime) : '—';
+    final patLine  = _userName.isNotEmpty ? 'Patient: $_userName\n' : '';
 
     final buf = StringBuffer();
     buf.writeln('════════════════════════════════');
@@ -248,47 +233,37 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     buf.writeln('════════════════════════════════');
     buf.writeln('${patLine}Generated : ${_fmt(now)}');
     buf.writeln('Period    : $dateFrom → $dateTo ($_daysBack-day window)');
-    buf.writeln(
-        'Goals     : Water ≥ ${_waterGoal.toStringAsFixed(0)} oz/day  |  Oxalate ≤ ${_oxGoal.toStringAsFixed(0)} mg/day');
+    buf.writeln('Goals     : Water ≥ ${_waterGoal.toStringAsFixed(0)} oz/day  |  Oxalate ≤ ${_oxGoal.toStringAsFixed(0)} mg/day');
     buf.writeln();
-    buf.writeln('─── SUMMARY ────────────────────');
+    buf.writeln('─── SUMMARY ────────────────────────');
     buf.writeln('Days logged          : ${stats['daysLogged']}');
-    buf.writeln(
-        'Avg daily water      : ${(stats['avgWater'] as double).toStringAsFixed(1)} oz');
-    buf.writeln(
-        'Avg daily oxalate    : ${(stats['avgOxalate'] as double).toStringAsFixed(1)} mg');
-    buf.writeln(
-        'Water goal met       : ${stats['waterGoalDays']} / ${stats['daysLogged']} days  (${stats['waterPct']}%)');
-    buf.writeln(
-        'Oxalate goal met     : ${stats['oxalateGoalDays']} / ${stats['daysLogged']} days  (${stats['oxalatePct']}%)');
+    buf.writeln('Avg daily water      : ${(stats['avgWater']    as double).toStringAsFixed(1)} oz');
+    buf.writeln('Avg daily oxalate    : ${(stats['avgOxalate']  as double).toStringAsFixed(1)} mg');
+    buf.writeln('Water goal met       : ${stats['waterGoalDays']} / ${stats['daysLogged']} days  (${stats['waterPct']}%)');
+    buf.writeln('Oxalate goal met     : ${stats['oxalateGoalDays']} / ${stats['daysLogged']} days  (${stats['oxalatePct']}%)');
     buf.writeln('Current streak       : ${stats['currentStreak']} days (both goals met)');
     buf.writeln('Hydration trend      : ${stats['trend']}');
-    buf.writeln(
-        'Best water day       : ${stats['bestWaterDay']} (${(stats['bestWaterVal'] as double).toStringAsFixed(1)} oz)');
-    buf.writeln(
-        'Highest oxalate day  : ${stats['worstOxDay']} (${(stats['worstOxVal'] as double).toStringAsFixed(1)} mg)');
+    buf.writeln('Best water day       : ${stats['bestWaterDay']} (${(stats['bestWaterVal'] as double).toStringAsFixed(1)} oz)');
+    buf.writeln('Highest oxalate day  : ${stats['worstOxDay']} (${(stats['worstOxVal'] as double).toStringAsFixed(1)} mg)');
     buf.writeln();
-    buf.writeln('─── DAILY LOG ──────────────────');
+    buf.writeln('─── DAILY LOG ──────────────────────');
     buf.writeln('Date         Water(oz)  Oxalate(mg)  Water✓  Ox✓');
     buf.writeln('──────────────────────────────────────────────────');
     for (final e in _entries) {
-      final d = _fmt(e['date'] as DateTime);
-      final w = (e['water_oz'] as double);
-      final o = (e['oxalate_mg'] as double);
-      final wOk = w >= _waterGoal ? '✓' : '✗';
-      final oOk = o <= _oxGoal ? '✓' : '✗';
+      final d    = _fmt(e['date'] as DateTime);
+      final w    = e['water_oz']   as double;
+      final o    = e['oxalate_mg'] as double;
+      final wOk  = w >= _waterGoal ? '✓' : '✗';
+      final oOk  = o <= _oxGoal    ? '✓' : '✗';
       buf.writeln('$d  ${w.toStringAsFixed(1).padLeft(9)}  ${o.toStringAsFixed(1).padLeft(11)}   $wOk      $oOk');
     }
     if (_foodEntries.isNotEmpty) {
       buf.writeln();
       buf.writeln('─── FOOD LOG (top oxalate items) ───');
       final sorted = List.of(_foodEntries)
-        ..sort((a, b) =>
-            (b['oxalate_mg'] as double).compareTo(a['oxalate_mg'] as double));
-      final top = sorted.take(20);
-      for (final f in top) {
-        buf.writeln(
-            '${f['date']}  ${(f['food'] as String).padRight(28)}  ${(f['oxalate_mg'] as double).toStringAsFixed(1)} mg');
+        ..sort((a, b) => (b['oxalate_mg'] as double).compareTo(a['oxalate_mg'] as double));
+      for (final f in sorted.take(20)) {
+        buf.writeln('${f['date']}  ${(f['food'] as String).padRight(28)}  ${(f['oxalate_mg'] as double).toStringAsFixed(1)} mg');
       }
     }
     buf.writeln();
@@ -298,12 +273,11 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     buf.writeln('lab results, imaging, or medical advice.');
     buf.writeln('Please review with your healthcare provider.');
     buf.writeln();
-    buf.writeln(
-        'Privacy Policy: https://www.freeprivacypolicy.com/live/c256b9ff-8fd7-4252-ac3b-2cc80b29633f');
+    buf.writeln('Privacy Policy: https://www.freeprivacypolicy.com/live/c256b9ff-8fd7-4252-ac3b-2cc80b29633f');
     return buf.toString();
   }
 
-  // ── pw helpers (used by PDF table cells) ─────────────────────────────────
+  // ── pw helper (PDF table cells) ───────────────────────────────
   static pw.Widget _cell(String text,
       {bool bold = false, PdfColor? color, int colspan = 1}) {
     return pw.Padding(
@@ -319,10 +293,10 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     );
   }
 
+  // ── build ──────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final stats = _computeStats();
-
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(
@@ -374,6 +348,9 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Fix 6: disclaimer now at the TOP so it is seen before any data.
+          _disclaimer(),
+          const SizedBox(height: 16),
           _timeframeRow(),
           const SizedBox(height: 16),
           if (_entries.isEmpty)
@@ -402,8 +379,6 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
             ),
             const SizedBox(height: 16),
             if (_foodEntries.isNotEmpty) _foodTable(),
-            const SizedBox(height: 16),
-            _disclaimer(),
           ],
         ],
       ),
@@ -429,7 +404,7 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
 
   Widget _timeframeRow() => Row(
         children: _timeframes.map((tf) {
-          final selected = tf['days'] == _daysBack;
+          final selected     = tf['days'] == _daysBack;
           final isPremiumOnly = tf['premium'] == true;
           return Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -481,10 +456,8 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(label,
-                style: TextStyle(
-                    color: _textMuted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500)),
+                style: const TextStyle(
+                    color: _textMuted, fontSize: 11, fontWeight: FontWeight.w500)),
             const SizedBox(height: 4),
             Text(value,
                 style: TextStyle(
@@ -503,20 +476,14 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
         crossAxisSpacing: 10,
         childAspectRatio: 2.2,
         children: [
-          _statTile('Days Logged', '${stats['daysLogged']}'),
-          _statTile('Avg Water / Day',
-              '${(stats['avgWater'] as double).toStringAsFixed(1)} oz',
-              valueColor: _teal),
-          _statTile('Avg Oxalate / Day',
-              '${(stats['avgOxalate'] as double).toStringAsFixed(1)} mg',
-              valueColor: _red),
-          _statTile('Current Streak', '${stats['currentStreak']} days'),
-          _statTile('Water Goal Met', '${stats['waterPct']}%',
-              valueColor:
-                  (stats['waterPct'] as int) >= 70 ? _teal : _red),
-          _statTile('Oxalate Goal Met', '${stats['oxalatePct']}%',
-              valueColor:
-                  (stats['oxalatePct'] as int) >= 70 ? _teal : _red),
+          _statTile('Days Logged',       '${stats['daysLogged']}'),
+          _statTile('Avg Water / Day',   '${(stats['avgWater']   as double).toStringAsFixed(1)} oz',  valueColor: _teal),
+          _statTile('Avg Oxalate / Day', '${(stats['avgOxalate'] as double).toStringAsFixed(1)} mg',  valueColor: _red),
+          _statTile('Current Streak',    '${stats['currentStreak']} days'),
+          _statTile('Water Goal Met',    '${stats['waterPct']}%',
+              valueColor: (stats['waterPct']   as int) >= 70 ? _teal : _red),
+          _statTile('Oxalate Goal Met',  '${stats['oxalatePct']}%',
+              valueColor: (stats['oxalatePct'] as int) >= 70 ? _teal : _red),
         ],
       );
 
@@ -562,10 +529,9 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     required Color color,
     required bool goalIsMax,
   }) {
-    final values = entries.map((e) => e[valueKey] as double).toList();
+    final values  = entries.map((e) => e[valueKey] as double).toList();
     if (values.isEmpty) return const SizedBox.shrink();
-
-    final maxVal = values.fold(0.0, (m, v) => v > m ? v : m);
+    final maxVal  = values.fold(0.0, (m, v) => v > m ? v : m);
     final scaleMax = (goal > maxVal ? goal : maxVal) * 1.15;
 
     return Container(
@@ -586,44 +552,44 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
           const SizedBox(height: 12),
           SizedBox(
             height: 120,
-            child: BarChart(
-              BarChartData(
-                maxY: scaleMax,
-                gridData: FlGridData(
-                  show: true,
-                  horizontalInterval: goal,
-                  getDrawingHorizontalLine: (_) => FlLine(
-                    color: color.withAlpha(60),
-                    strokeWidth: 1,
-                    dashArray: [4, 4],
-                  ),
-                  drawVerticalLine: false,
+            child: BarChart(BarChartData(
+              maxY: scaleMax,
+              gridData: FlGridData(
+                show: true,
+                horizontalInterval: goal,
+                getDrawingHorizontalLine: (_) => FlLine(
+                  color: color.withAlpha(60),
+                  strokeWidth: 1,
+                  dashArray: [4, 4],
                 ),
-                titlesData: const FlTitlesData(show: false),
-                borderData: FlBorderData(show: false),
-                barGroups: values.asMap().entries.map((e) {
-                  final met = goalIsMax ? e.value >= goal : e.value <= goal;
-                  return BarChartGroupData(
-                    x: e.key,
-                    barRods: [
-                      BarChartRodData(
-                        toY: e.value.clamp(0.5, scaleMax),
-                        color: met ? color : _red,
-                        width: (300 / values.length).clamp(2, 14),
-                        borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(2)),
-                      ),
-                    ],
-                  );
-                }).toList(),
+                drawVerticalLine: false,
               ),
-            ),
+              titlesData: const FlTitlesData(show: false),
+              borderData:  FlBorderData(show: false),
+              barGroups: values.asMap().entries.map((e) {
+                final met = goalIsMax ? e.value >= goal : e.value <= goal;
+                return BarChartGroupData(
+                  x: e.key,
+                  barRods: [
+                    BarChartRodData(
+                      toY: e.value.clamp(0.5, scaleMax),
+                      color: met ? color : _red,
+                      width: (300 / values.length).clamp(2, 14),
+                      borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(2)),
+                    ),
+                  ],
+                );
+              }).toList(),
+            )),
           ),
           const SizedBox(height: 6),
           Row(
             children: [
               _legend(color,
-                  goalIsMax ? '≥ ${goal.toStringAsFixed(0)}' : '≤ ${goal.toStringAsFixed(0)}',
+                  goalIsMax
+                      ? '≥ ${goal.toStringAsFixed(0)}'
+                      : '≤ ${goal.toStringAsFixed(0)}',
                   'Goal'),
               const SizedBox(width: 16),
               _legend(_red, 'Missed goal', ''),
@@ -639,7 +605,7 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
           Container(width: 10, height: 10, color: color),
           const SizedBox(width: 4),
           Text('$label $sub',
-              style: TextStyle(color: _textMuted, fontSize: 11)),
+              style: const TextStyle(color: _textMuted, fontSize: 11)),
         ],
       );
 
@@ -648,7 +614,6 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
       ..sort((a, b) =>
           (b['oxalate_mg'] as double).compareTo(a['oxalate_mg'] as double));
     final top = sorted.take(15).toList();
-
     return Container(
       decoration: BoxDecoration(
         color: _surface,
@@ -658,18 +623,17 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(14),
+          const Padding(
+            padding: EdgeInsets.all(14),
             child: Text('Top Oxalate Foods',
-                style: const TextStyle(
+                style: TextStyle(
                     color: Color(0xFF2C2C2C),
                     fontSize: 14,
                     fontWeight: FontWeight.w600)),
           ),
           const Divider(height: 1),
           ...top.map((f) => Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 child: Row(
                   children: [
                     Expanded(
@@ -678,7 +642,7 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
                               color: Color(0xFF2C2C2C), fontSize: 13)),
                     ),
                     Text(f['date'] as String,
-                        style: TextStyle(color: _textMuted, fontSize: 11)),
+                        style: const TextStyle(color: _textMuted, fontSize: 11)),
                     const SizedBox(width: 12),
                     Text(
                         '${(f['oxalate_mg'] as double).toStringAsFixed(1)} mg',
@@ -696,18 +660,45 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     );
   }
 
+  // Fix 6: redesigned as a prominent yellow warning card shown at the TOP
+  // of the screen so it is unmissable by both users and Play Store reviewers.
   Widget _disclaimer() => Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: const Color(0xFFF0F4F5),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: _border),
+          color: const Color(0xFFFFFBEB),   // warm amber tint
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFD4A017), width: 1.5),
         ),
-        child: const Text(
-          'StoneGuard is a self-tracking tool only. This report does not replace clinical '
-          'evaluation, lab results, imaging, or medical advice. Please review with your '
-          'healthcare provider.',
-          style: TextStyle(color: Color(0xFF888888), fontSize: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.health_and_safety_outlined,
+                color: Color(0xFFB45309), size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'Not a Medical Device',
+                    style: TextStyle(
+                      color: Color(0xFF92400E),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'StoneGuard is a self-tracking tool only. This report does '
+                    'not replace clinical evaluation, lab results, imaging, or '
+                    'medical advice. Always review with your healthcare provider.',
+                    style: TextStyle(
+                        color: Color(0xFF78350F), fontSize: 12, height: 1.45),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       );
 }
