@@ -8,7 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:stoneguard/screens/export_report_screen.dart';
+import 'export_report_screen.dart';
 
 import 'paywall_screen.dart';
 
@@ -546,9 +546,14 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
                     color: (stats['oxalatePct'] as int) >= 70 ? pdfTeal : pdfRed),
               ]),
               pw.TableRow(children: [
-                _cell('Current Streak (both goals)'),
+                _cell('Current Streak'),
                 _cell('${stats['currentStreak']} days'),
-                _cell('—'), _cell('—'),
+                _cell('Both goals met'), _cell('—'),
+              ]),
+              pw.TableRow(children: [
+                _cell('Hydration Trend'),
+                _cell('${stats['trend']}', colspan: 3),
+                _cell(''), _cell(''),
               ]),
               pw.TableRow(children: [
                 _cell('Best Water Day'),
@@ -562,49 +567,35 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
                 _cell('${(stats['worstOxVal'] as double).toStringAsFixed(1)} mg'),
                 _cell(''),
               ]),
-              pw.TableRow(children: [
-                _cell('7-Day Hydration Trend'),
-                pw.Padding(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-                  child: pw.Text('${stats['trend']}',
-                      style: const pw.TextStyle(fontSize: 9, color: pdfBlack)),
-                ),
-                _cell('—'), _cell('—'),
-              ]),
             ],
           ),
 
-          sectionHeader('Daily Water Intake (oz)'),
-          pw.Text(
-            'Teal = goal met (≥ ${_waterGoal.toStringAsFixed(0)} oz)  •  Red = below goal',
-            style: const pw.TextStyle(fontSize: 8, color: pdfGrey),
+          sectionHeader('Daily Hydration (oz)'),
+          barChart(
+            values: waterValues,
+            goal: _waterGoal,
+            barColor: pdfTeal,
+            unit: 'oz',
+            goalIsMax: true,
           ),
-          pw.SizedBox(height: 6),
-          barChart(values: waterValues, goal: _waterGoal,
-              barColor: pdfTeal, unit: 'oz', goalIsMax: true),
 
-          sectionHeader('Daily Oxalate Load (mg)'),
-          pw.Text(
-            'Teal = goal met (≤ ${_oxGoal.toStringAsFixed(0)} mg)  •  Red = over limit',
-            style: const pw.TextStyle(fontSize: 8, color: pdfGrey),
+          sectionHeader('Daily Oxalate (mg)'),
+          barChart(
+            values: oxalateValues,
+            goal: _oxGoal,
+            barColor: pdfRed,
+            unit: 'mg',
+            goalIsMax: false,
           ),
-          pw.SizedBox(height: 6),
-          barChart(values: oxalateValues, goal: _oxGoal,
-              barColor: pdfTeal, unit: 'mg', goalIsMax: false),
 
           if (top15.isNotEmpty) ...[
-            sectionHeader('Top Foods by Oxalate (up to 15 items)'),
-            pw.Text(
-              'Highest-oxalate foods logged during this period.',
-              style: const pw.TextStyle(fontSize: 8, color: pdfGrey),
-            ),
-            pw.SizedBox(height: 6),
+            sectionHeader('Top Oxalate Foods (last $_daysBack days)'),
             pw.Table(
               border: pw.TableBorder.all(color: pdfBorder, width: 0.5),
               columnWidths: {
-                0: const pw.FlexColumnWidth(1.5),
+                0: const pw.FlexColumnWidth(1.2),
                 1: const pw.FlexColumnWidth(2.5),
-                2: const pw.FlexColumnWidth(1.2),
+                2: const pw.FlexColumnWidth(1.3),
               },
               children: [
                 pw.TableRow(
@@ -616,56 +607,17 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
                   ],
                 ),
                 ...top15.map((f) => pw.TableRow(children: [
-                  _cell(f['date'] as String),
-                  _cell(f['food'] as String),
-                  _cell(
-                    (f['oxalate_mg'] as double).toStringAsFixed(1),
-                    color: (f['oxalate_mg'] as double) > _oxGoal * 0.3
-                        ? pdfRed
-                        : pdfBlack,
-                  ),
-                ])),
+                      _cell(f['date'] as String),
+                      _cell(f['food'] as String),
+                      _cell(
+                          '${(f['oxalate_mg'] as double).toStringAsFixed(1)} mg',
+                          color: (f['oxalate_mg'] as double) > 50
+                              ? pdfRed
+                              : pdfBlack),
+                    ])),
               ],
             ),
           ],
-
-          sectionHeader('Daily Log'),
-          pw.Table(
-            border: pw.TableBorder.all(color: pdfBorder, width: 0.5),
-            columnWidths: {
-              0: const pw.FlexColumnWidth(2),
-              1: const pw.FlexColumnWidth(1.5),
-              2: const pw.FlexColumnWidth(1.5),
-              3: const pw.FlexColumnWidth(1.2),
-              4: const pw.FlexColumnWidth(1.2),
-            },
-            children: [
-              pw.TableRow(
-                decoration: const pw.BoxDecoration(color: pdfLight),
-                children: [
-                  _cell('Date', bold: true),
-                  _cell('Water (oz)', bold: true),
-                  _cell('Oxalate (mg)', bold: true),
-                  _cell('Water ✓', bold: true),
-                  _cell('Oxalate ✓', bold: true),
-                ],
-              ),
-              ..._entries.map((e) {
-                final d = e['date'] as DateTime;
-                final w = e['water_oz'] as double;
-                final o = e['oxalate_mg'] as double;
-                final wOk = w >= _waterGoal;
-                final oOk = o <= _oxGoal;
-                return pw.TableRow(children: [
-                  _cell(_fmt(d)),
-                  _cell(w.toStringAsFixed(1)),
-                  _cell(o.toStringAsFixed(1)),
-                  _cell(wOk ? '✓' : '✗', color: wOk ? pdfTeal : pdfRed),
-                  _cell(oOk ? '✓' : '✗', color: oOk ? pdfTeal : pdfRed),
-                ]);
-              }),
-            ],
-          ),
 
           pw.SizedBox(height: 16),
           pw.Container(
@@ -680,20 +632,20 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
               children: [
                 pw.Text('Disclaimer',
                     style: pw.TextStyle(
-                        fontSize: 9,
                         fontWeight: pw.FontWeight.bold,
+                        fontSize: 10,
                         color: pdfBlack)),
                 pw.SizedBox(height: 4),
                 pw.Text(
-                  'StoneGuard is a self-tracking tool only. This report does not replace '
-                  'clinical evaluation, lab results, imaging, or medical advice. '
-                  'Please review with your healthcare provider.',
-                  style: const pw.TextStyle(fontSize: 8, color: pdfGrey),
+                  'StoneGuard is a self-tracking tool only. This report does not replace clinical '
+                  'evaluation, lab results, imaging, or medical advice. Please review with your '
+                  'healthcare provider.',
+                  style: const pw.TextStyle(fontSize: 9, color: pdfGrey),
                 ),
                 pw.SizedBox(height: 4),
                 pw.Text(
                   'Privacy Policy: https://www.freeprivacypolicy.com/live/c256b9ff-8fd7-4252-ac3b-2cc80b29633f',
-                  style: const pw.TextStyle(fontSize: 7, color: pdfGrey),
+                  style: const pw.TextStyle(fontSize: 8, color: pdfGrey),
                 ),
               ],
             ),
@@ -705,9 +657,10 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     return pdf.save();
   }
 
-  pw.Widget _cell(String text, {bool bold = false, PdfColor? color}) {
+  static pw.Widget _cell(String text,
+      {bool bold = false, PdfColor? color, int colspan = 1}) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       child: pw.Text(
         text,
         style: pw.TextStyle(
@@ -719,458 +672,395 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     );
   }
 
-  Future<void> _shareText() async {
-    if (!_isPremium) { await _openPaywall(); return; }
-    final text = _buildReportText();
-    await Share.share(text, subject: 'StoneGuard Doctor Report');
-  }
-
-  Future<void> _sharePdf() async {
-    if (!_isPremium) { await _openPaywall(); return; }
-    final pdfBytes = await _buildPdf();
-    await Printing.sharePdf(
-      bytes: pdfBytes,
-      filename: 'StoneGuard_Report_${_fmt(DateTime.now())}.pdf',
-    );
-  }
-
-  void _showExportSheet() {
-    if (!_isPremium) { _openPaywall(); return; }
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36, height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text('Export Report',
-                  style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                      color: _textPri)),
-              const SizedBox(height: 4),
-              const Text('Choose a format to share with your doctor.',
-                  style: TextStyle(fontSize: 13, color: _textMuted)),
-              const SizedBox(height: 20),
-              _exportOption(
-                icon: Icons.picture_as_pdf_rounded,
-                iconColor: const Color(0xFF1A8A9A),
-                title: 'Enhanced PDF Report',
-                subtitle:
-                    'Full report with period selector, live preview & share — recommended',
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const ExportReportScreen()),
-                  );
-                },
-              ),
-              const SizedBox(height: 10),
-              _exportOption(
-                icon: Icons.picture_as_pdf_outlined,
-                iconColor: const Color(0xFFD32F2F),
-                title: 'Quick PDF',
-                subtitle:
-                    'Charts, streak, food log & full daily table — instant share',
-                onTap: () { Navigator.pop(context); _sharePdf(); },
-              ),
-              const SizedBox(height: 10),
-              _exportOption(
-                icon: Icons.text_snippet_outlined,
-                iconColor: _teal,
-                title: 'Plain Text',
-                subtitle:
-                    'Simple text — great for texting or copying into a patient portal',
-                onTap: () { Navigator.pop(context); _shareText(); },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _exportOption({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8F8F8),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _border),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: iconColor, size: 22),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                          color: _textPri)),
-                  const SizedBox(height: 3),
-                  Text(subtitle,
-                      style:
-                          const TextStyle(fontSize: 12, color: _textMuted)),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right,
-                color: Color(0xFFCCCCCC), size: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final stats = _computeStats();
+
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(
         backgroundColor: _appBar,
         elevation: 0,
-        title: Text(
-          _userName.isNotEmpty ? '$_userName — Doctor View' : 'Doctor View',
-          style: const TextStyle(
-              color: _textPri, fontWeight: FontWeight.bold, fontSize: 17),
+        title: const Text(
+          'Doctor Report',
+          style: TextStyle(
+            color: Color(0xFF2C2C2C),
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+          ),
         ),
-        iconTheme: const IconThemeData(color: _textPri),
+        iconTheme: const IconThemeData(color: Color(0xFF2C2C2C)),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.ios_share),
-            tooltip: 'Export report',
-            onPressed: _showExportSheet,
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.ios_share_outlined),
+            tooltip: 'Export',
+            onSelected: (val) async {
+              if (val == 'text') {
+                final text = _buildReportText();
+                await SharePlus.instance.share(ShareParams(text: text));
+              } else if (val == 'pdf') {
+                final bytes = await _buildPdf();
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ExportReportScreen(pdfBytes: bytes),
+                  ),
+                );
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'text', child: Text('Share as Text')),
+              PopupMenuItem(value: 'pdf',  child: Text('Export as PDF')),
+            ],
           ),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _buildBody(),
+          : _buildBody(stats),
     );
   }
 
-  Widget _buildBody() {
-    final stats = _computeStats();
-
+  Widget _buildBody(Map<String, dynamic> stats) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── TIMEFRAME SELECTOR ────────────────────────────────────────
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _timeframes.map((tf) {
-              final isSelected = _daysBack == tf['days'];
-              final isPremiumOnly = tf['premium'] == true;
-              return GestureDetector(
-                onTap: () => _selectTimeframe(tf),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isSelected ? _teal : _surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: isSelected ? _teal : _border),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (isPremiumOnly && !_isPremium)
-                        const Padding(
-                          padding: EdgeInsets.only(right: 4),
-                          child: Icon(Icons.lock,
-                              size: 12, color: Colors.white),
-                        ),
-                      Text(
-                        tf['label'] as String,
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : _textMuted,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 20),
-
-          // ── STATS GRID ────────────────────────────────────────────────
-          if (stats['daysLogged'] == 0)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: _surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: _border),
-              ),
-              child: const Column(
-                children: [
-                  Icon(Icons.bar_chart, size: 40, color: Color(0xFFCCCCCC)),
-                  SizedBox(height: 12),
-                  Text('No data logged yet',
-                      style: TextStyle(color: _textMuted, fontSize: 15)),
-                  SizedBox(height: 4),
-                  Text(
-                    'Start logging water and oxalate intake to generate your doctor report.',
-                    style: TextStyle(color: _textMuted, fontSize: 12),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            )
-          else
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(children: [
-                  _statCard('Days Logged', '${stats['daysLogged']}', _teal),
-                  const SizedBox(width: 10),
-                  _statCard('Avg Water',
-                      '${(stats['avgWater'] as double).toStringAsFixed(1)} oz',
-                      _teal),
-                ]),
-                const SizedBox(height: 10),
-                Row(children: [
-                  _statCard('Water Goal', '${stats['waterPct']}%', _teal),
-                  const SizedBox(width: 10),
-                  _statCard(
-                    'Oxalate Goal',
-                    '${stats['oxalatePct']}%',
-                    (stats['oxalatePct'] as int) >= 70 ? _teal : _red,
-                  ),
-                ]),
-                const SizedBox(height: 10),
-                Row(children: [
-                  _statCard('🔥 Streak',
-                      '${stats['currentStreak']} days', _teal),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: _surface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: _border),
-                      ),
-                      child: Column(
-                        children: [
-                          const Text('Trend',
-                              style: TextStyle(
-                                  color: _textMuted, fontSize: 11)),
-                          const SizedBox(height: 6),
-                          Text(
-                            stats['trend'] as String,
-                            style: const TextStyle(
-                                color: _textPri,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ]),
-                const SizedBox(height: 20),
-                _buildChart(
-                  title: 'DAILY WATER INTAKE (oz)',
-                  values: _entries
-                      .map((e) => e['water_oz'] as double)
-                      .toList(),
-                  goal: _waterGoal,
-                  color: _teal,
-                  goalIsMax: true,
-                ),
-                const SizedBox(height: 20),
-                _buildChart(
-                  title: 'DAILY OXALATE LOAD (mg)',
-                  values: _entries
-                      .map((e) => e['oxalate_mg'] as double)
-                      .toList(),
-                  goal: _oxGoal,
-                  color: _red,
-                  goalIsMax: false,
-                ),
-                const SizedBox(height: 20),
-
-                // ── Export button ────────────────────────────────────────
-                ElevatedButton.icon(
-                  onPressed: _showExportSheet,
-                  icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
-                  label: const Text('Export Report for Doctor'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _teal,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
-              ],
+          _timeframeRow(),
+          const SizedBox(height: 16),
+          if (_entries.isEmpty)
+            _emptyState()
+          else ...[
+            _summaryGrid(stats),
+            const SizedBox(height: 16),
+            _trendCard(stats),
+            const SizedBox(height: 16),
+            _chartCard(
+              title: 'Daily Hydration (oz)',
+              entries: _entries,
+              valueKey: 'water_oz',
+              goal: _waterGoal,
+              color: _teal,
+              goalIsMax: true,
             ),
-          const SizedBox(height: 32),
+            const SizedBox(height: 16),
+            _chartCard(
+              title: 'Daily Oxalate (mg)',
+              entries: _entries,
+              valueKey: 'oxalate_mg',
+              goal: _oxGoal,
+              color: _red,
+              goalIsMax: false,
+            ),
+            const SizedBox(height: 16),
+            if (_foodEntries.isNotEmpty) _foodTable(),
+            const SizedBox(height: 16),
+            _disclaimer(),
+          ],
         ],
       ),
     );
   }
 
-  Widget _statCard(String label, String value, Color color) {
-    return Expanded(
-      child: Container(
+  Widget _emptyState() => Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 48),
+          child: Column(
+            children: [
+              Icon(Icons.bar_chart_outlined, size: 48, color: Colors.grey[400]),
+              const SizedBox(height: 12),
+              Text(
+                'No data for this period.\nStart logging hydration & food to see your report.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[500], fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      );
+
+  Widget _timeframeRow() => Row(
+        children: _timeframes.map((tf) {
+          final selected = tf['days'] == _daysBack;
+          final isPremiumOnly = tf['premium'] == true;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () => _selectTimeframe(tf),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: selected ? _teal : _surface,
+                  border: Border.all(
+                      color: selected ? _teal : _border, width: 1.5),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      tf['label'] as String,
+                      style: TextStyle(
+                        color: selected ? Colors.white : _textPri,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    if (isPremiumOnly && !_isPremium) ...[
+                      const SizedBox(width: 4),
+                      Icon(Icons.lock_outline,
+                          size: 12,
+                          color: selected ? Colors.white70 : _textMuted),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      );
+
+  Widget _statTile(String label, String value, {Color? valueColor}) =>
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: _surface,
+          border: Border.all(color: _border),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label,
+                style: TextStyle(
+                    color: _textMuted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500)),
+            const SizedBox(height: 4),
+            Text(value,
+                style: TextStyle(
+                    color: valueColor ?? _textPri,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700)),
+          ],
+        ),
+      );
+
+  Widget _summaryGrid(Map<String, dynamic> stats) => GridView.count(
+        crossAxisCount: 2,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 2.2,
+        children: [
+          _statTile('Days Logged', '${stats['daysLogged']}'),
+          _statTile('Avg Water / Day',
+              '${(stats['avgWater'] as double).toStringAsFixed(1)} oz',
+              valueColor: _teal),
+          _statTile('Avg Oxalate / Day',
+              '${(stats['avgOxalate'] as double).toStringAsFixed(1)} mg',
+              valueColor: _red),
+          _statTile('Current Streak', '${stats['currentStreak']} days'),
+          _statTile('Water Goal Met', '${stats['waterPct']}%',
+              valueColor:
+                  (stats['waterPct'] as int) >= 70 ? _teal : _red),
+          _statTile('Oxalate Goal Met', '${stats['oxalatePct']}%',
+              valueColor:
+                  (stats['oxalatePct'] as int) >= 70 ? _teal : _red),
+        ],
+      );
+
+  Widget _trendCard(Map<String, dynamic> stats) => Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: _surface,
-          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: _border),
+          borderRadius: BorderRadius.circular(10),
         ),
-        child: Column(
+        child: Row(
           children: [
-            Text(label,
-                style: const TextStyle(color: _textMuted, fontSize: 11)),
-            const SizedBox(height: 6),
-            Text(value,
-                style: TextStyle(
-                    color: color,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold)),
+            const Icon(Icons.trending_up_outlined,
+                color: Color(0xFF1A8A9A), size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Hydration Trend',
+                      style: TextStyle(
+                          color: Color(0xFF888888),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 2),
+                  Text('${stats['trend']}',
+                      style: const TextStyle(
+                          color: Color(0xFF2C2C2C),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
           ],
         ),
-      ),
-    );
-  }
+      );
 
-  Widget _buildChart({
+  Widget _chartCard({
     required String title,
-    required List<double> values,
+    required List<Map<String, dynamic>> entries,
+    required String valueKey,
     required double goal,
     required Color color,
     required bool goalIsMax,
   }) {
-    if (values.isEmpty) return const SizedBox();
-    final maxY = (values.fold(0.0, (m, v) => v > m ? v : m)) * 1.2;
+    final values = entries.map((e) => e[valueKey] as double).toList();
+    if (values.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title,
-            style: const TextStyle(
-                color: _textMuted,
-                fontSize: 11,
-                letterSpacing: 1.4,
-                fontWeight: FontWeight.w600)),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
-          decoration: BoxDecoration(
-            color: _surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _border),
-          ),
-          child: SizedBox(
-            height: 160,
+    final maxVal = values.fold(0.0, (m, v) => v > m ? v : m);
+    final scaleMax = (goal > maxVal ? goal : maxVal) * 1.15;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _surface,
+        border: Border.all(color: _border),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style: const TextStyle(
+                  color: Color(0xFF2C2C2C),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600)),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 120,
             child: BarChart(
               BarChartData(
-                maxY: maxY > 0 ? maxY : goal * 1.5,
-                alignment: BarChartAlignment.spaceAround,
+                maxY: scaleMax,
                 gridData: FlGridData(
                   show: true,
-                  horizontalInterval: goal / 2,
-                  getDrawingHorizontalLine: (_) =>
-                      FlLine(color: _border, strokeWidth: 1),
+                  horizontalInterval: goal,
+                  getDrawingHorizontalLine: (_) => FlLine(
+                    color: color.withAlpha(60),
+                    strokeWidth: 1,
+                    dashArray: [4, 4],
+                  ),
                   drawVerticalLine: false,
                 ),
+                titlesData: const FlTitlesData(show: false),
                 borderData: FlBorderData(show: false),
-                titlesData: const FlTitlesData(
-                  bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
-                  leftTitles: AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
-                  topTitles: AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
-                ),
-                extraLinesData: ExtraLinesData(
-                  horizontalLines: [
-                    HorizontalLine(
-                      y: goal,
-                      color: color.withValues(alpha: 0.5),
-                      strokeWidth: 1.5,
-                      dashArray: [6, 4],
-                      label: HorizontalLineLabel(
-                        show: true,
-                        style: TextStyle(color: color, fontSize: 10),
-                        labelResolver: (_) =>
-                            'Goal: ${goal.toStringAsFixed(0)}',
-                      ),
-                    ),
-                  ],
-                ),
-                barGroups: List.generate(values.length, (i) {
-                  final v = values[i];
-                  final met = goalIsMax ? v >= goal : v <= goal;
+                barGroups: values.asMap().entries.map((e) {
+                  final met = goalIsMax ? e.value >= goal : e.value <= goal;
                   return BarChartGroupData(
-                    x: i,
+                    x: e.key,
                     barRods: [
                       BarChartRodData(
-                        toY: v,
-                        width: values.length <= 30 ? 8 : 4,
-                        borderRadius: BorderRadius.circular(3),
+                        toY: e.value.clamp(0.5, scaleMax),
                         color: met ? color : _red,
+                        width: (300 / values.length).clamp(2, 14),
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(2)),
                       ),
                     ],
                   );
-                }),
+                }).toList(),
               ),
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              _legend(color,
+                  goalIsMax ? '≥ ${goal.toStringAsFixed(0)}' : '≤ ${goal.toStringAsFixed(0)}',
+                  'Goal'),
+              const SizedBox(width: 16),
+              _legend(_red, 'Missed goal', ''),
+            ],
+          ),
+        ],
+      ),
     );
   }
+
+  Widget _legend(Color color, String label, String sub) => Row(
+        children: [
+          Container(width: 10, height: 10, color: color),
+          const SizedBox(width: 4),
+          Text('$label $sub',
+              style: TextStyle(color: _textMuted, fontSize: 11)),
+        ],
+      );
+
+  Widget _foodTable() {
+    final sorted = List.of(_foodEntries)
+      ..sort((a, b) =>
+          (b['oxalate_mg'] as double).compareTo(a['oxalate_mg'] as double));
+    final top = sorted.take(15).toList();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: _surface,
+        border: Border.all(color: _border),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Text('Top Oxalate Foods',
+                style: const TextStyle(
+                    color: Color(0xFF2C2C2C),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600)),
+          ),
+          const Divider(height: 1),
+          ...top.map((f) => Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(f['food'] as String,
+                          style: const TextStyle(
+                              color: Color(0xFF2C2C2C), fontSize: 13)),
+                    ),
+                    Text(f['date'] as String,
+                        style: TextStyle(color: _textMuted, fontSize: 11)),
+                    const SizedBox(width: 12),
+                    Text(
+                        '${(f['oxalate_mg'] as double).toStringAsFixed(1)} mg',
+                        style: TextStyle(
+                            color: (f['oxalate_mg'] as double) > 50
+                                ? _red
+                                : _textPri,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13)),
+                  ],
+                ),
+              )),
+        ],
+      ),
+    );
+  }
+
+  Widget _disclaimer() => Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0F4F5),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: _border),
+        ),
+        child: const Text(
+          'StoneGuard is a self-tracking tool only. This report does not replace clinical '
+          'evaluation, lab results, imaging, or medical advice. Please review with your '
+          'healthcare provider.',
+          style: TextStyle(color: Color(0xFF888888), fontSize: 12),
+        ),
+      );
 }
