@@ -1,17 +1,13 @@
 // ─── HISTORY SCREEN ───────────────────────────────────────────────────────────
-import 'dart:convert';
+// Fix 5: _load() now delegates to HistoryStorage (AES-256-CBC encrypted).
+//   • All Fix-4 decrypt-failure recovery is now active on this screen.
+//   • If HistoryStorage.lastError is a DecryptFailure after load, a
+//     one-time dialog is shown so users understand why history is empty.
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../theme/app_theme.dart';
-
-// ═══════════════════════════════════════════════════════════
-// HISTORY SCREEN WIDGET
-// Loads daily water + oxalate history from SharedPreferences
-// key 'daily_history' (a StringList of JSON objects), NOT
-// from DatabaseHelper which only holds pain-journal entries.
-// ═══════════════════════════════════════════════════════════
+import '../history_storage.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -21,27 +17,21 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  // ── theme helpers ───────────────────────────────────────────
-  bool _isDark(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark;
+  // ── theme helpers ──────────────────────────────────────────
+  bool  _isDark(BuildContext ctx) =>
+      Theme.of(ctx).brightness == Brightness.dark;
+  Color _surface(BuildContext ctx) =>
+      _isDark(ctx) ? AppColors.darkSurface    : AppColors.surface;
+  Color _background(BuildContext ctx) =>
+      _isDark(ctx) ? AppColors.darkBackground : AppColors.background;
+  Color _border(BuildContext ctx) =>
+      _isDark(ctx) ? AppColors.darkBorder     : AppColors.border;
+  Color _textPrimary(BuildContext ctx) =>
+      _isDark(ctx) ? AppColors.darkTextPrimary : AppColors.textPrimary;
+  Color _textSecond(BuildContext ctx) =>
+      _isDark(ctx) ? AppColors.darkTextSecond  : AppColors.textSecond;
 
-  Color _surface(BuildContext context) =>
-      _isDark(context) ? AppColors.darkSurface : AppColors.surface;
-
-  Color _background(BuildContext context) =>
-      _isDark(context) ? AppColors.darkBackground : AppColors.background;
-
-  Color _border(BuildContext context) =>
-      _isDark(context) ? AppColors.darkBorder : AppColors.border;
-
-  Color _textPrimary(BuildContext context) =>
-      _isDark(context) ? AppColors.darkTextPrimary : AppColors.textPrimary;
-
-  Color _textSecond(BuildContext context) =>
-      _isDark(context) ? AppColors.darkTextSecond : AppColors.textSecond;
-
-  // ── state ────────────────────────────────────────────────
-  // Each entry: { 'date': 'YYYY-MM-DD', 'oxalate_mg': double, 'water_oz': double }
+  // ── state ──────────────────────────────────────────────────
   List<Map<String, dynamic>> _entries  = [];
   List<Map<String, dynamic>> _filtered = [];
   bool   _loading    = true;
@@ -50,7 +40,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   String _filterType = 'all';
   int?   _selectedIndex;
 
-  // ── lifecycle ────────────────────────────────────────────
+  // ── lifecycle ──────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
@@ -58,36 +48,65 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   // ── data ───────────────────────────────────────────────────
-  // Loads from SharedPreferences 'daily_history' StringList.
-  // Each list item is a JSON string with keys: date, oxalate_mg, water_oz.
-  // This matches ExportReportScreen and ProgressScreen exactly.
+  // Fix 5: delegates to HistoryStorage instead of reading the legacy
+  // plaintext 'daily_history' SharedPreferences key directly.
+  // This activates all Fix-4 decrypt-failure recovery paths.
   Future<void> _load() async {
-    final prefs      = await SharedPreferences.getInstance();
-    final rawList    = prefs.getStringList('daily_history') ?? [];
-    final List<Map<String, dynamic>> parsed = [];
+    final storage = HistoryStorage();
+    final raw     = await storage.loadHistory();
 
-    for (final item in rawList) {
-      try {
-        final map  = jsonDecode(item) as Map<String, dynamic>;
-        final date = map['date'] as String?;
-        if (date == null) continue;
-        parsed.add({
-          'date':       date,
-          'oxalate_mg': (map['oxalate_mg'] as num?)?.toDouble() ?? 0.0,
-          'water_oz':   (map['water_oz']   as num?)?.toDouble() ?? 0.0,
-        });
-      } catch (_) {
-        // skip malformed entries
-      }
+    // Normalise: ensure each entry has the expected keys and types.
+    final parsed = <Map<String, dynamic>>[];
+    for (final map in raw) {
+      final date = map['date'] as String?;
+      if (date == null) continue;
+      parsed.add({
+        'date':       date,
+        'oxalate_mg': (map['oxalate_mg'] as num?)?.toDouble() ?? 0.0,
+        'water_oz':   (map['water_oz']   as num?)?.toDouble() ?? 0.0,
+      });
     }
 
+    if (!mounted) return;
     setState(() {
       _entries  = parsed;
       _filtered = _applyFilters(parsed);
       _loading  = false;
     });
+
+    // Fix 5: show a one-time dialog if the key was lost and history was reset.
+    // This fires only on DecryptFailure — not on a normal empty first-run.
+    if (storage.lastError is DecryptFailure) {
+      _showDecryptResetDialog();
+    }
   }
 
+  // ── decrypt-failure dialog ─────────────────────────────────
+  void _showDecryptResetDialog() {
+    if (!mounted) return;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('History Reset'),
+        content: const Text(
+          'Your history data could not be read — this usually happens when '
+          'the device security key changes (e.g. after a full app-data clear '
+          'or an OS update).\n\n'
+          'Your history has been safely reset on this device. '
+          'New entries will be stored securely going forward.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── filtering / sorting ────────────────────────────────────
   List<Map<String, dynamic>> _applyFilters(
       List<Map<String, dynamic>> src) {
     var list = src.where((e) {
@@ -97,7 +116,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }).toList();
 
     if (_filterType == 'water') {
-      list = list.where((e) => (e['water_oz'] ?? 0) > 0).toList();
+      list = list.where((e) => (e['water_oz']   ?? 0) > 0).toList();
     } else if (_filterType == 'oxalate') {
       list = list.where((e) => (e['oxalate_mg'] ?? 0) > 0).toList();
     }
@@ -107,7 +126,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         case 'date_asc':
           return (a['date'] ?? '').compareTo(b['date'] ?? '');
         case 'water_desc':
-          return (b['water_oz'] ?? 0).compareTo(a['water_oz'] ?? 0);
+          return (b['water_oz']   ?? 0).compareTo(a['water_oz']   ?? 0);
         case 'oxalate_desc':
           return (b['oxalate_mg'] ?? 0).compareTo(a['oxalate_mg'] ?? 0);
         default: // date_desc
@@ -128,12 +147,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
   void _onFilter(String v) =>
       setState(() { _filterType = v; _filtered = _applyFilters(_entries); });
 
-  // ── build ─────────────────────────────────────────────────
+  // ── build ──────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final bg      = _background(context);
-    final surface = _surface(context);
-    final borderC = _border(context);
+    final bg       = _background(context);
+    final surface  = _surface(context);
+    final borderC  = _border(context);
     final textPrim = _textPrimary(context);
     final textSec  = _textSecond(context);
 
@@ -161,10 +180,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
               icon: Icon(Icons.sort, color: textSec, size: 20),
               style: TextStyle(color: textSec, fontSize: 13),
               items: const [
-                DropdownMenuItem(value: 'date_desc',     child: Text('Newest first')),
-                DropdownMenuItem(value: 'date_asc',      child: Text('Oldest first')),
-                DropdownMenuItem(value: 'water_desc',    child: Text('Most water')),
-                DropdownMenuItem(value: 'oxalate_desc',  child: Text('Most oxalate')),
+                DropdownMenuItem(value: 'date_desc',    child: Text('Newest first')),
+                DropdownMenuItem(value: 'date_asc',     child: Text('Oldest first')),
+                DropdownMenuItem(value: 'water_desc',   child: Text('Most water')),
+                DropdownMenuItem(value: 'oxalate_desc', child: Text('Most oxalate')),
               ],
               onChanged: _onSort,
             ),
@@ -187,7 +206,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  // ── SEARCH BAR ──────────────────────────────────────────────
+  // ── SEARCH BAR ─────────────────────────────────────────────
   Widget _buildSearchBar(
     BuildContext context,
     Color surface,
@@ -263,7 +282,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  // ── CHARTS ───────────────────────────────────────────────────
+  // ── CHARTS ─────────────────────────────────────────────────
   Widget _buildCharts(BuildContext context) {
     if (_entries.length < 2) return const SizedBox();
     return Padding(
@@ -399,7 +418,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  // ── LIST ──────────────────────────────────────────────────────
+  // ── LIST ───────────────────────────────────────────────────
   Widget _buildList(
     BuildContext context,
     Color textPrim,
@@ -433,7 +452,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  // ── ENTRY CARD ────────────────────────────────────────────
+  // ── ENTRY CARD ─────────────────────────────────────────────
   Widget _entryCard(
     BuildContext context,
     Map<String, dynamic> entry,
@@ -441,13 +460,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
     Color textPrim,
     Color textSec,
   ) {
-    final rawDate    = entry['date'] as String;
+    final rawDate    = entry['date']       as String;
     final oxalateMg  = entry['oxalate_mg'] as double;
     final waterOz    = entry['water_oz']   as double;
     final isExpanded = _selectedIndex == index;
     final oxColor    = _oxalateColor(oxalateMg);
 
-    // Format date nicely: "May 14, 2026"
     String displayDate = rawDate;
     try {
       displayDate =
