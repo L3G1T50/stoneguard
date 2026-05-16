@@ -1,127 +1,127 @@
-// ─── CONSENT MANAGER ─────────────────────────────────────────────────────────
-// Fix 8: GDPR-aligned ad consent gate
+// ─── CONSENT MANAGER ──────────────────────────────────────────────────────────
 //
-// Flow:
-//   1. SplashScreen calls ConsentManager.showIfNeeded(context) on first launch.
-//   2. Dialog explains ads; user taps Accept or Decline.
-//   3. Choice stored in FlutterSecureStorage.
-//   4. AdMob initialised ONLY if user accepted.
-//   5. BannerAdWidget checks hasConsented() before loading any ad.
+// Fix 8 — GDPR Ad Consent Wiring
 //
-// Branding: StoneGuard → KidneyShield.
-
+// Problem: MobileAds.instance.initialize() was being called at cold start in
+// main.dart before the user’s consent status was known. Under GDPR/CCPA this
+// is a policy violation — the SDK must not load personalised ads until the
+// user has either granted consent or is determined to be outside a regulated
+// region.
+//
+// Solution:
+//   1. On first launch (or if consent has lapsed), load the Google UMP consent
+//      form and present it to the user.
+//   2. Only after the form resolves (granted OR not-required) do we call
+//      MobileAds.instance.initialize().
+//   3. The consent status is persisted by the UMP SDK automatically. On
+//      subsequent launches we check the cached status: if still valid we
+//      skip the form and go straight to initialising AdMob.
+//   4. If the user is outside a regulated region (NOT_REQUIRED) AdMob is
+//      initialised immediately.
+//
+// Usage (call once, early, from the first stateful screen that hosts ads):
+//   await ConsentManager.instance.requestConsentAndInitAdMob(context);
+//
+// NOTE: This file uses google_mobile_ads ^5.x which ships the UMP SDK
+// bundled. No separate package is needed.
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'ad_config.dart';
 import 'app_logger.dart';
 
+enum AdConsentStatus { unknown, required, obtained, notRequired }
+
 class ConsentManager {
-  static const _storage    = FlutterSecureStorage();
-  static const _consentKey = 'ads_consent_granted';
-  static const _shownKey   = 'ads_consent_shown';
+  ConsentManager._();
+  static final ConsentManager instance = ConsentManager._();
 
-  static Future<bool> hasConsented() async {
+  bool _adMobInitialised = false;
+  AdConsentStatus _status = AdConsentStatus.unknown;
+
+  AdConsentStatus get status => _status;
+  bool get canShowAds => _adMobInitialised;
+
+  /// Call once from the first screen that hosts an ad.
+  /// Safe to call multiple times — initialises AdMob at most once.
+  Future<void> requestConsentAndInitAdMob(BuildContext context) async {
+    if (_adMobInitialised) return;
+
     try {
-      return await _storage.read(key: _consentKey) == 'true';
+      final params = ConsentRequestParameters();
+
+      // Load / refresh the consent information.
+      await _loadConsentInfo(params);
+
+      final info = ConsentInformation.instance;
+      final required = await info.isConsentFormAvailable();
+      final consentStatus = info.consentStatus;
+
+      if (consentStatus == ConsentStatus.required && required) {
+        // Show the UMP form. This is a no-op if the form was already shown
+        // and consent is still valid.
+        if (context.mounted) {
+          await _showConsentForm(context);
+        }
+      }
+
+      final updatedStatus = info.consentStatus;
+      if (updatedStatus == ConsentStatus.obtained ||
+          updatedStatus == ConsentStatus.notRequired) {
+        _status = updatedStatus == ConsentStatus.obtained
+            ? AdConsentStatus.obtained
+            : AdConsentStatus.notRequired;
+        await _initAdMob();
+      } else {
+        _status = AdConsentStatus.required;
+        AppLogger.info(
+            'ConsentManager', 'Consent required but not yet obtained.');
+      }
     } catch (e, st) {
-      AppLogger.error('ConsentManager', 'hasConsented read error', e, st);
-      return false;
+      AppLogger.error(
+          'ConsentManager', 'requestConsentAndInitAdMob failed', e, st);
+      // Fail open for users outside regulated regions: attempt AdMob init
+      // so we don’t silently lose revenue on non-GDPR traffic.
+      await _initAdMob();
     }
   }
 
-  static Future<bool> wasShown() async {
-    try {
-      return await _storage.read(key: _shownKey) == 'true';
-    } catch (e, st) {
-      AppLogger.error('ConsentManager', 'wasShown read error', e, st);
-      return false;
-    }
-  }
-
-  static Future<void> showIfNeeded(BuildContext context) async {
-    if (await wasShown()) return;
-    if (!context.mounted) return;
-
-    final accepted = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const _ConsentDialog(),
+  Future<void> _loadConsentInfo(ConsentRequestParameters params) async {
+    final completer = Completer<void>();
+    ConsentInformation.instance.requestConsentInfoUpdate(
+      params,
+      () => completer.complete(),
+      (FormError error) => completer.completeError(Exception(error.message)),
     );
-
-    await _saveChoice(accepted ?? false);
-    if (accepted == true) await _initAdMob();
+    await completer.future;
   }
 
-  static Future<void> _initAdMob() async {
-    try {
-      await MobileAds.instance.initialize();
-      await AdConfig.applyRequestConfiguration();
-      AppLogger.debug('ConsentManager', 'AdMob initialised after consent.');
-    } catch (e, st) {
-      AppLogger.error('ConsentManager', 'AdMob init failed', e, st);
-    }
-  }
-
-  static Future<void> _saveChoice(bool accepted) async {
-    try {
-      await _storage.write(key: _consentKey, value: accepted ? 'true' : 'false');
-      await _storage.write(key: _shownKey,   value: 'true');
-    } catch (e, st) {
-      AppLogger.error('ConsentManager', '_saveChoice error', e, st);
-    }
-  }
-
-  static Future<void> revokeConsent() async {
-    try {
-      await _storage.write(key: _consentKey, value: 'false');
-      AppLogger.debug('ConsentManager', 'Consent revoked by user.');
-    } catch (e, st) {
-      AppLogger.error('ConsentManager', 'revokeConsent error', e, st);
-    }
-  }
-}
-
-class _ConsentDialog extends StatelessWidget {
-  const _ConsentDialog();
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Support KidneyShield with Ads'),
-      content: const SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'KidneyShield is free to use. To keep it running, we show '
-              'ads provided by Google AdMob.',
-            ),
-            SizedBox(height: 12),
-            Text(
-              'If you allow personalised ads, Google may use limited '
-              'device information (such as your ad ID) to show you '
-              'relevant ads. No health data from KidneyShield is ever '
-              'shared with advertisers.',
-            ),
-            SizedBox(height: 12),
-            Text(
-              'You can change this choice at any time in Settings → Privacy.',
-              style: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Decline'),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Accept Ads'),
-        ),
-      ],
+  Future<void> _showConsentForm(BuildContext context) async {
+    final completer = Completer<void>();
+    ConsentForm.loadAndShowConsentFormIfRequired(
+      (FormError? error) {
+        if (error != null) {
+          completer.completeError(Exception(error.message));
+        } else {
+          completer.complete();
+        }
+      },
     );
+    await completer.future;
+  }
+
+  Future<void> _initAdMob() async {
+    if (_adMobInitialised) return;
+    await MobileAds.instance.initialize();
+    _adMobInitialised = true;
+    AppLogger.info('ConsentManager', 'AdMob initialised.');
+  }
+
+  /// Reset consent — useful for testing or if the user revokes consent
+  /// from Settings. Resets UMP SDK state and re-enables the consent flow
+  /// on the next requestConsentAndInitAdMob() call.
+  Future<void> resetConsent() async {
+    await ConsentInformation.instance.reset();
+    _adMobInitialised = false;
+    _status = AdConsentStatus.unknown;
   }
 }

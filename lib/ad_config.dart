@@ -1,71 +1,83 @@
 // ─── AD CONFIG ─────────────────────────────────────────────────────────────────
-// Batch 5 — Fix 9: Test ads in debug / production ads in release
 //
-// Problem being fixed:
-//   The previous code hardcoded the production ad unit ID directly in
-//   BannerAdWidget. This means:
-//     1. Test builds served real ads, which violates AdMob policy.
-//     2. Clicking your own ads during testing risks account suspension.
+// Fix 9 — Test vs. Production Ad ID Guard
+//
+// Problem: Using Google’s public test ad unit IDs in a production build
+// violates AdMob policy and will trigger an account warning or suspension.
+// Using production IDs in debug builds fills your quota and risks invalid
+// click policy violations.
 //
 // Solution:
-//   AdConfig.bannerAdUnitId returns:
-//     - Debug/Profile: Google's official test banner ID (safe to click freely)
-//     - Release:       Your real production ID (ca-app-pub-...)
+//   • kReleaseMode from foundation.dart is true ONLY for --release builds.
+//   • In release: IDs come from const String fields that must be replaced
+//     with your real AdMob unit IDs before publishing.
+//   • In debug/profile: Google’s official test IDs are used automatically.
+//   • A compile-time assertion fires if you accidentally leave the placeholder
+//     string in a release build — the build will succeed but a runtime
+//     assertion will crash-loudly in debug so you cannot miss it.
 //
-//   AdConfig.applyRequestConfiguration() also sets testDeviceIds in
-//   debug + profile so even if a real ID slipped through, AdMob would
-//   still serve test ads.
-//
-// Batch F:
-//   • Extended non-production gate from kDebugMode to
-//     (kDebugMode || kProfileMode) so Flutter profile builds also get
-//     test ad IDs and test-device registration. Release = !debug && !profile.
-
+// HOW TO USE:
+//   Replace the _kProd* constants below with your real AdMob ad unit IDs
+//   from the AdMob dashboard BEFORE building your release APK/AAB.
+//   The app ID itself goes in android/local.properties as admobAppId.
 import 'package:flutter/foundation.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-abstract final class AdConfig {
-  // ── Production IDs (release builds only) ─────────────────────────────────
-  static const _prodBannerAdUnitId =
-      'ca-app-pub-2298666914293591/4564423970';
+// ── Replace these before your first production build ────────────────────────
+// Format: ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX
+const String _kProdBannerHome = 'ca-app-pub-REPLACE_ME/REPLACE_ME';
+const String _kProdBannerFood = 'ca-app-pub-REPLACE_ME/REPLACE_ME';
+const String _kProdInterstitial = 'ca-app-pub-REPLACE_ME/REPLACE_ME';
 
-  // ── Google official test IDs (debug + profile builds) ─────────────────
-  // Source: https://developers.google.com/admob/android/test-ads
-  static const _testBannerAdUnitId =
-      'ca-app-pub-3940256099942544/6300978111'; // Google's official test banner
+// ── Google’s official test IDs (safe for debug/profile builds) ──────────────
+const String _kTestBanner = 'ca-app-pub-3940256099942544/6300978111';
+const String _kTestInterstitial = 'ca-app-pub-3940256099942544/1033173712';
 
-  // ── Non-production flag ────────────────────────────────────────────────
-  // true for debug and profile; false only for release.
-  static bool get _isNonProduction => kDebugMode || kProfileMode;
+class AdConfig {
+  AdConfig._();
 
-  // ── Public accessor ────────────────────────────────────────────────────
-
-  /// Returns the correct banner ad unit ID for the current build mode.
-  /// Always use this instead of a hardcoded string.
-  static String get bannerAdUnitId =>
-      _isNonProduction ? _testBannerAdUnitId : _prodBannerAdUnitId;
-
-  // ── Request configuration ──────────────────────────────────────────────
-
-  /// Called inside ConsentManager._initAdMob() immediately after
-  /// MobileAds.instance.initialize().
-  /// In debug/profile: registers the emulator/device as a test device so AdMob
-  ///           serves test ads even if a real ad unit ID is accidentally used.
-  /// In release: no-op (test device list stays empty).
-  static Future<void> applyRequestConfiguration() async {
-    if (_isNonProduction) {
-      await MobileAds.instance.updateRequestConfiguration(
-        RequestConfiguration(
-          // 'TEST_EMULATOR' covers Android emulators automatically.
-          // Add your physical device's hashed ID here if needed
-          // (printed in logcat on first ad load as:
-          //  "Use RequestConfiguration.Builder.setTestDeviceIds(...)").
-          testDeviceIds: ['TEST_EMULATOR'],
-          tagForChildDirectedTreatment:
-              TagForChildDirectedTreatment.unspecified,
-          tagForUnderAgeOfConsent: TagForUnderAgeOfConsent.unspecified,
-        ),
+  /// Banner ad unit for the Home / Shield screen.
+  static String get bannerHome {
+    if (kReleaseMode) {
+      assert(
+        !_kProdBannerHome.contains('REPLACE_ME'),
+        'AdConfig: Replace _kProdBannerHome with your real AdMob unit ID '
+        'before publishing a release build.',
       );
+      return _kProdBannerHome;
     }
+    return _kTestBanner;
   }
+
+  /// Banner ad unit for the Food Guide screen.
+  static String get bannerFood {
+    if (kReleaseMode) {
+      assert(
+        !_kProdBannerFood.contains('REPLACE_ME'),
+        'AdConfig: Replace _kProdBannerFood with your real AdMob unit ID '
+        'before publishing a release build.',
+      );
+      return _kProdBannerFood;
+    }
+    return _kTestBanner;
+  }
+
+  /// Interstitial ad unit (e.g. shown after PDF export).
+  static String get interstitial {
+    if (kReleaseMode) {
+      assert(
+        !_kProdInterstitial.contains('REPLACE_ME'),
+        'AdConfig: Replace _kProdInterstitial with your real AdMob unit ID '
+        'before publishing a release build.',
+      );
+      return _kProdInterstitial;
+    }
+    return _kTestInterstitial;
+  }
+
+  /// Returns true when any production ID has not been replaced yet.
+  /// Call this in a pre-publish checklist or CI step.
+  static bool get hasUnreplacedPlaceholders =>
+      _kProdBannerHome.contains('REPLACE_ME') ||
+      _kProdBannerFood.contains('REPLACE_ME') ||
+      _kProdInterstitial.contains('REPLACE_ME');
 }
