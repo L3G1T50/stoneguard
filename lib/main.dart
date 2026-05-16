@@ -1,21 +1,23 @@
-// ─── MAIN ENTRY POINT ─────────────────────────────────────────────────────
+// ─── MAIN ENTRY POINT ─────────────────────────────────────────────────────────
 //
 // Fix 2: AdMob consent gate
 //   • MobileAds.instance.initialize() has been REMOVED from here.
 //   • AdMob is now ONLY initialised inside ConsentManager._initAdMob(),
-//     which is called only if the user taps “Accept Ads” in the consent dialog.
+//     which is called only if the user taps "Accept Ads" in the consent dialog.
 //   • This ensures no ad SDK tracking begins before explicit user consent,
 //     satisfying GDPR / Play Store data-safety requirements.
 //
 // Fix 4 / Batch C: Decrypt-failure / key-loss recovery
 //   • SecurePrefs.checkIntegrity() is called once on every cold start.
 //   • The result is passed to SplashScreen(showKeyLossWarning: !integrityOk)
-//     so the dialog is shown from a live BuildContext (fixes null-context risk
-//     from the previous postFrameCallback approach).
+//     so the dialog is shown from a live BuildContext.
 //
 // Batch C: Legacy migration
 //   • HydrationRepository.migrateLegacyPlainTextPrefs() is called on startup
 //     so users upgrading from plain-text builds don’t silently lose data.
+//
+// Fix 8 branding patch:
+//   • MaterialApp title corrected from 'KidneyShield' → 'StoneGuard'.
 //
 // Fix 12: Global crash handler (retained)
 //   • FlutterError.onError routes framework errors through AppLogger.
@@ -49,20 +51,18 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 final ThemeNotifier themeNotifier = ThemeNotifier(ThemeMode.light);
 
 Future<void> main() async {
-  // ── Fix 12: Route Flutter framework errors through AppLogger ──────────────
+  // ── Fix 12: Route Flutter framework errors through AppLogger ────────────
   FlutterError.onError = AppLogger.flutterError;
 
-  // ── Fix 12: Catch all unhandled async/zone errors ───────────────────────
+  // ── Fix 12: Catch all unhandled async/zone errors ───────────────────
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
 
-      // ── Fix 4 / Batch C: Check encryption key integrity ───────────────────
-      // Result is passed to SplashScreen — dialog shown from live context.
+      // ── Fix 4 / Batch C: Check encryption key integrity ─────────────────
       final integrityOk = await SecurePrefs.instance.checkIntegrity();
 
-      // ── Batch C: Migrate legacy plain-text prefs ─────────────────────────
-      // No-op if nothing to migrate. Runs before UI so data is ready.
+      // ── Batch C: Migrate legacy plain-text prefs ──────────────────────
       await HydrationRepository.instance.migrateLegacyPlainTextPrefs();
 
       // Load saved theme preference
@@ -100,7 +100,7 @@ Future<void> requestExactAlarmPermission() async {
   }
 }
 
-// ─── MyApp ──────────────────────────────────────────────────────────────────
+// ─── MyApp ─────────────────────────────────────────────────────────────
 class MyApp extends StatelessWidget {
   final bool integrityOk;
   const MyApp({super.key, required this.integrityOk});
@@ -122,18 +122,17 @@ class _ThemeConsumer extends StatelessWidget {
   Widget build(BuildContext context) {
     final notifier = ThemeNotifier.of(context);
     return MaterialApp(
-      title: 'KidneyShield',
+      title: 'StoneGuard',         // Fix 8 branding: was 'KidneyShield'
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       darkTheme: buildDarkTheme(),
       themeMode: notifier.mode,
-      // Batch C: pass integrity flag — navigatorKey no longer needed
       home: SplashScreen(showKeyLossWarning: !integrityOk),
     );
   }
 }
 
-// ─── MAIN SHELL ───────────────────────────────────────────────────────────────
+// ─── MAIN SHELL ─────────────────────────────────────────────────────────────
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -144,7 +143,6 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
-  // Batch D: screens list moved to initState — built once, not on every rebuild
   late final List<Widget> _screens;
   final GlobalKey<HomeShieldScreenState> _shieldKey =
       GlobalKey<HomeShieldScreenState>();

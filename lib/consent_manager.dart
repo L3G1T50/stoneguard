@@ -1,4 +1,4 @@
-// ─── CONSENT MANAGER ─────────────────────────────────────────────────────────
+// ─── CONSENT MANAGER ──────────────────────────────────────────────────────────
 // Batch 5 — Fix 8: GDPR-aligned ad consent gate
 //
 // Flow:
@@ -8,12 +8,10 @@
 //   4. AdMob is initialised ONLY if the user accepted.
 //   5. BannerAdWidget checks hasConsented() before loading any ad.
 //
-// Batch F fixes:
-//   • Dialog title corrected from 'StoneGuard' → 'KidneyShield' (branding bug).
-//   • AdConfig.applyRequestConfiguration() now called inside _initAdMob() so
-//     emulator/device is registered as a test device in debug/profile builds.
+// Fix 8 branding patch:
+//   • All 'KidneyShield' references replaced with 'StoneGuard'.
 //
-// To comply with Google's EU consent requirements you should also integrate
+// To comply with Google’s EU consent requirements you should also integrate
 // the full Google User Messaging Platform (UMP) SDK for EEA users. This
 // ConsentManager is a lightweight first-party gate that works for all regions
 // and can be used alongside UMP.
@@ -29,7 +27,7 @@ class ConsentManager {
   static const _consentKey = 'ads_consent_granted';
   static const _shownKey   = 'ads_consent_shown';
 
-  // ── Read helpers ────────────────────────────────────────────────────────
+  // ── Read helpers ───────────────────────────────────────────────
 
   /// Returns true if the user has explicitly accepted ad personalisation.
   static Future<bool> hasConsented() async {
@@ -51,7 +49,7 @@ class ConsentManager {
     }
   }
 
-  // ── Show consent dialog if needed ────────────────────────────────────────
+  // ── Show consent dialog if needed ──────────────────────────────────────
 
   /// Call once from SplashScreen (or first screen after onboarding).
   /// Shows the consent dialog only on first launch.
@@ -74,12 +72,12 @@ class ConsentManager {
     }
   }
 
-  // ── Initialise AdMob (only called after consent) ────────────────────────
+  // ── Initialise AdMob (only called after consent) ──────────────────────
 
   static Future<void> _initAdMob() async {
     try {
       await MobileAds.instance.initialize();
-      // Batch F: apply test-device configuration immediately after init so
+      // Apply test-device configuration immediately after init so
       // debug/profile builds register the emulator and never track real
       // impressions. In release this is a no-op (see AdConfig).
       await AdConfig.applyRequestConfiguration();
@@ -89,7 +87,7 @@ class ConsentManager {
     }
   }
 
-  // ── Save choice ──────────────────────────────────────────────────────────
+  // ── Save choice ──────────────────────────────────────────────────
 
   static Future<void> _saveChoice(bool accepted) async {
     try {
@@ -111,7 +109,7 @@ class ConsentManager {
   }
 }
 
-// ─── Consent Dialog Widget ────────────────────────────────────────────────────
+// ─── Consent Dialog Widget ─────────────────────────────────────────────────────
 
 class _ConsentDialog extends StatelessWidget {
   const _ConsentDialog();
@@ -119,21 +117,20 @@ class _ConsentDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      // Batch F: was 'Support StoneGuard with Ads' — corrected to KidneyShield.
-      title: const Text('Support KidneyShield with Ads'),
+      title: const Text('Support StoneGuard with Ads'),
       content: const SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'KidneyShield is free to use. To keep it running, we show '
+              'StoneGuard is free to use. To keep it running, we show '
               'ads provided by Google AdMob.',
             ),
             SizedBox(height: 12),
             Text(
               'If you allow personalised ads, Google may use limited '
               'device information (such as your ad ID) to show you '
-              'relevant ads. No health data from KidneyShield is ever '
+              'relevant ads. No health data from StoneGuard is ever '
               'shared with advertisers.',
             ),
             SizedBox(height: 12),
