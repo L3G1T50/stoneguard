@@ -13,7 +13,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.stoneguard"
+    namespace = "com.lacaprara.kidneyshield"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "28.2.13676358"
 
@@ -30,7 +30,9 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.stoneguard"
+        // Fix 10: Unique application ID — required for Play Store.
+        // com.example.* is rejected by Google Play.
+        applicationId = "com.lacaprara.kidneyshield"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -49,6 +51,8 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
+            // Fix 10: R8 minification + resource shrinking enabled for release.
+            // Reduces APK size and makes reverse engineering harder.
             isMinifyEnabled = true
             isShrinkResources = true
         }

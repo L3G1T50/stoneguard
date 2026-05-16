@@ -20,7 +20,7 @@
         Prevents accidental plain-HTTP calls leaking data in transit.
     -->
     <application
-        android:label="StoneGuard"
+        android:label="KidneyShield"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:fullBackupContent="false"
