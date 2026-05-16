@@ -7,10 +7,9 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <!--
         Fix 10: CALL_PHONE removed.
-        KidneyShield never makes phone calls. This permission had no legitimate
+        StoneGuard never makes phone calls. This permission had no legitimate
         use in the app and would trigger a Play Store sensitive-permissions
-        review. Removing it also improves user trust — a health/diet tracker
-        should not be requesting call access.
+        review.
     -->
 
     <!--
@@ -38,7 +37,7 @@
         development builds when local.properties is absent (e.g. CI).
     -->
     <application
-        android:label="KidneyShield"
+        android:label="StoneGuard"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:fullBackupContent="false"
