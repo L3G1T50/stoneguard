@@ -1,7 +1,17 @@
 // ─── SPLASH SCREEN ───────────────────────────────────────────────
+//
+// Fix 2: Wire ConsentManager.showIfNeeded() into the splash-to-home transition.
+//   • When the user is a returning user going to MainShell, we show the
+//     consent dialog exactly once (ConsentManager gates repeat showings).
+//   • New users see onboarding/setup first; consent is shown on their
+//     first arrival at MainShell instead, so it doesn't interrupt the
+//     onboarding flow.
+//   • If consent was already given/declined in a prior session, the call
+//     is a no-op (returns immediately without showing a dialog).
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
+import '../consent_manager.dart';
 import 'setup_screen.dart';
 import 'onboarding_screen.dart';
 
@@ -58,10 +68,18 @@ class _SplashScreenState extends State<SplashScreen>
     Widget nextScreen;
 
     if (!hasSeenOnboarding) {
+      // New user — go through onboarding; consent will be shown later.
       nextScreen = const OnboardingScreen();
     } else if (!hasCompletedSetup) {
+      // Partially set up — finish setup first.
       nextScreen = const SetupScreen();
     } else {
+      // ── Fix 2: Show ad-consent dialog exactly once before MainShell ────
+      // ConsentManager.showIfNeeded() is a no-op if the user has already
+      // made a choice. It only shows the dialog on the very first launch
+      // after onboarding is complete.
+      await ConsentManager.showIfNeeded(context);
+      if (!mounted) return; // Guard after async gap.
       nextScreen = const MainShell();
     }
 

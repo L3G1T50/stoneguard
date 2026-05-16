@@ -1,12 +1,15 @@
 // ─── MAIN ENTRY POINT ─────────────────────────────────────────────────────────
 //
-// Batch 3 — Fix 12: Global crash handler
-//   • FlutterError.onError routes framework errors through AppLogger.flutterError()
-//     so release builds stay silent while debug builds still dump to console.
-//   • runZonedGuarded wraps runApp to catch all unhandled async errors that
-//     would otherwise crash the app silently or show a red-screen in release.
-//   • Neither handler logs PHI. Both are wired to a TODO slot for a future
-//     privacy-respecting crash reporter (e.g. Crashlytics with scrubbing).
+// Fix 2: AdMob consent gate
+//   • MobileAds.instance.initialize() has been REMOVED from here.
+//   • AdMob is now ONLY initialised inside ConsentManager._initAdMob(),
+//     which is called only if the user taps "Accept Ads" in the consent dialog.
+//   • This ensures no ad SDK tracking begins before explicit user consent,
+//     satisfying GDPR / Play Store data-safety requirements.
+//
+// Fix 12: Global crash handler (retained from previous batch)
+//   • FlutterError.onError routes framework errors through AppLogger.
+//   • runZonedGuarded wraps runApp to catch all unhandled async errors.
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -14,7 +17,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:permission_handler/permission_handler.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home_shield_screen.dart';
@@ -37,13 +39,9 @@ final ThemeNotifier themeNotifier = ThemeNotifier(ThemeMode.light);
 
 Future<void> main() async {
   // ── Fix 12: Route Flutter framework errors through AppLogger ──────────────
-  // In debug: dumps full details to console (same as default behaviour).
-  // In release: completely silent — no stack traces reach logcat.
   FlutterError.onError = AppLogger.flutterError;
 
   // ── Fix 12: Catch all unhandled async/zone errors ─────────────────────────
-  // runZonedGuarded is the outermost safety net. Any Future that is never
-  // awaited and throws, or any isolate-level exception, is caught here.
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
@@ -60,7 +58,12 @@ Future<void> main() async {
         systemNavigationBarIconBrightness: Brightness.dark,
       ));
 
-      MobileAds.instance.initialize();
+      // ── Fix 2: MobileAds.instance.initialize() intentionally NOT called here.
+      // AdMob is initialised only inside ConsentManager._initAdMob(), which
+      // is invoked only after the user explicitly accepts ads in SplashScreen.
+      // Initialising the SDK before consent would allow Google to begin
+      // device-level tracking immediately on install — a GDPR violation.
+
       tz.initializeTimeZones();
 
       const AndroidInitializationSettings androidSettings =
@@ -72,9 +75,6 @@ Future<void> main() async {
 
       runApp(const MyApp());
     },
-    // ── Zone error handler ───────────────────────────────────────────────────
-    // Called whenever an unhandled error escapes the zone.
-    // We log it (debug only) and leave the app running rather than crashing.
     (Object error, StackTrace stack) {
       AppLogger.error('ZoneHandler', 'Unhandled async error', error, stack);
       // TODO(release): forward non-PHI metadata to crash reporter here.
@@ -138,12 +138,9 @@ class _MainShellState extends State<MainShell> {
   }
 
   // ── Fix 5: surface save failures to the user ─────────────────────────────
-  // logFood now returns SaveResult<double>. If it comes back as SaveFailure,
-  // the app shows a snackbar so the user knows their entry didn't save.
   Future<void> _onLogFood(double mg, String name) async {
     final result = await HydrationRepository.instance.logFood(mg, name);
     if (result is SaveFailure) {
-      // Context may have changed during the async gap — guard with mounted.
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
