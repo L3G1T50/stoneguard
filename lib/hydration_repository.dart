@@ -11,7 +11,6 @@
 //   Fix 5 — addWater and logFood now return SaveResult<double> instead of a
 //            raw double so UI callers can easily detect and surface failures.
 
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'history_storage.dart';
 import 'secure_prefs.dart';
