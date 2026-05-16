@@ -1,12 +1,12 @@
-// ─── HOME SHIELD SCREEN ────────────────────────────────────
+// ─── HOME SHIELD SCREEN ────────────────────────────────────────────────────────────────────────────────
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../widgets/banner_ad_widget.dart';
 import '../main.dart';
 import '../hydration_repository.dart';
+import '../secure_prefs.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'settings_screen.dart';
 import 'history_progress_screen.dart';
 
@@ -189,7 +189,9 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   double goalOz = 80;
   double goalMg = 200;
 
-  final _repo = HydrationRepository.instance;
+  final _repo   = HydrationRepository.instance;
+  // Fix 1: use SecurePrefs for all PHI reads — no more raw SharedPreferences.
+  final _secure = SecurePrefs.instance;
 
   Set<String> _celebratedBadges = {};
   int get _unlockedCount => _kAllBadges
@@ -250,10 +252,13 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
     if (state == AppLifecycleState.resumed) loadData();
   }
 
+  // Fix 1: All prefs read through SecurePrefs — user_name, avatar_path,
+  // and celebrated_badges are no longer read from plain SharedPreferences.
   Future<void> loadData() async {
-    final snapshot = await _repo.readToday();
-    final prefs = await SharedPreferences.getInstance();
-    final celebratedList = prefs.getStringList('celebrated_badges') ?? [];
+    final snapshot        = await _repo.readToday();
+    final userName        = await _secure.getString('user_name');
+    final avatarPath      = await _secure.getString('avatar_path');
+    final celebratedList  = await _secure.getStringList('celebrated_badges');
 
     if (!mounted) return;
     setState(() {
@@ -261,8 +266,8 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
       oxalateMg = snapshot.oxalateMg;
       goalOz    = snapshot.goalOz;
       goalMg    = snapshot.goalMg;
-      _userName    = prefs.getString('user_name')    ?? '';
-      _avatarPath  = prefs.getString('avatar_path')  ?? '';
+      _userName        = userName;
+      _avatarPath      = avatarPath;
       _celebratedBadges = celebratedList.toSet();
       final visualFill = (snapshot.waterOz / snapshot.goalOz).clamp(0.0, 1.0);
       _fillAnimation =
@@ -275,7 +280,6 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
   Future<void> _addWater(double oz) async {
     final result = await _repo.addWater(oz);
 
-    // Fix 5: unwrap SaveResult — show snackbar on failure, update UI on success.
     if (result is SaveFailure<double>) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -324,6 +328,8 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
 
     await _repo.resetToday();
 
+    if (!mounted) return;
+
     final currentAnimProg = _fillAnimation.value;
     _fillAnimation =
         Tween<double>(begin: currentAnimProg, end: 0).animate(CurvedAnimation(
@@ -333,6 +339,11 @@ class HomeShieldScreenState extends State<HomeShieldScreen>
       waterOz   = 0;
       oxalateMg = 0;
     });
+
+    // Fix 1b: confirm the reset completed so user isn't left wondering.
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Today's data has been reset.")),
+    );
   }
 
   Color _lerpShieldColor(double p) {
