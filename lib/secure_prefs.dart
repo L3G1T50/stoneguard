@@ -1,11 +1,11 @@
-// ─── SECURE PREFS ────────────────────────────────────────────────────────────
+// ─── SECURE PREFS ──────────────────────────────────────────────────────────────────────
 // AES-256-CBC encrypted wrapper around SharedPreferences.
 // Replaces plain-text storage for all sensitive current-day health data:
 //   water_*, oxalate_*, oxalate_log_*, goal_water, goal_oxalate,
 //   user_name, avatar_path, celebrated_badges, best_streak, and any future PHI keys.
 //
 // Design mirrors HistoryStorage so only ONE encryption pattern exists in
-// this codebase.  The 32-byte AES key is generated once and kept in
+// this codebase. The 32-byte AES key is generated once and kept in
 // FlutterSecureStorage (Android Keystore / iOS Keychain).
 // Every value is stored as  base64( iv_16_bytes || ciphertext ).
 //
@@ -15,6 +15,11 @@
 // Fix 4: checkIntegrity() detects key-loss (OS wipe / app-data clear) and
 // returns false so the caller can show a recovery dialog rather than
 // silently returning default values for all health data.
+//
+// Batch D: SharedPreferences instance cached after first call.
+// Previously every get/set method called SharedPreferences.getInstance()
+// inline, adding an unnecessary async hop on each operation. The instance
+// is now cached in _prefs after the first call via _getPrefs().
 
 import 'dart:convert';
 import 'dart:math';
@@ -34,7 +39,17 @@ class SecurePrefs {
   static const _secure    = FlutterSecureStorage();
   static const _keyEncKey = 'secure_prefs_aes_key'; // stored in Keystore/Keychain
 
-  // ── Key management ────────────────────────────────────────────────────────
+  // Batch D: cache the SharedPreferences instance so we only pay the
+  // getInstance() async cost once per app lifetime instead of once per
+  // read/write operation.
+  SharedPreferences? _prefs;
+
+  Future<SharedPreferences> _getPrefs() async {
+    _prefs ??= await SharedPreferences.getInstance();
+    return _prefs!;
+  }
+
+  // ── Key management ──────────────────────────────────────────────────────
   Future<enc.Key> _getOrCreateKey() async {
     final existing = await _secure.read(key: _keyEncKey);
     if (existing != null && existing.isNotEmpty) {
@@ -77,11 +92,11 @@ class SecurePrefs {
 
   // ── Fix 4: Integrity check ────────────────────────────────────────────────
   /// Writes a known sentinel value, reads it back, and returns [true] if the
-  /// round-trip succeeds.  Returns [false] when the AES key has been wiped
+  /// round-trip succeeds. Returns [false] when the AES key has been wiped
   /// (e.g. the user cleared app data or the OS rotated the Keystore) so that
   /// all previously encrypted values are now unreadable.
   ///
-  /// Call once on startup BEFORE reading any health data.  When this returns
+  /// Call once on startup BEFORE reading any health data. When this returns
   /// false the app should show a one-time recovery dialog so the user knows
   /// their data was reset — never let them discover it silently.
   ///
@@ -101,12 +116,12 @@ class SecurePrefs {
     }
   }
 
-  // ── Public API ────────────────────────────────────────────────────────────
+  // ── Public API ────────────────────────────────────────────────────────────────────
 
   /// Store an encrypted [double] value.
   Future<void> setDouble(String key, double value) async {
     try {
-      final prefs   = await SharedPreferences.getInstance();
+      final prefs   = await _getPrefs();
       final encoded = await _encrypt(value.toString());
       await prefs.setString('enc_$key', encoded);
     } catch (e, st) {
@@ -117,7 +132,7 @@ class SecurePrefs {
   /// Read an encrypted [double]. Returns [defaultValue] on any error.
   Future<double> getDouble(String key, {double defaultValue = 0.0}) async {
     try {
-      final prefs   = await SharedPreferences.getInstance();
+      final prefs   = await _getPrefs();
       final encoded = prefs.getString('enc_$key');
       final plain   = await _decrypt(encoded);
       if (plain == null) return defaultValue;
@@ -131,7 +146,7 @@ class SecurePrefs {
   /// Store an encrypted [int] value.
   Future<void> setInt(String key, int value) async {
     try {
-      final prefs   = await SharedPreferences.getInstance();
+      final prefs   = await _getPrefs();
       final encoded = await _encrypt(value.toString());
       await prefs.setString('enc_$key', encoded);
     } catch (e, st) {
@@ -142,7 +157,7 @@ class SecurePrefs {
   /// Read an encrypted [int]. Returns [defaultValue] on any error.
   Future<int> getInt(String key, {int defaultValue = 0}) async {
     try {
-      final prefs   = await SharedPreferences.getInstance();
+      final prefs   = await _getPrefs();
       final encoded = prefs.getString('enc_$key');
       final plain   = await _decrypt(encoded);
       if (plain == null) return defaultValue;
@@ -156,7 +171,7 @@ class SecurePrefs {
   /// Store an encrypted [String] value.
   Future<void> setString(String key, String value) async {
     try {
-      final prefs   = await SharedPreferences.getInstance();
+      final prefs   = await _getPrefs();
       final encoded = await _encrypt(value);
       await prefs.setString('enc_$key', encoded);
     } catch (e, st) {
@@ -167,7 +182,7 @@ class SecurePrefs {
   /// Read an encrypted [String]. Returns [defaultValue] on any error.
   Future<String> getString(String key, {String defaultValue = ''}) async {
     try {
-      final prefs   = await SharedPreferences.getInstance();
+      final prefs   = await _getPrefs();
       final encoded = prefs.getString('enc_$key');
       final plain   = await _decrypt(encoded);
       return plain ?? defaultValue;
@@ -180,7 +195,7 @@ class SecurePrefs {
   /// Store an encrypted [List<String>].
   Future<void> setStringList(String key, List<String> value) async {
     try {
-      final prefs   = await SharedPreferences.getInstance();
+      final prefs   = await _getPrefs();
       final encoded = await _encrypt(jsonEncode(value));
       await prefs.setString('enc_$key', encoded);
     } catch (e, st) {
@@ -191,7 +206,7 @@ class SecurePrefs {
   /// Read an encrypted [List<String>]. Returns [] on any error.
   Future<List<String>> getStringList(String key) async {
     try {
-      final prefs   = await SharedPreferences.getInstance();
+      final prefs   = await _getPrefs();
       final encoded = prefs.getString('enc_$key');
       final plain   = await _decrypt(encoded);
       if (plain == null) return [];
@@ -205,7 +220,7 @@ class SecurePrefs {
   /// Remove a single encrypted key.
   Future<void> remove(String key) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = await _getPrefs();
       await prefs.remove('enc_$key');
     } catch (e, st) {
       AppLogger.error('SecurePrefs', 'remove failed', e, st);
