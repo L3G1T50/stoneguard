@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Batch B: Android 12+ (API 31+) backup and data-transfer policy.
+
+    disableIfNoEncryptionCapabilities="true"
+        Cloud backup is only allowed if the device supports end-to-end
+        encryption. On devices that don't (older Android / no lock screen)
+        cloud backup is silently disabled — KidneyShield health data never
+        leaves the device unencrypted.
+
+    <exclude domain="sharedpref" .../>
+        Belt-and-suspenders: explicitly exclude the SharedPreferences file
+        that stores our AES-encrypted health data from any backup, even on
+        devices with encryption support. The AES key lives in the Android
+        Keystore (not in SharedPreferences) and cannot be backed up anyway,
+        so restoring the SharedPreferences blob on a different device would
+        produce permanently unreadable ciphertext. Excluding it prevents
+        user confusion and wasted storage.
+-->
+<data-extraction-rules>
+    <cloud-backup disableIfNoEncryptionCapabilities="true">
+        <exclude domain="sharedpref" path="FlutterSharedPreferences.xml"/>
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="FlutterSharedPreferences.xml"/>
+    </device-transfer>
+</data-extraction-rules>

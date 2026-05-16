@@ -7,7 +7,7 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <!--
         Fix 10: CALL_PHONE removed.
-        StoneGuard never makes phone calls. This permission had no legitimate
+        KidneyShield never makes phone calls. This permission had no legitimate
         use in the app and would trigger a Play Store sensitive-permissions
         review. Removing it also improves user trust — a health/diet tracker
         should not be requesting call access.
@@ -20,22 +20,35 @@
     <uses-feature android:name="android.hardware.telephony" android:required="false"/>
 
     <!--
-        allowBackup="false"      : prevents Android system backup from copying
-                                   encrypted DB/prefs to Google Drive or adb.
-        fullBackupContent="false": belt-and-suspenders for pre-API-23 devices.
-        networkSecurityConfig   : enforces HTTPS-only; blocks all cleartext HTTP.
+        allowBackup="false"        : prevents Android system backup from copying
+                                     encrypted DB/prefs to Google Drive or adb.
+        fullBackupContent="false"  : belt-and-suspenders for pre-API-23 devices.
+        dataExtractionRules        : API 31+ (Android 12) backup/transfer policy.
+                                     See res/xml/data_extraction_rules.xml.
+        networkSecurityConfig      : enforces HTTPS-only; blocks all cleartext HTTP.
+
+        Batch B: AdMob App ID is NO LONGER hardcoded here.
+        The ${admobAppId} placeholder is injected at build time from
+        android/local.properties (which is gitignored).
+        Add this line to android/local.properties:
+            admobAppId=ca-app-pub-XXXXXXXXXXXXXXXX~XXXXXXXXXX
+        And add this to android/app/build.gradle.kts defaultConfig block:
+            manifestPlaceholders["admobAppId"] = localProperties.getProperty("admobAppId", "ca-app-pub-3940256099942544~3347511713")
+        The fallback value above is Google's official test App ID — safe for
+        development builds when local.properties is absent (e.g. CI).
     -->
     <application
-        android:label="StoneGuard"
+        android:label="KidneyShield"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:networkSecurityConfig="@xml/network_security_config">
 
-        <!-- AdMob App ID -->
+        <!-- AdMob App ID — injected from local.properties via manifestPlaceholders -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-2298666914293591~4166424993"/>
+            android:value="${admobAppId}"/>
 
         <activity
             android:name=".MainActivity"
