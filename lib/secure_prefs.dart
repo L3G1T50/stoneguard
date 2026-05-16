@@ -2,7 +2,7 @@
 // AES-256-CBC encrypted wrapper around SharedPreferences.
 // Replaces plain-text storage for all sensitive current-day health data:
 //   water_*, oxalate_*, oxalate_log_*, goal_water, goal_oxalate,
-//   user_name, avatar_path, celebrated_badges, and any future PHI keys.
+//   user_name, avatar_path, celebrated_badges, best_streak, and any future PHI keys.
 //
 // Design mirrors HistoryStorage so only ONE encryption pattern exists in
 // this codebase.  The 32-byte AES key is generated once and kept in
@@ -90,6 +90,31 @@ class SecurePrefs {
       return double.tryParse(plain) ?? defaultValue;
     } catch (e, st) {
       debugPrint('[SecurePrefs] getDouble error ($key): $e\n$st');
+      return defaultValue;
+    }
+  }
+
+  /// Store an encrypted [int] value.
+  Future<void> setInt(String key, int value) async {
+    try {
+      final prefs   = await SharedPreferences.getInstance();
+      final encoded = await _encrypt(value.toString());
+      await prefs.setString('enc_$key', encoded);
+    } catch (e, st) {
+      debugPrint('[SecurePrefs] setInt error ($key): $e\n$st');
+    }
+  }
+
+  /// Read an encrypted [int]. Returns [defaultValue] on any error.
+  Future<int> getInt(String key, {int defaultValue = 0}) async {
+    try {
+      final prefs   = await SharedPreferences.getInstance();
+      final encoded = prefs.getString('enc_$key');
+      final plain   = await _decrypt(encoded);
+      if (plain == null) return defaultValue;
+      return int.tryParse(plain) ?? defaultValue;
+    } catch (e, st) {
+      debugPrint('[SecurePrefs] getInt error ($key): $e\n$st');
       return defaultValue;
     }
   }
