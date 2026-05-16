@@ -1,16 +1,17 @@
 // ─── ABOUT SCREEN ──────────────────────────────────────────────────
+// Preflight Batch 1: Rebranded StoneGuard → KidneyShield throughout.
 // Batch H: Migrated from isolated local colour constants to AppTheme
 //   tokens (AppColors, AppTextStyles, AppSpacing, AppCard, AppDynamic).
-//   Removed every hardcoded Color(0xFF...) literal; the screen now
-//   adapts automatically to light / dark mode via the global theme.
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../widgets/gradient_scaffold.dart';
+import 'privacy_policy_screen.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
 
+  // Hosted privacy policy URL (matches Play Console declaration)
   static const String _privacyUrl =
       'https://www.freeprivacypolicy.com/live/c256b9ff-8fd7-4252-ac3b-2cc80b29633f';
 
@@ -25,10 +26,17 @@ class AboutScreen extends StatelessWidget {
     }
   }
 
+  void _openInAppPrivacyPolicy(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return GradientScaffold(
-      title: 'About StoneGuard',
+      title: 'About KidneyShield',
       body: SingleChildScrollView(
         padding: AppSpacing.pagePadding.add(
             const EdgeInsets.only(bottom: 40)),
@@ -52,7 +60,7 @@ class AboutScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    'StoneGuard',
+                    'KidneyShield',
                     style: AppTextStyles.heading,
                   ),
                   const SizedBox(height: 4),
@@ -98,7 +106,7 @@ class AboutScreen extends StatelessWidget {
                   'specifically for calcium oxalate kidney stone sufferers. '
                   'It is hard to remember which foods to avoid every day '
                   'and to stay consistent with drinking enough water. '
-                  'That gap inspired me to build something custom -- '
+                  'That gap inspired me to build KidneyShield -- '
                   'a one-of-a-kind app that benefits not just myself, '
                   'but everyone who deals with stones.',
             ),
@@ -107,16 +115,16 @@ class AboutScreen extends StatelessWidget {
             // ── What It Does ─────────────────────────────────────────
             _buildSection(
               icon: Icons.favorite_outline_rounded,
-              title: 'What StoneGuard Does',
+              title: 'What KidneyShield Does',
               content:
-                  'StoneGuard is designed to be simple enough to use every day, '
+                  'KidneyShield is designed to be simple enough to use every day, '
                   'while being powerful enough to show you the bigger picture. '
                   'It tracks your hydration, monitors your oxalate intake, '
                   'and helps you understand where you are doing well and '
                   'where you can improve.\n\n'
                   'That real data can help you have more informed conversations '
-                  'with your doctor about your specific kidney stone situation. '
-                  'Knowledge is prevention -- and StoneGuard puts that '
+                  'with your healthcare provider about your daily habits. '
+                  'Knowledge is prevention -- and KidneyShield puts that '
                   'knowledge in your hands.',
             ),
             const SizedBox(height: 24),
@@ -132,7 +140,7 @@ class AboutScreen extends StatelessWidget {
                   Expanded(
                     child: Text(
                       'Wondering if you are on track? '
-                          'With StoneGuard, you will know for sure.',
+                          'With KidneyShield, you will know for sure.',
                       style: AppTextStyles.body.copyWith(
                           fontStyle: FontStyle.italic),
                     ),
@@ -143,6 +151,8 @@ class AboutScreen extends StatelessWidget {
             const SizedBox(height: 24),
 
             // ── Disclaimer ───────────────────────────────────────────
+            // Play Store Health Policy: medical disclaimer must appear in-app.
+            // "not a medical device" phrasing required for Health Apps Declaration.
             Container(
               padding: const EdgeInsets.all(14),
               decoration: AppDynamic.border(
@@ -159,10 +169,11 @@ class AboutScreen extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'StoneGuard is a self-tracking and educational tool only. '
-                          'It does not replace medical advice, clinical evaluation, '
-                          'lab results, or imaging. Always consult your healthcare '
-                          'provider for diagnosis and treatment.',
+                      'KidneyShield is a self-tracking tool, not a medical device. '
+                          'It does not diagnose, treat, cure, or replace medical advice, '
+                          'clinical evaluation, lab results, or imaging. '
+                          'Always consult your healthcare provider for '
+                          'diagnosis and treatment.',
                       style: AppTextStyles.body,
                     ),
                   ),
@@ -176,12 +187,25 @@ class AboutScreen extends StatelessWidget {
               padding: EdgeInsets.zero,
               child: Column(
                 children: [
-                  _buildLinkTile(
+                  // In-app privacy policy (full text, no external browser needed)
+                  _buildActionTile(
                     context,
                     icon: Icons.privacy_tip_outlined,
                     label: 'Privacy Policy',
-                    url: _privacyUrl,
                     isFirst: true,
+                    onTap: () => _openInAppPrivacyPolicy(context),
+                    trailing: const Icon(Icons.chevron_right_rounded,
+                        color: AppColors.teal, size: 20),
+                  ),
+                  const Divider(height: 1),
+                  // External hosted policy (for Play Console link)
+                  _buildActionTile(
+                    context,
+                    icon: Icons.open_in_new_rounded,
+                    label: 'View Hosted Policy',
+                    onTap: () => _launchUrl(context, _privacyUrl),
+                    trailing: const Icon(Icons.open_in_new_rounded,
+                        color: AppColors.teal, size: 16),
                   ),
                   const Divider(height: 1),
                   _buildInfoTile(
@@ -208,7 +232,7 @@ class AboutScreen extends StatelessWidget {
 
             Center(
               child: Text(
-                '\u00A9 2026 StoneGuard. Made with love for stone survivors.',
+                '\u00A9 2026 KidneyShield. Made with love for stone survivors.',
                 style: AppTextStyles.micro,
                 textAlign: TextAlign.center,
               ),
@@ -242,18 +266,19 @@ class AboutScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLinkTile(
+  Widget _buildActionTile(
     BuildContext context, {
     required IconData icon,
     required String label,
-    required String url,
+    required VoidCallback onTap,
+    Widget? trailing,
     bool isFirst = false,
   }) {
     return InkWell(
       borderRadius: isFirst
           ? const BorderRadius.vertical(top: Radius.circular(14))
           : BorderRadius.zero,
-      onTap: () => _launchUrl(context, url),
+      onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
@@ -263,8 +288,7 @@ class AboutScreen extends StatelessWidget {
             Expanded(
               child: Text(label, style: AppTextStyles.itemTitle),
             ),
-            const Icon(Icons.open_in_new_rounded,
-                color: AppColors.teal, size: 16),
+            if (trailing != null) trailing,
           ],
         ),
       ),

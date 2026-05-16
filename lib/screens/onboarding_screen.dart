@@ -1,12 +1,14 @@
 // ─── ONBOARDING SCREEN ────────────────────────────────────────────────────
 //
-// Fix 11: Added privacy policy disclosure on the last onboarding page.
-//   Google Play requires an on-screen disclosure before first use for any
-//   app that collects data or shows ads. The text:
-//     "By continuing you agree to our Privacy Policy"
-//   appears directly above the 'Continue to setup' button on the final page
-//   only. Tapping 'Privacy Policy' opens PrivacyPolicyScreen full-screen so
-//   the user can read it before they tap Continue.
+// Preflight Batch 1:
+//   • Rebranded all 'StoneGuard' strings → 'KidneyShield'.
+//   • Added medical disclaimer banner on Page 1 (cold-launch visible).
+//     Google Play Health Policy requires the disclaimer to appear before
+//     the user begins using the app — not just on About/Settings.
+//   • Disclaimer uses the exact phrase "not a medical device" as required
+//     by the Play Store Health Apps Declaration form.
+//
+// Fix 11 (existing): Privacy policy disclosure on the last onboarding page.
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,13 +27,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  // AnimationController drives the icon cross-fade between pages
   late AnimationController _iconController;
   late Animation<double> _iconFade;
 
   final List<_OnboardingPageData> _pages = const [
     _OnboardingPageData(
-      title: 'Welcome to StoneGuard',
+      title: 'Welcome to KidneyShield',
       description:
           'A simple way to track habits that may help lower your kidney stone risk.',
       accent: Color(0xFF0097A7),
@@ -70,7 +71,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _iconController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
-      value: 1.0, // start fully visible
+      value: 1.0,
     );
     _iconFade = CurvedAnimation(parent: _iconController, curve: Curves.easeIn);
   }
@@ -124,6 +125,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   Widget build(BuildContext context) {
     final isLastPage = _currentPage == _pages.length - 1;
+    final isFirstPage = _currentPage == 0;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -145,7 +147,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  // Skip button — hidden on the last page
                   if (!isLastPage)
                     TextButton(
                       onPressed: _finishOnboarding,
@@ -168,6 +169,42 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               ),
             ),
 
+            // ── MEDICAL DISCLAIMER BANNER — Page 1 only ──────────────
+            // Play Store Health Apps Declaration requires this to be
+            // visible before the user begins interacting with the app.
+            if (isFirstPage)
+              Container(
+                margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8E1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFFFFB300).withValues(alpha: 0.5),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline_rounded,
+                        color: Color(0xFFF57F17), size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'KidneyShield is a self-tracking tool, not a medical '
+                        'device. It does not diagnose or treat kidney stones. '
+                        'Always consult your healthcare provider.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade800,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             // ── PAGE CONTENT ──
             Expanded(
               child: PageView.builder(
@@ -183,7 +220,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       children: [
                         FadeTransition(
                           opacity: _iconFade,
-                          child: _StoneGuardHeroBadge(page: page),
+                          child: _KidneyShieldHeroBadge(page: page),
                         ),
                         const SizedBox(height: 40),
                         Text(
@@ -218,7 +255,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
               child: Column(
                 children: [
-                  // Animated dot indicators
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
@@ -239,7 +275,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   ),
                   const SizedBox(height: 24),
 
-                  // Next / Continue button
                   SizedBox(
                     width: double.infinity,
                     height: 56,
@@ -268,9 +303,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   ),
                   const SizedBox(height: 12),
 
-                  // Fix 11: Privacy policy disclosure — shown on last page only.
-                  // Google Play requires a visible, tappable link to the privacy
-                  // policy before the user first commits to using the app.
                   if (isLastPage)
                     RichText(
                       textAlign: TextAlign.center,
@@ -318,10 +350,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 }
 
 // ── Hero badge widget ───────────────────────────────────────────────────────
-class _StoneGuardHeroBadge extends StatelessWidget {
+class _KidneyShieldHeroBadge extends StatelessWidget {
   final _OnboardingPageData page;
 
-  const _StoneGuardHeroBadge({required this.page});
+  const _KidneyShieldHeroBadge({required this.page});
 
   @override
   Widget build(BuildContext context) {

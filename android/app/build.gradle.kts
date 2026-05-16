@@ -1,5 +1,6 @@
 // android/app/build.gradle.kts
-// Branding: applicationId + namespace updated to com.lacaprara.kidneyshield
+// Preflight Batch 1: targetSdk pinned explicitly to 35 (2026 Play Store mandate).
+// Branding: applicationId + namespace = com.lacaprara.kidneyshield
 
 import java.util.Properties
 
@@ -23,7 +24,7 @@ plugins {
 
 android {
     namespace = "com.lacaprara.kidneyshield"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 35
     ndkVersion = "28.2.13676358"
 
     compileOptions {
@@ -40,8 +41,9 @@ android {
 
     defaultConfig {
         applicationId = "com.lacaprara.kidneyshield"
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 21
+        targetSdk = 35   // pinned — never delegate to flutter.targetSdkVersion
+        compileSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
