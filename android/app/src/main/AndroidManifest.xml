@@ -5,39 +5,11 @@
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
-    <!--
-        Fix 10: CALL_PHONE removed.
-        StoneGuard never makes phone calls. This permission had no legitimate
-        use in the app and would trigger a Play Store sensitive-permissions
-        review.
-    -->
 
-    <!--
-        Required alongside internet permission so app works on
-        tablets/devices without a SIM card (telephony feature is optional).
-    -->
     <uses-feature android:name="android.hardware.telephony" android:required="false"/>
 
-    <!--
-        allowBackup="false"        : prevents Android system backup from copying
-                                     encrypted DB/prefs to Google Drive or adb.
-        fullBackupContent="false"  : belt-and-suspenders for pre-API-23 devices.
-        dataExtractionRules        : API 31+ (Android 12) backup/transfer policy.
-                                     See res/xml/data_extraction_rules.xml.
-        networkSecurityConfig      : enforces HTTPS-only; blocks all cleartext HTTP.
-
-        Batch B: AdMob App ID is NO LONGER hardcoded here.
-        The ${admobAppId} placeholder is injected at build time from
-        android/local.properties (which is gitignored).
-        Add this line to android/local.properties:
-            admobAppId=ca-app-pub-XXXXXXXXXXXXXXXX~XXXXXXXXXX
-        And add this to android/app/build.gradle.kts defaultConfig block:
-            manifestPlaceholders["admobAppId"] = localProperties.getProperty("admobAppId", "ca-app-pub-3940256099942544~3347511713")
-        The fallback value above is Google's official test App ID — safe for
-        development builds when local.properties is absent (e.g. CI).
-    -->
     <application
-        android:label="StoneGuard"
+        android:label="KidneyShield"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:fullBackupContent="false"

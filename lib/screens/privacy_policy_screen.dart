@@ -1,22 +1,5 @@
 // ─── PRIVACY POLICY SCREEN ─────────────────────────────────────────────────────────
-//
-// Fix 11: In-app privacy policy disclosure
-//
-// Google Play requires that apps collecting personal or sensitive data
-// display a privacy policy link that users can access before consenting.
-//
-// This screen:
-//   1. Renders the full privacy policy text inline (no external browser needed).
-//   2. Is reachable from Settings → Privacy → "View Privacy Policy".
-//   3. Is also linked from the consent dialog footer.
-//
-// Policy content covers:
-//   • What data is collected (oxalate logs, hydration, journal entries)
-//   • Where data is stored (on-device only, AES-256 encrypted)
-//   • Ad data (Google AdMob — ad ID only, no health data shared)
-//   • No third-party data sales
-//   • User rights (delete all data from Settings)
-//   • Contact information
+// Fix 11: In-app privacy policy disclosure (Google Play requirement)
 
 import 'package:flutter/material.dart';
 import '../widgets/gradient_scaffold.dart';
@@ -47,7 +30,7 @@ class _PolicyBody extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'StoneGuard Privacy Policy',
+            'KidneyShield Privacy Policy',
             style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
@@ -60,7 +43,7 @@ class _PolicyBody extends StatelessWidget {
           _Section(
             title: '1. Overview',
             body:
-                'StoneGuard is a kidney stone prevention app designed to help you '
+                'KidneyShield is a kidney stone prevention app designed to help you '
                 'track dietary oxalate intake, hydration, and wellness journal '
                 'entries. Your health is personal — we take data privacy seriously.',
           ),
@@ -68,7 +51,7 @@ class _PolicyBody extends StatelessWidget {
           _Section(
             title: '2. What Data We Collect',
             body:
-                'StoneGuard collects only the data you choose to enter:\n\n'
+                'KidneyShield collects only the data you choose to enter:\n\n'
                 '• Oxalate food log entries (food name, mg of oxalate, timestamp)\n'
                 '• Daily hydration intake\n'
                 '• Wellness journal entries\n'
@@ -82,17 +65,17 @@ class _PolicyBody extends StatelessWidget {
             body:
                 'All data is stored exclusively on your device using an AES-256 '
                 'encrypted SQLite database. Your data never leaves your device '
-                'and is never uploaded to any server. StoneGuard has no backend, '
+                'and is never uploaded to any server. KidneyShield has no backend, '
                 'no cloud sync, and no account system.',
           ),
 
           _Section(
             title: '4. Advertising (Google AdMob)',
             body:
-                'StoneGuard shows ads provided by Google AdMob to support free '
+                'KidneyShield shows ads provided by Google AdMob to support free '
                 'access to the app. If you accept personalised ads, Google may '
                 'use your device\'s advertising ID to show relevant ads.\n\n'
-                'IMPORTANT: No health data from StoneGuard (oxalate logs, '
+                'IMPORTANT: No health data from KidneyShield (oxalate logs, '
                 'hydration records, journal entries) is ever shared with Google '
                 'or any advertiser.\n\n'
                 'You can decline personalised ads during the consent prompt on '
@@ -103,7 +86,7 @@ class _PolicyBody extends StatelessWidget {
           _Section(
             title: '5. Third-Party SDKs',
             body:
-                'StoneGuard uses the following third-party libraries:\n\n'
+                'KidneyShield uses the following third-party libraries:\n\n'
                 '• Google AdMob (advertising)\n'
                 '• Flutter Secure Storage (AES-256 key management via Android Keystore)\n'
                 '• Flutter Local Notifications (reminder alerts, on-device only)\n\n'
@@ -117,13 +100,13 @@ class _PolicyBody extends StatelessWidget {
                 '• Delete individual log entries from the History screen\n'
                 '• Delete all data by uninstalling the app\n\n'
                 'Because data is stored only on your device, uninstalling '
-                'StoneGuard permanently removes all records.',
+                'KidneyShield permanently removes all records.',
           ),
 
           _Section(
             title: '7. Children\'s Privacy',
             body:
-                'StoneGuard is not directed at children under 13. We do not '
+                'KidneyShield is not directed at children under 13. We do not '
                 'knowingly collect data from children.',
           ),
 
@@ -139,13 +122,13 @@ class _PolicyBody extends StatelessWidget {
             title: '9. Contact',
             body:
                 'Questions about this policy? Contact us at:\n\n'
-                'stoneguard.app@gmail.com',
+                'kidneyshield.app@gmail.com',
           ),
 
           const SizedBox(height: 32),
           Center(
             child: Text(
-              '© 2026 StoneGuard. All rights reserved.',
+              '© 2026 KidneyShield. All rights reserved.',
               style: textTheme.bodySmall?.copyWith(color: Colors.grey),
             ),
           ),
@@ -155,8 +138,6 @@ class _PolicyBody extends StatelessWidget {
     );
   }
 }
-
-// ─── Section widget ──────────────────────────────────────────────────────────
 
 class _Section extends StatelessWidget {
   final String title;
