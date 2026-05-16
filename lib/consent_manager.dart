@@ -1,12 +1,14 @@
-// ─── CONSENT MANAGER ──────────────────────────────────────────────────────────
+// ─── CONSENT MANAGER ─────────────────────────────────────────────────────────
 // Fix 8: GDPR-aligned ad consent gate
 //
 // Flow:
 //   1. SplashScreen calls ConsentManager.showIfNeeded(context) on first launch.
-//   2. Dialog explains ads, user accepts or declines.
+//   2. Dialog explains ads; user taps Accept or Decline.
 //   3. Choice stored in FlutterSecureStorage.
 //   4. AdMob initialised ONLY if user accepted.
 //   5. BannerAdWidget checks hasConsented() before loading any ad.
+//
+// Branding: StoneGuard → KidneyShield.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -104,8 +106,7 @@ class _ConsentDialog extends StatelessWidget {
             ),
             SizedBox(height: 12),
             Text(
-              'You can change this choice at any time in Settings → '
-              'Privacy.',
+              'You can change this choice at any time in Settings → Privacy.',
               style: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
             ),
           ],

@@ -1,17 +1,5 @@
 // android/app/build.gradle.kts
-//
-// Fix 10 — Android release hardening (confirmed complete)
-//   • proguardFiles() wires in proguard-rules.pro alongside default rules.
-//   • isMinifyEnabled + isShrinkResources = true for release.
-//   • signingConfig reads from key.properties (gitignored).
-//
-// Fix 10 branding patch:
-//   • namespace + applicationId changed from com.lacaprara.kidneyshield
-//     to com.lacaprara.stoneguard so the Play Store listing matches the app name.
-//
-// Batch C — AdMob App ID injection
-//   • admobAppId loaded from local.properties (gitignored).
-//   • Falls back to Google’s official test App ID on CI / fresh clones.
+// Branding: applicationId + namespace updated to com.lacaprara.kidneyshield
 
 import java.util.Properties
 
@@ -34,7 +22,7 @@ plugins {
 }
 
 android {
-    namespace = "com.lacaprara.stoneguard"
+    namespace = "com.lacaprara.kidneyshield"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "28.2.13676358"
 
@@ -51,14 +39,12 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.lacaprara.stoneguard"
+        applicationId = "com.lacaprara.kidneyshield"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
-        // Inject AdMob App ID from local.properties.
-        // Fallback is Google’s official test App ID — safe for CI / fresh clones.
         manifestPlaceholders["admobAppId"] = localProperties.getProperty(
             "admobAppId",
             "ca-app-pub-3940256099942544~3347511713"

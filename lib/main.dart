@@ -2,14 +2,15 @@
 //
 // Fix 2: AdMob consent gate
 //   • MobileAds.instance.initialize() removed from here.
-//   • AdMob only initialised inside ConsentManager._initAdMob() after consent.
+//   • AdMob initialised ONLY inside ConsentManager._initAdMob() after consent.
 //
 // Fix 4 / Batch C: Decrypt-failure / key-loss recovery
 //   • SecurePrefs.checkIntegrity() called once on every cold start.
-//   • Result passed to SplashScreen(showKeyLossWarning: !integrityOk).
 //
 // Batch C: Legacy migration
 //   • HydrationRepository.migrateLegacyPlainTextPrefs() called on startup.
+//
+// Branding: StoneGuard → KidneyShield throughout.
 //
 // Fix 12: Global crash handler
 //   • FlutterError.onError routes framework errors through AppLogger.
