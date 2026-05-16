@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:confetti/confetti.dart';
-import 'dart:convert';
 import 'dart:math' as math;
 
-// ── Timeframe enum ────────────────────────────────────────────────────────────
+import '../secure_prefs.dart';
+import '../hydration_repository.dart';
+import '../history_storage.dart';
+
+// ── Timeframe enum ──────────────────────────────────────────────────────────────
 enum ChartTimeframe { d7, d30, m6, y1, y2 }
 
 extension ChartTimeframeLabel on ChartTimeframe {
@@ -30,7 +32,7 @@ extension ChartTimeframeLabel on ChartTimeframe {
   }
 }
 
-// ── Chart metric enum ─────────────────────────────────────────────────────────
+// ── Chart metric enum ────────────────────────────────────────────────────────────
 enum ChartMetric { oxalate, water }
 
 class ProgressScreen extends StatefulWidget {
@@ -42,16 +44,16 @@ class ProgressScreen extends StatefulWidget {
 
 class _ProgressScreenState extends State<ProgressScreen>
     with TickerProviderStateMixin {
-  // ── Raw data maps (full history) ──────────────────────────────────────────
+  // ── Raw data maps (full history) ────────────────────────────────────────────
   Map<String, double> _allOxalate = {};
   Map<String, double> _allWater   = {};
 
-  // ── Chart / display state ─────────────────────────────────────────────────
+  // ── Chart / display state ───────────────────────────────────────────────────
   ChartTimeframe _selectedTimeframe = ChartTimeframe.d7;
   ChartMetric    _selectedMetric    = ChartMetric.oxalate;
   List<_ChartBar> _chartBars = [];
 
-  // ── Stats ─────────────────────────────────────────────────────────────────
+  // ── Stats ──────────────────────────────────────────────────────────────────
   List<Map<String, dynamic>> _weeklyData = [];
   int    _currentStreak            = 0;
   int    _bestStreak               = 0;
@@ -65,7 +67,12 @@ class _ProgressScreenState extends State<ProgressScreen>
   int    _daysLoggedInRange        = 0;
   Set<String> _celebratedBadges   = {};
 
-  // ── Animation controllers ─────────────────────────────────────────────────
+  // ── Repositories ────────────────────────────────────────────────────────────
+  final _repo    = HydrationRepository.instance;
+  final _secure  = SecurePrefs.instance;
+  final _history = HistoryStorage();
+
+  // ── Animation controllers ───────────────────────────────────────────────────
   late ConfettiController _confettiController;
   final Map<String, AnimationController> _badgeAnimControllers = {};
   final Map<String, Animation<double>>   _badgeScaleAnims      = {};
@@ -86,7 +93,7 @@ class _ProgressScreenState extends State<ProgressScreen>
   static const Color goalLine    = Color(0xFF1A8A9A);
   static const Color gridLine    = Color(0xFFEAEAEA);
 
-  // ── Badge definitions ─────────────────────────────────────────────────────
+  // ── Badge definitions ───────────────────────────────────────────────────────────
   List<Map<String, dynamic>> get _achievements => [
     {
       'id': 'first_log',
@@ -217,7 +224,7 @@ class _ProgressScreenState extends State<ProgressScreen>
     },
   ];
 
-  // ── Lifecycle ─────────────────────────────────────────────────────────────
+  // ── Lifecycle ─────────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
@@ -240,39 +247,45 @@ class _ProgressScreenState extends State<ProgressScreen>
     super.dispose();
   }
 
-  // ── Data loading ──────────────────────────────────────────────────────────
+  // ── Data loading ──────────────────────────────────────────────────────────────
   Future<void> _loadProgressData() async {
-    final prefs = await SharedPreferences.getInstance();
+    // ─ Goals: read via HydrationRepository (already uses SecurePrefs) ───────
+    final snapshot = await _repo.readToday();
+    final oxalateGoal = snapshot.goalMg;
+    final waterGoal   = snapshot.goalOz;
 
-    _oxalateGoal = prefs.getDouble('goal_oxalate') ?? 200.0;
-    _waterGoal   = prefs.getDouble('goal_water')   ?? 80.0;
+    // ─ Badges: read via SecurePrefs (encrypted) ─────────────────────────
+    final celebratedList = await _secure.getStringList('celebrated_badges');
+    final celebratedBadges = celebratedList.toSet();
 
-    final celebratedList = prefs.getStringList('celebrated_badges') ?? [];
-    _celebratedBadges = celebratedList.toSet();
-
-    final dailyHistoryRaw = prefs.getStringList('daily_history') ?? [];
+    // ─ History: read via HistoryStorage (already AES-encrypted) ──────────
+    final rawHistory = await _history.loadHistory();
     final Map<String, double> dailyOxalate = {};
     final Map<String, double> dailyWater   = {};
 
-    for (final entry in dailyHistoryRaw) {
+    for (final entry in rawHistory) {
       try {
-        final map  = jsonDecode(entry) as Map<String, dynamic>;
-        final date = map['date'] as String?;
+        final date = entry['date'] as String?;
         if (date == null) continue;
-        dailyOxalate[date] = (map['oxalate_mg'] as num?)?.toDouble() ?? 0.0;
-        dailyWater[date]   = (map['water_oz']   as num?)?.toDouble() ?? 0.0;
+        dailyOxalate[date] = (entry['oxalate_mg'] as num?)?.toDouble() ?? 0.0;
+        dailyWater[date]   = (entry['water_oz']   as num?)?.toDouble() ?? 0.0;
       } catch (_) {}
     }
 
+    // ─ Merge today’s live encrypted values ────────────────────────────
     final now      = DateTime.now();
     final todayKey = '${now.year}_${now.month}_${now.day}';
     final todayStr =
         '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-    dailyOxalate[todayStr] = prefs.getDouble('oxalate_$todayKey') ?? 0.0;
-    dailyWater[todayStr]   = prefs.getDouble('water_$todayKey')   ?? 0.0;
+
+    dailyOxalate[todayStr] =
+        await _secure.getDouble('oxalate_$todayKey', defaultValue: 0.0);
+    dailyWater[todayStr] =
+        await _secure.getDouble('water_$todayKey', defaultValue: 0.0);
 
     final totalDaysLogged = dailyOxalate.values.where((v) => v > 0).length;
 
+    // ─ Current streak ────────────────────────────────────────────────────────
     int currentStreak = 0;
     DateTime cursor = now;
     while (true) {
@@ -280,7 +293,7 @@ class _ProgressScreenState extends State<ProgressScreen>
           '${cursor.year}-${cursor.month.toString().padLeft(2, '0')}-${cursor.day.toString().padLeft(2, '0')}';
       final ox  = dailyOxalate[key] ?? 0.0;
       final wat = dailyWater[key]   ?? 0.0;
-      if (ox > 0 && ox <= _oxalateGoal && wat >= _waterGoal) {
+      if (ox > 0 && ox <= oxalateGoal && wat >= waterGoal) {
         currentStreak++;
         cursor = cursor.subtract(const Duration(days: 1));
       } else {
@@ -289,6 +302,7 @@ class _ProgressScreenState extends State<ProgressScreen>
       if (cursor.isBefore(now.subtract(const Duration(days: 730)))) break;
     }
 
+    // ─ Longest consecutive streak ────────────────────────────────────────────
     int longestStreak  = 0;
     int runningStreak  = 0;
     final allDates = dailyOxalate.keys
@@ -303,7 +317,7 @@ class _ProgressScreenState extends State<ProgressScreen>
           '${allDates[i].year}-${allDates[i].month.toString().padLeft(2, '0')}-${allDates[i].day.toString().padLeft(2, '0')}';
       final ox  = dailyOxalate[key] ?? 0.0;
       final wat = dailyWater[key]   ?? 0.0;
-      if (ox > 0 && ox <= _oxalateGoal && wat >= _waterGoal) {
+      if (ox > 0 && ox <= oxalateGoal && wat >= waterGoal) {
         if (i == 0) {
           runningStreak = 1;
         } else {
@@ -316,16 +330,18 @@ class _ProgressScreenState extends State<ProgressScreen>
       }
     }
 
-    int best = prefs.getInt('best_streak') ?? 0;
+    // ─ Best streak: read + write via SecurePrefs ───────────────────────────
+    int best = await _secure.getInt('best_streak', defaultValue: 0);
     if (currentStreak > best) {
       best = currentStreak;
-      await prefs.setInt('best_streak', best);
+      await _secure.setInt('best_streak', best);
     }
     if (longestStreak > best) {
       best = longestStreak;
-      await prefs.setInt('best_streak', best);
+      await _secure.setInt('best_streak', best);
     }
 
+    // ─ 7-day breakdown ───────────────────────────────────────────────────────────
     const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     final List<Map<String, dynamic>> weeklyData = [];
     for (int i = 6; i >= 0; i--) {
@@ -339,8 +355,8 @@ class _ProgressScreenState extends State<ProgressScreen>
         'date':           dateKey,
         'oxalate':        ox,
         'water':          wat,
-        'oxalateGoalMet': ox > 0 && ox <= _oxalateGoal,
-        'waterGoalMet':   wat >= _waterGoal,
+        'oxalateGoalMet': ox > 0 && ox <= oxalateGoal,
+        'waterGoalMet':   wat >= waterGoal,
       });
     }
 
@@ -356,24 +372,28 @@ class _ProgressScreenState extends State<ProgressScreen>
         : daysWithWat.fold(0.0, (s, d) => s + (d['water'] as double)) /
             daysWithWat.length;
 
+    if (!mounted) return;
     setState(() {
-      _allOxalate              = dailyOxalate;
-      _allWater                = dailyWater;
-      _weeklyData              = weeklyData;
-      _currentStreak           = currentStreak;
-      _bestStreak              = best;
+      _allOxalate               = dailyOxalate;
+      _allWater                 = dailyWater;
+      _weeklyData               = weeklyData;
+      _currentStreak            = currentStreak;
+      _bestStreak               = best;
       _longestConsecutiveStreak = longestStreak;
-      _avgDailyOxalate         = avgOx;
-      _avgDailyWater           = avgWat;
-      _totalDaysLogged         = totalDaysLogged;
-      _isLoading               = false;
+      _avgDailyOxalate          = avgOx;
+      _avgDailyWater            = avgWat;
+      _totalDaysLogged          = totalDaysLogged;
+      _oxalateGoal              = oxalateGoal;
+      _waterGoal                = waterGoal;
+      _celebratedBadges         = celebratedBadges;
+      _isLoading                = false;
     });
 
     _rebuildChartBars();
-    await _checkForNewUnlocks(prefs);
+    await _checkForNewUnlocks();
   }
 
-  // ── Chart bar builder ─────────────────────────────────────────────────────
+  // ── Chart bar builder ──────────────────────────────────────────────────────────
   void _rebuildChartBars() {
     final now        = DateTime.now();
     final totalDays  = _selectedTimeframe.days;
@@ -448,6 +468,7 @@ class _ProgressScreenState extends State<ProgressScreen>
         ? 0.0
         : logged.fold(0.0, (s, b) => s + b.value) / logged.length;
 
+    if (!mounted) return;
     setState(() {
       _chartBars          = bars;
       _daysLoggedInRange  = logged.length;
@@ -469,7 +490,9 @@ class _ProgressScreenState extends State<ProgressScreen>
     _rebuildChartBars();
   }
 
-  Future<void> _checkForNewUnlocks(SharedPreferences prefs) async {
+  // ── Badge unlock check ────────────────────────────────────────────────────────────
+  // No longer takes a SharedPreferences arg — writes via SecurePrefs directly.
+  Future<void> _checkForNewUnlocks() async {
     for (final badge in _achievements) {
       final id          = badge['id']       as String;
       final unlocked    = badge['unlocked'] as bool;
@@ -477,7 +500,8 @@ class _ProgressScreenState extends State<ProgressScreen>
 
       if (unlocked && !_celebratedBadges.contains(id)) {
         _celebratedBadges.add(id);
-        await prefs.setStringList(
+        // Persist the updated set through SecurePrefs (encrypted)
+        await _secure.setStringList(
             'celebrated_badges', _celebratedBadges.toList());
         _triggerBadgePop(id);
         await Future.delayed(const Duration(milliseconds: 400));
@@ -521,7 +545,7 @@ class _ProgressScreenState extends State<ProgressScreen>
     );
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
+  // ── Build ───────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -626,6 +650,7 @@ class _ProgressScreenState extends State<ProgressScreen>
     );
   }
 
+  // ── Chart header ──────────────────────────────────────────────────────────────
   Widget _buildChartHeader() {
     final isOxalate = _selectedMetric == ChartMetric.oxalate;
     final String title = isOxalate
@@ -663,6 +688,7 @@ class _ProgressScreenState extends State<ProgressScreen>
     }
   }
 
+  // ── Timeframe selector ──────────────────────────────────────────────────────────
   Widget _buildTimeframeSelector() {
     return Container(
       decoration: BoxDecoration(
@@ -709,6 +735,7 @@ class _ProgressScreenState extends State<ProgressScreen>
     );
   }
 
+  // ── Metric toggle ────────────────────────────────────────────────────────────────
   Widget _buildMetricToggle() {
     return Row(
       children: [
@@ -760,19 +787,16 @@ class _ProgressScreenState extends State<ProgressScreen>
     );
   }
 
-  // ── Bar chart ─────────────────────────────────────────────────────────────
-  // Layout constants
-  static const double _kBarAreaH    = 140.0; // taller usable drawing area
-  static const double _kValueLabelH =  16.0; // top slot for value text
-  static const double _kXLabelH     =  16.0; // bottom slot for x-axis label
-  static const double _kYAxisW      =  36.0; // left y-axis label column
+  // ── Bar chart constants ──────────────────────────────────────────────────────────
+  static const double _kBarAreaH    = 140.0;
+  static const double _kValueLabelH =  16.0;
+  static const double _kXLabelH     =  16.0;
+  static const double _kYAxisW      =  36.0;
   static const double _kTotalH =
-      _kValueLabelH + _kBarAreaH + _kXLabelH;   // 172 px total
+      _kValueLabelH + _kBarAreaH + _kXLabelH;
 
-  /// Nice round y-axis tick values for a given max
   List<double> _yTicks(double chartMax) {
     if (chartMax <= 0) return [0];
-    // pick a step that gives ~4 ticks
     final rawStep = chartMax / 4;
     final mag = math.pow(10, (math.log(rawStep) / math.ln10).floor()).toDouble();
     final niceStep = (rawStep / mag).ceil() * mag;
@@ -817,7 +841,6 @@ class _ProgressScreenState extends State<ProgressScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Legend row
           Padding(
             padding: const EdgeInsets.only(left: _kYAxisW),
             child: Row(children: [
@@ -831,14 +854,11 @@ class _ProgressScreenState extends State<ProgressScreen>
             ]),
           ),
           const SizedBox(height: 10),
-
-          // ── Chart area: y-axis labels + bars side by side ─────────────────
           SizedBox(
             height: _kTotalH,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // ── Y-axis label column ─────────────────────────────────────
                 SizedBox(
                   width: _kYAxisW,
                   child: Stack(
@@ -846,7 +866,6 @@ class _ProgressScreenState extends State<ProgressScreen>
                       final frac = chartMax > 0
                           ? (tick / chartMax).clamp(0.0, 1.0)
                           : 0.0;
-                      // position from bottom of the bar area
                       final bottomOffset =
                           _kXLabelH + frac * _kBarAreaH - 6;
                       return Positioned(
@@ -864,8 +883,6 @@ class _ProgressScreenState extends State<ProgressScreen>
                     }).toList(),
                   ),
                 ),
-
-                // ── Bars + grid ─────────────────────────────────────────────
                 Expanded(
                   child: ClipRect(
                     child: CustomPaint(
@@ -896,141 +913,66 @@ class _ProgressScreenState extends State<ProgressScreen>
                             if (bar.value == 0) {
                               barColor = barEmpty;
                             } else if (isOxalate) {
-                              barColor =
-                                  bar.value > goal ? barOver : barOk;
+                              barColor = bar.value > goal ? barOver : barOk;
                             } else {
-                              barColor = bar.value >= goal
-                                  ? barWater
-                                  : barWaterLow;
+                              barColor =
+                                  bar.value >= goal ? barWater : barWaterLow;
                             }
 
-                            final showLabel = idx % showEveryN == 0;
-                            // Show value labels on 7D; 30D only if bar is wide enough
-                            final showValue = bar.value > 0 &&
-                                (_selectedTimeframe == ChartTimeframe.d7 ||
-                                    _selectedTimeframe ==
-                                        ChartTimeframe.d30);
-
-                            final barWidth =
-                                _selectedTimeframe == ChartTimeframe.d7
-                                    ? 22.0
-                                    : _selectedTimeframe ==
-                                            ChartTimeframe.d30
-                                        ? 8.0
-                                        : _selectedTimeframe ==
-                                                ChartTimeframe.m6
-                                            ? 8.0
-                                            : 12.0;
-
-                            // Scale radius: small bars get less radius
-                            final radius =
-                                (barH * 0.15).clamp(2.0, 5.0);
+                            final showLabel = _chartBars.length <= 7 ||
+                                idx % showEveryN == 0 ||
+                                idx == _chartBars.length - 1;
 
                             return Expanded(
-                              child: SizedBox(
-                                height: _kTotalH,
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.max,
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.end,
-                                  children: [
-                                    // ① Value label slot
-                                    SizedBox(
-                                      height: _kValueLabelH,
-                                      child: showValue
-                                          ? Align(
-                                              alignment:
-                                                  Alignment.bottomCenter,
-                                              child: Text(
-                                                bar.value >= 1000
-                                                    ? '${(bar.value / 1000).toStringAsFixed(1)}k'
-                                                    : bar.value
-                                                        .toStringAsFixed(
-                                                            0),
-                                                style: TextStyle(
-                                                  color: barColor ==
-                                                          barEmpty
-                                                      ? mutedColor
-                                                      : barColor
-                                                          .withValues(
-                                                              alpha:
-                                                                  0.85),
-                                                  fontSize:
-                                                      _selectedTimeframe ==
-                                                              ChartTimeframe
-                                                                  .d7
-                                                          ? 9
-                                                          : 7,
-                                                  fontWeight:
-                                                      FontWeight.w600,
-                                                ),
-                                                overflow:
-                                                    TextOverflow.visible,
-                                                softWrap: false,
-                                              ),
-                                            )
-                                          : const SizedBox.shrink(),
-                                    ),
-
-                                    // ② Bar — fixed height slot
-                                    SizedBox(
-                                      height: _kBarAreaH,
-                                      child: Align(
-                                        alignment:
-                                            Alignment.bottomCenter,
-                                        child: AnimatedContainer(
-                                          duration: const Duration(
-                                              milliseconds: 380),
-                                          curve: Curves.easeOut,
-                                          width: barWidth,
-                                          height: barH,
-                                          decoration: BoxDecoration(
-                                            color: bar.value == 0
-                                                ? Colors.transparent
-                                                : barColor,
-                                            borderRadius:
-                                                BorderRadius.vertical(
-                                              top: Radius.circular(
-                                                  radius),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  SizedBox(
+                                    height: _kValueLabelH,
+                                    child: bar.value > 0
+                                        ? Text(
+                                            bar.value >= 1000
+                                                ? '${(bar.value / 1000).toStringAsFixed(1)}k'
+                                                : bar.value.toStringAsFixed(0),
+                                            style: TextStyle(
+                                              fontSize: 8,
+                                              color: barColor == barEmpty
+                                                  ? Colors.transparent
+                                                  : barColor,
+                                              fontWeight: FontWeight.bold,
                                             ),
-                                            border: bar.value == 0
-                                                ? Border.all(
-                                                    color: borderColor
-                                                        .withValues(
-                                                            alpha: 0.6),
-                                                    width: 1,
-                                                  )
-                                                : null,
-                                          ),
-                                        ),
+                                            textAlign: TextAlign.center,
+                                          )
+                                        : const SizedBox.shrink(),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 1.5),
+                                    child: AnimatedContainer(
+                                      duration:
+                                          const Duration(milliseconds: 300),
+                                      height: barH,
+                                      decoration: BoxDecoration(
+                                        color: barColor,
+                                        borderRadius: const BorderRadius.vertical(
+                                            top: Radius.circular(3)),
                                       ),
                                     ),
-
-                                    // ③ X-axis label slot
-                                    SizedBox(
-                                      height: _kXLabelH,
-                                      child: showLabel
-                                          ? Align(
-                                              alignment:
-                                                  Alignment.topCenter,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.only(
-                                                        top: 3),
-                                                child: Text(
-                                                  bar.label,
-                                                  style: const TextStyle(
-                                                      color: mutedColor,
-                                                      fontSize: 9),
-                                                  overflow: TextOverflow
-                                                      .ellipsis,
-                                                ),
-                                              ),
-                                            )
-                                          : const SizedBox.shrink(),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                  SizedBox(
+                                    height: _kXLabelH,
+                                    child: showLabel
+                                        ? Text(
+                                            bar.label,
+                                            style: const TextStyle(
+                                                color: mutedColor,
+                                                fontSize: 8),
+                                            textAlign: TextAlign.center,
+                                            overflow: TextOverflow.visible,
+                                          )
+                                        : const SizedBox.shrink(),
+                                  ),
+                                ],
                               ),
                             );
                           }),
@@ -1042,419 +984,259 @@ class _ProgressScreenState extends State<ProgressScreen>
               ],
             ),
           ),
-
-          // ── Goal line key ─────────────────────────────────────────────────
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.only(left: _kYAxisW),
-            child: Row(children: [
-              // Mini dashed line swatch
-              SizedBox(
-                width: 20,
-                height: 10,
-                child: CustomPaint(
-                  painter: _DashSwatchPainter(color: goalLine),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                isOxalate
-                    ? 'Goal: ${_oxalateGoal.toStringAsFixed(0)} mg'
-                    : 'Goal: ${_waterGoal.toStringAsFixed(0)} oz',
-                style: const TextStyle(color: mutedColor, fontSize: 10),
-              ),
-            ]),
-          ),
         ],
       ),
     );
   }
 
-  Widget _legendDot(Color color, String label) {
-    return Row(children: [
-      Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(
-              color: color, borderRadius: BorderRadius.circular(3))),
-      const SizedBox(width: 4),
-      Text(label, style: const TextStyle(color: mutedColor, fontSize: 11)),
-    ]);
-  }
-
   Widget _buildEmptyChart() {
     return Container(
-      height: 160,
+      height: _kTotalH + 24,
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: borderColor),
       ),
       child: const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.bar_chart_rounded, color: mutedColor, size: 36),
-            SizedBox(height: 8),
-            Text('No data for this period',
-                style: TextStyle(color: mutedColor, fontSize: 13)),
-            SizedBox(height: 4),
-            Text('Start logging to see your trends',
-                style: TextStyle(color: mutedColor, fontSize: 11)),
-          ],
-        ),
+        child: Text('No data yet — start logging!',
+            style: TextStyle(color: mutedColor, fontSize: 13)),
       ),
     );
   }
 
   Widget _buildDaysLoggedBadge() {
-    final totalBars = _chartBars.length;
-    if (totalBars == 0) return const SizedBox.shrink();
-
-    final percent = totalBars > 0
-        ? (_daysLoggedInRange / totalBars * 100).clamp(0, 100).toInt()
-        : 0;
-
-    final unitLabel = (_selectedTimeframe == ChartTimeframe.m6)
-        ? 'weeks'
-        : (_selectedTimeframe == ChartTimeframe.y1 ||
-                _selectedTimeframe == ChartTimeframe.y2)
-            ? 'months'
-            : 'days';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: accentTeal.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: accentTeal.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.calendar_today_rounded,
-              color: accentTeal, size: 16),
-          const SizedBox(width: 8),
-          Text(
-            '$_daysLoggedInRange of $totalBars $unitLabel logged  •  $percent%',
-            style: const TextStyle(
-                color: accentTeal, fontSize: 12, fontWeight: FontWeight.w600),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Container(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: accentTeal.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border:
+                Border.all(color: accentTeal.withValues(alpha: 0.3), width: 1),
           ),
-        ],
-      ),
+          child: Text(
+            '$_daysLoggedInRange day${_daysLoggedInRange == 1 ? '' : 's'} logged',
+            style: const TextStyle(
+                color: accentTeal,
+                fontSize: 11,
+                fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
     );
+  }
+
+  Widget _legendDot(Color color, String label) {
+    return Row(children: [
+      Container(
+          width: 8,
+          height: 8,
+          decoration:
+              BoxDecoration(color: color, shape: BoxShape.circle)),
+      const SizedBox(width: 4),
+      Text(label,
+          style: const TextStyle(color: mutedColor, fontSize: 10)),
+    ]);
   }
 
   Widget _buildStreakCard(String title, String value, Color color) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 6,
               offset: const Offset(0, 2))
         ],
       ),
-      child: Column(children: [
-        Text(title, style: const TextStyle(color: mutedColor, fontSize: 12)),
-        const SizedBox(height: 6),
-        Text(value,
-            style: TextStyle(
-                color: color, fontSize: 22, fontWeight: FontWeight.bold)),
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style:
+                  const TextStyle(color: mutedColor, fontSize: 11)),
+          const SizedBox(height: 4),
+          Text(value,
+              style: TextStyle(
+                  color: color,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold)),
+        ],
+      ),
     );
   }
 
   Widget _buildStatCard(String title, String value, Color color,
       {String? subtitle}) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 6,
               offset: const Offset(0, 2))
         ],
       ),
-      child: Column(children: [
-        Text(title, style: const TextStyle(color: mutedColor, fontSize: 12)),
-        const SizedBox(height: 6),
-        Text(value,
-            style: TextStyle(
-                color: color, fontSize: 15, fontWeight: FontWeight.bold)),
-        if (subtitle != null) ...[
-          const SizedBox(height: 2),
-          Text(subtitle,
-              style: const TextStyle(color: mutedColor, fontSize: 10)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style:
+                  const TextStyle(color: mutedColor, fontSize: 11)),
+          const SizedBox(height: 4),
+          Text(value,
+              style: TextStyle(
+                  color: color,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold)),
+          if (subtitle != null)
+            Text(subtitle,
+                style:
+                    const TextStyle(color: mutedColor, fontSize: 10)),
         ],
-      ]),
+      ),
     );
   }
 
   Widget _buildDayRow(Map<String, dynamic> day) {
-    final oxalate      = day['oxalate']        as double;
-    final water        = day['water']          as double;
-    final oxGoalMet    = day['oxalateGoalMet'] as bool;
-    final waterGoalMet = day['waterGoalMet']   as bool;
-    final bothMet      = oxGoalMet && waterGoalMet;
-    final noData       = oxalate == 0 && water == 0;
+    final ox  = (day['oxalate'] as double);
+    final wat = (day['water']   as double);
+    final oxMet  = day['oxalateGoalMet'] as bool;
+    final watMet = day['waterGoalMet']   as bool;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: bothMet
-              ? accentGreen.withValues(alpha: 0.35)
-              : noData
-                  ? borderColor.withValues(alpha: 0.5)
-                  : borderColor,
-        ),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: bothMet
-                    ? accentGreen.withValues(alpha: 0.1)
-                    : noData
-                        ? borderColor.withValues(alpha: 0.3)
-                        : accentTeal.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    day['label'].toString().substring(0, 3),
-                    style: TextStyle(
-                      color: bothMet
-                          ? accentGreen
-                          : noData
-                              ? mutedColor
-                              : accentTeal,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: noData
-                  ? Row(children: [
-                      Icon(Icons.remove_circle_outline,
-                          color: mutedColor.withValues(alpha: 0.5), size: 16),
-                      const SizedBox(width: 6),
-                      const Text('No data logged',
-                          style: TextStyle(
-                              color: mutedColor,
-                              fontSize: 13,
-                              fontStyle: FontStyle.italic)),
-                    ])
-                  : Row(children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('OXALATE',
-                                style: TextStyle(
-                                    color: mutedColor,
-                                    fontSize: 9,
-                                    letterSpacing: 1.2,
-                                    fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 3),
-                            Text(
-                              '${oxalate.toStringAsFixed(0)} mg',
-                              style: TextStyle(
-                                  color: oxGoalMet
-                                      ? accentGreen
-                                      : Colors.redAccent,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: LinearProgressIndicator(
-                                value:
-                                    (oxalate / _oxalateGoal).clamp(0.0, 1.0),
-                                minHeight: 4,
-                                backgroundColor: borderColor,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                    oxGoalMet
-                                        ? accentGreen
-                                        : Colors.redAccent),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                          width: 1,
-                          height: 40,
-                          margin:
-                              const EdgeInsets.symmetric(horizontal: 12),
-                          color: borderColor),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('WATER',
-                                style: TextStyle(
-                                    color: mutedColor,
-                                    fontSize: 9,
-                                    letterSpacing: 1.2,
-                                    fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 3),
-                            Text(
-                              '${water.toStringAsFixed(0)} oz',
-                              style: TextStyle(
-                                  color: waterGoalMet
-                                      ? accentTeal
-                                      : Colors.orange,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: LinearProgressIndicator(
-                                value:
-                                    (water / _waterGoal).clamp(0.0, 1.0),
-                                minHeight: 4,
-                                backgroundColor: borderColor,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                    waterGoalMet
-                                        ? accentTeal
-                                        : Colors.orange),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ]),
-            ),
-            if (!noData) ...[
-              const SizedBox(width: 10),
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: bothMet
-                      ? accentGreen.withValues(alpha: 0.1)
-                      : Colors.orange.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  bothMet ? Icons.check_circle : Icons.warning_amber_rounded,
-                  color: bothMet ? accentGreen : Colors.orange,
-                  size: 20,
-                ),
-              ),
-            ],
-          ],
-        ),
+      child: Row(
+        children: [
+          SizedBox(
+              width: 36,
+              child: Text(day['label'] as String,
+                  style: const TextStyle(
+                      color: textColor,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13))),
+          Expanded(
+            child: Row(children: [
+              Icon(
+                  oxMet
+                      ? Icons.check_circle
+                      : (ox > 0 ? Icons.cancel : Icons.radio_button_unchecked),
+                  color: oxMet
+                      ? accentGreen
+                      : (ox > 0 ? Colors.redAccent : mutedColor),
+                  size: 16),
+              const SizedBox(width: 4),
+              Text('${ox.toStringAsFixed(0)} mg',
+                  style: TextStyle(
+                      color: oxMet ? accentGreen : textColor,
+                      fontSize: 12)),
+            ]),
+          ),
+          Row(children: [
+            Icon(
+                watMet
+                    ? Icons.check_circle
+                    : (wat > 0
+                        ? Icons.warning_amber_rounded
+                        : Icons.radio_button_unchecked),
+                color: watMet
+                    ? accentTeal
+                    : (wat > 0 ? Colors.orange : mutedColor),
+                size: 16),
+            const SizedBox(width: 4),
+            Text('${wat.toStringAsFixed(0)} oz',
+                style: TextStyle(
+                    color: watMet ? accentTeal : textColor,
+                    fontSize: 12)),
+          ]),
+        ],
       ),
     );
   }
 
   Widget _buildAchievements() {
-    return Column(
-      children: _achievements.map((a) {
-        final id          = a['id']       as String;
-        final unlocked    = a['unlocked'] as bool;
-        final progress    = a['progress'] as String?;
-        final isMilestone = a['milestone'] as bool;
-        final scaleAnim   = _badgeScaleAnims[id];
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 0.78,
+      ),
+      itemCount: _achievements.length,
+      itemBuilder: (_, idx) {
+        final badge     = _achievements[idx];
+        final id        = badge['id'] as String;
+        final unlocked  = badge['unlocked'] as bool;
+        final milestone = badge['milestone'] as bool;
+        final progress  = badge['progress'] as String?;
+        final scaleAnim = _badgeScaleAnims[id];
 
         Widget card = Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: unlocked
-                ? (isMilestone
-                    ? const Color(0xFFFFF8E1)
-                    : const Color(0xFFF0FAF4))
-                : cardColor,
-            borderRadius: BorderRadius.circular(12),
+                ? (milestone
+                    ? accentGold.withValues(alpha: 0.12)
+                    : accentTeal.withValues(alpha: 0.08))
+                : const Color(0xFFF3F4F6),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: unlocked
-                  ? (isMilestone
-                      ? accentGold.withValues(alpha: 0.45)
-                      : accentGreen.withValues(alpha: 0.35))
+                  ? (milestone ? accentGold : accentTeal)
+                      .withValues(alpha: 0.4)
                   : borderColor,
+              width: unlocked ? 1.5 : 1,
             ),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 6,
-                  offset: const Offset(0, 1))
-            ],
           ),
-          child: Row(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                a['icon'] as String,
-                style: TextStyle(
-                  fontSize: 28,
-                  color: unlocked
-                      ? null
-                      : Colors.grey.withValues(alpha: 0.35),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(a['title'] as String,
-                        style: TextStyle(
-                            color: unlocked ? textColor : mutedColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14)),
-                    Text(a['desc'] as String,
-                        style: const TextStyle(
-                            color: mutedColor, fontSize: 12)),
-                    if (!unlocked && progress != null) ...[
-                      const SizedBox(height: 4),
-                      Text(progress,
-                          style: TextStyle(
-                            color: accentTeal.withValues(alpha: 0.8),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          )),
-                    ],
-                  ],
-                ),
-              ),
-              if (unlocked)
-                Icon(
-                  isMilestone ? Icons.star_rounded : Icons.check_circle,
-                  color: isMilestone ? accentGold : accentGreen,
-                  size: 22,
-                )
-              else
-                const Icon(Icons.lock_outline, color: mutedColor, size: 20),
+              Text(badge['icon'] as String,
+                  style: TextStyle(
+                      fontSize: 28,
+                      color: unlocked ? null : Colors.grey)),
+              const SizedBox(height: 6),
+              Text(badge['title'] as String,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: unlocked ? textColor : mutedColor,
+                  )),
+              const SizedBox(height: 3),
+              Text(badge['desc'] as String,
+                  textAlign: TextAlign.center,
+                  style:
+                      const TextStyle(fontSize: 9, color: mutedColor),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
+              if (progress != null) ...[
+                const SizedBox(height: 4),
+                Text(progress,
+                    style: const TextStyle(
+                        fontSize: 9,
+                        color: accentTeal,
+                        fontWeight: FontWeight.w600)),
+              ],
             ],
           ),
         );
@@ -1467,13 +1249,16 @@ class _ProgressScreenState extends State<ProgressScreen>
             child: card,
           );
         }
+
         return card;
-      }).toList(),
+      },
     );
   }
 }
 
-// ── Chart bar data model ──────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
+// ─ Supporting types ───────────────────────────────────────────────────────────────
+
 class _ChartBar {
   final String label;
   final double value;
@@ -1481,7 +1266,6 @@ class _ChartBar {
   const _ChartBar({required this.label, required this.value, required this.goal});
 }
 
-// ── Grid + dashed goal-line painter ──────────────────────────────────────────
 class _GridPainter extends CustomPainter {
   final List<double> ticks;
   final double chartMax;
@@ -1507,196 +1291,105 @@ class _GridPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final gridPaint = Paint()
       ..color = gridLineColor
-      ..strokeWidth = 1.0
+      ..strokeWidth = 0.5;
+    final goalPaint = Paint()
+      ..color = goalLineColor
+      ..strokeWidth = 1.2
       ..style = PaintingStyle.stroke;
 
-    final totalH = valueLabelH + barAreaH + xLabelH;
-
-    // Draw horizontal grid lines at each tick
     for (final tick in ticks) {
-      if (chartMax <= 0) continue;
-      final frac = (tick / chartMax).clamp(0.0, 1.0);
-      final y = totalH - xLabelH - frac * barAreaH;
+      if (tick == 0) continue;
+      final frac = chartMax > 0 ? (tick / chartMax).clamp(0.0, 1.0) : 0.0;
+      final y = size.height - xLabelH - frac * barAreaH;
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
 
-    // Draw dashed goal line on top
-    final goalY = totalH - xLabelH - goalFrac * barAreaH;
-    final dashPaint = Paint()
-      ..color = goalLineColor.withValues(alpha: 0.7)
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-
-    const dashW = 5.0;
-    const gapW  = 4.0;
-    double x = 0;
-    while (x < size.width) {
-      canvas.drawLine(
-        Offset(x, goalY),
-        Offset((x + dashW).clamp(0.0, size.width), goalY),
-        dashPaint,
-      );
-      x += dashW + gapW;
+    if (goalFrac > 0) {
+      final goalY = size.height - xLabelH - goalFrac * barAreaH;
+      const dashW = 5.0;
+      const gapW  = 3.0;
+      double x = 0;
+      while (x < size.width) {
+        canvas.drawLine(
+            Offset(x, goalY), Offset((x + dashW).clamp(0, size.width), goalY),
+            goalPaint);
+        x += dashW + gapW;
+      }
     }
   }
 
   @override
   bool shouldRepaint(_GridPainter old) =>
-      old.chartMax != chartMax ||
-      old.goalFrac != goalFrac ||
-      old.ticks.length != ticks.length;
+      old.chartMax != chartMax || old.goalFrac != goalFrac;
 }
 
-// ── Mini dash swatch for the legend ──────────────────────────────────────────
-class _DashSwatchPainter extends CustomPainter {
-  final Color color;
-  const _DashSwatchPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color.withValues(alpha: 0.7)
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-    const dashW = 4.0;
-    const gapW  = 3.0;
-    double x = 0;
-    final y = size.height / 2;
-    while (x < size.width) {
-      canvas.drawLine(
-        Offset(x, y),
-        Offset((x + dashW).clamp(0.0, size.width), y),
-        paint,
-      );
-      x += dashW + gapW;
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashSwatchPainter old) => old.color != color;
-}
-
-// ── Achievement Unlock Modal ──────────────────────────────────────────────────
-class _AchievementModal extends StatefulWidget {
+class _AchievementModal extends StatelessWidget {
   final Map<String, dynamic> badge;
   final bool isMilestone;
-  const _AchievementModal({required this.badge, required this.isMilestone});
-
-  @override
-  State<_AchievementModal> createState() => _AchievementModalState();
-}
-
-class _AchievementModalState extends State<_AchievementModal>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _scaleAnim;
-  late Animation<double> _fadeAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 500));
-    _scaleAnim = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
-    _fadeAnim  = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
-    _ctrl.forward();
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
+  const _AchievementModal(
+      {required this.badge, required this.isMilestone});
 
   @override
   Widget build(BuildContext context) {
-    final isMilestone = widget.isMilestone;
-    final badge       = widget.badge;
-
-    return FadeTransition(
-      opacity: _fadeAnim,
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-        padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 24,
-                offset: const Offset(0, 8))
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40, height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2)),
-            ),
-            ScaleTransition(
-              scale: _scaleAnim,
-              child: Text(badge['icon'] as String,
-                  style: const TextStyle(fontSize: 72)),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: isMilestone
-                    ? const Color(0xFFD4A020).withValues(alpha: 0.12)
-                    : const Color(0xFF2A9A5A).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(20),
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 20,
+              offset: const Offset(0, -4))
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(badge['icon'] as String,
+              style: const TextStyle(fontSize: 52)),
+          const SizedBox(height: 12),
+          Text(
+            isMilestone ? '🎉 Milestone Unlocked!' : '📈 Achievement Unlocked!',
+            style: const TextStyle(
+                color: Color(0xFF1A8A9A),
+                fontSize: 14,
+                fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            badge['title'] as String,
+            style: const TextStyle(
+                color: Color(0xFF2C2C2C),
+                fontSize: 20,
+                fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            badge['desc'] as String,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+                color: Color(0xFF888888), fontSize: 14),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1A8A9A),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
               ),
-              child: Text(
-                isMilestone ? '🎉 Milestone Unlocked!' : '✅ Achievement Unlocked!',
-                style: TextStyle(
-                  color: isMilestone
-                      ? const Color(0xFFD4A020)
-                      : const Color(0xFF2A9A5A),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
+              child: const Text('Awesome!',
+                  style: TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold)),
             ),
-            const SizedBox(height: 14),
-            Text(badge['title'] as String,
-                style: const TextStyle(
-                    color: Color(0xFF2C2C2C),
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center),
-            const SizedBox(height: 6),
-            Text(badge['desc'] as String,
-                style:
-                    const TextStyle(color: Color(0xFF888888), fontSize: 14),
-                textAlign: TextAlign.center),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isMilestone
-                      ? const Color(0xFFD4A020)
-                      : const Color(0xFF1A8A9A),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                  elevation: 0,
-                ),
-                child: const Text('Awesome!',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
