@@ -1,13 +1,21 @@
+// export_report_screen.dart
+//
+// Fix 7 — Export path hardening
+//   • _sharePdf() and _sharePdfBytes() now route through ExportGuard.
+//   • Files are written to app-private Documents/stoneguard_exports/ only.
+//   • Filename is sanitised inside ExportGuard.saveToPrivateDir().
+//   • The export file is deleted after the share sheet closes.
+//   • _loadData() reads goals/name from SecurePrefs (not plain prefs).
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+
+import '../export_guard.dart';
+import '../hydration_repository.dart'; // SaveResult, SaveFailure
+import '../history_storage.dart';
+import '../secure_prefs.dart';
 
 class ExportReportScreen extends StatefulWidget {
   const ExportReportScreen({super.key});
@@ -17,7 +25,7 @@ class ExportReportScreen extends StatefulWidget {
 }
 
 class _ExportReportScreenState extends State<ExportReportScreen> {
-  // ── Colours ─────────────────────────────────────────────────────────────
+  // ── Colours ───────────────────────────────────────────────────────────────
   static const Color accentTeal  = Color(0xFF1A8A9A);
   static const Color cardColor   = Color(0xFFFFFFFF);
   static const Color borderColor = Color(0xFFD0D0D8);
@@ -26,7 +34,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
   static const Color accentGreen = Color(0xFF2A9A5A);
   static const Color bgColor     = Color(0xFFF5F7FA);
 
-  // ── State ────────────────────────────────────────────────────────────────
+  // ── State ──────────────────────────────────────────────────────────────────
   bool   _isLoading     = true;
   bool   _isGenerating  = false;
   String _patientName   = 'Patient';
@@ -34,7 +42,6 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
   double _waterGoal     = 80.0;
   int    _selectedDays  = 30;
 
-  // Period options: days → display label
   static const List<Map<String, dynamic>> _periods = [
     {'days': 7,   'label': '7 Days'},
     {'days': 30,  'label': '30 Days'},
@@ -43,7 +50,6 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
     {'days': 730, 'label': '2 Years'},
   ];
 
-  // Loaded data
   Map<String, double> _dailyOxalate = {};
   Map<String, double> _dailyWater   = {};
   int    _currentStreak   = 0;
@@ -59,35 +65,33 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
     _loadData();
   }
 
-  // ── Data loading ─────────────────────────────────────────────────────────
+  // ── Data loading ───────────────────────────────────────────────────────────
+  // Fix 7: read sensitive keys from SecurePrefs, not plain SharedPreferences.
   Future<void> _loadData() async {
-    final prefs = await SharedPreferences.getInstance();
-    _oxalateGoal = prefs.getDouble('goal_oxalate') ?? 200.0;
-    _waterGoal   = prefs.getDouble('goal_water')   ?? 80.0;
-    _patientName = prefs.getString('user_name')    ?? 'Patient';
+    final secure = SecurePrefs.instance;
+    _oxalateGoal = await secure.getDouble('goal_oxalate', defaultValue: 200.0);
+    _waterGoal   = await secure.getDouble('goal_water',   defaultValue: 80.0);
+    _patientName = await secure.getString('user_name',    defaultValue: 'Patient');
 
-    // Load full daily history
-    final historyRaw = prefs.getStringList('daily_history') ?? [];
+    // Load full daily history via HistoryStorage (already encrypted).
+    final history = await HistoryStorage().loadHistory();
     final Map<String, double> oxMap  = {};
     final Map<String, double> watMap = {};
-    for (final entry in historyRaw) {
-      try {
-        final map  = jsonDecode(entry) as Map<String, dynamic>;
-        final date = map['date'] as String?;
-        if (date == null) continue;
-        oxMap[date]  = (map['oxalate_mg'] as num?)?.toDouble() ?? 0.0;
-        watMap[date] = (map['water_oz']   as num?)?.toDouble() ?? 0.0;
-      } catch (_) {}
+    for (final entry in history) {
+      final date = entry['date'] as String?;
+      if (date == null) continue;
+      oxMap[date]  = (entry['oxalate_mg'] as num?)?.toDouble() ?? 0.0;
+      watMap[date] = (entry['water_oz']   as num?)?.toDouble() ?? 0.0;
     }
 
-    // Merge today
-    final now      = DateTime.now();
-    final todayKey = '${now.year}_${now.month}_${now.day}';
+    // Merge today’s live values.
+    final snap    = await HydrationRepository.instance.readToday();
+    final now     = DateTime.now();
     final todayStr = _dateKey(now);
-    oxMap[todayStr]  = prefs.getDouble('oxalate_$todayKey') ?? 0.0;
-    watMap[todayStr] = prefs.getDouble('water_$todayKey')   ?? 0.0;
+    oxMap[todayStr]  = snap.oxalateMg;
+    watMap[todayStr] = snap.waterOz;
 
-    // Streak — cap at 730 days back
+    // Compute streak (cap at 730 days back).
     int streak = 0;
     DateTime cursor = now;
     while (true) {
@@ -100,33 +104,28 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
       } else {
         break;
       }
-      if (cursor.isBefore(now.subtract(const Duration(days: 730)))) {
-        break;
-      }
       if (cursor.isBefore(now.subtract(const Duration(days: 730)))) break;
     }
 
     setState(() {
-      _dailyOxalate = oxMap;
-      _dailyWater   = watMap;
+      _dailyOxalate    = oxMap;
+      _dailyWater      = watMap;
       _currentStreak   = streak;
       _totalDaysLogged = oxMap.values.where((v) => v > 0).length;
-      _isLoading = false;
+      _isLoading       = false;
     });
-
     _recalcStats();
   }
 
   void _recalcStats() {
-    final now   = DateTime.now();
-    double sumOx  = 0, sumWat = 0;
-    int    logged = 0, underGoal = 0, metWater = 0;
-
+    final now = DateTime.now();
+    double sumOx = 0, sumWat = 0;
+    int logged = 0, underGoal = 0, metWater = 0;
     for (int i = 0; i < _selectedDays; i++) {
       final day = now.subtract(Duration(days: i));
       final k   = _dateKey(day);
-      final ox  = _dailyOxalate[k]  ?? 0.0;
-      final wat = _dailyWater[k]    ?? 0.0;
+      final ox  = _dailyOxalate[k] ?? 0.0;
+      final wat = _dailyWater[k]   ?? 0.0;
       if (ox > 0) {
         sumOx += ox;
         logged++;
@@ -135,10 +134,9 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
       if (wat >= _waterGoal) metWater++;
       sumWat += wat;
     }
-
     setState(() {
-      _avgOxalate   = logged > 0 ? sumOx / logged : 0;
-      _avgWater     = sumWat / _selectedDays;
+      _avgOxalate    = logged > 0 ? sumOx / logged : 0;
+      _avgWater      = sumWat / _selectedDays;
       _daysUnderGoal = underGoal;
       _daysMetWater  = metWater;
     });
@@ -147,7 +145,6 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
   String _dateKey(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-  /// Human-readable label for the currently selected period
   String get _periodLabel {
     switch (_selectedDays) {
       case 7:   return 'Last 7 Days';
@@ -159,19 +156,17 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
     }
   }
 
-  // ── PDF Generation ─────────────────────────────────────────────────────
+  // ── PDF Generation ────────────────────────────────────────────────────────────
   Future<Uint8List> _buildPdf() async {
     final pdf = pw.Document();
     final now  = DateTime.now();
 
-    // Build all rows for the period, then drop days with zero oxalate AND zero water
     final allRows = <Map<String, dynamic>>[];
     for (int i = _selectedDays - 1; i >= 0; i--) {
       final day = now.subtract(Duration(days: i));
       final k   = _dateKey(day);
       final ox  = _dailyOxalate[k] ?? 0.0;
       final wat = _dailyWater[k]   ?? 0.0;
-      // Skip completely empty days
       if (ox == 0 && wat == 0) continue;
       allRows.add({
         'date':  '${day.month}/${day.day}/${day.year}',
@@ -182,19 +177,15 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
       });
     }
 
-    // PDF colours
     final pdfTeal  = PdfColor.fromHex('1A8A9A');
     final pdfGreen = PdfColor.fromHex('2A9A5A');
     final pdfRed   = PdfColor.fromHex('E07070');
     final pdfGray  = PdfColor.fromHex('888888');
     final pdfLight = PdfColor.fromHex('F0F4F7');
     final pdfWhite = PdfColors.white;
-
     final dateGenerated = '${now.month}/${now.day}/${now.year}';
     final reportPeriod  = _periodLabel;
-
-    // Label for the daily log section header
-    final loggedCount = allRows.length;
+    final loggedCount   = allRows.length;
     final logLabel = loggedCount == 0
         ? 'Daily Log (no entries in this period)'
         : 'Daily Log ($loggedCount day${loggedCount == 1 ? '' : 's'} logged)';
@@ -255,7 +246,6 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
           ),
         ),
         build: (ctx) => [
-          // ── Patient Info ───────────────────────────────────────────────
           pw.Container(
             padding: const pw.EdgeInsets.all(14),
             decoration: pw.BoxDecoration(
@@ -302,8 +292,6 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
             ),
           ),
           pw.SizedBox(height: 16),
-
-          // ── Summary stats ────────────────────────────────────────────
           pw.Text('Summary — $reportPeriod',
               style: pw.TextStyle(
                   fontSize: 13,
@@ -314,37 +302,28 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
             children: [
               _pdfStatBox('Avg Oxalate',
                   '${_avgOxalate.toStringAsFixed(0)} mg/day',
-                  _avgOxalate <= _oxalateGoal ? pdfGreen : pdfRed,
-                  pdfLight),
+                  _avgOxalate <= _oxalateGoal ? pdfGreen : pdfRed, pdfLight),
               pw.SizedBox(width: 8),
               _pdfStatBox('Avg Water',
                   '${_avgWater.toStringAsFixed(0)} oz/day',
-                  _avgWater >= _waterGoal ? pdfGreen : pdfRed,
-                  pdfLight),
+                  _avgWater >= _waterGoal ? pdfGreen : pdfRed, pdfLight),
               pw.SizedBox(width: 8),
               _pdfStatBox('Days Under\nOxalate Goal',
                   '$_daysUnderGoal / $_selectedDays',
-                  _daysUnderGoal >= (_selectedDays * 0.8).round()
-                      ? pdfGreen
-                      : pdfRed,
+                  _daysUnderGoal >= (_selectedDays * 0.8).round() ? pdfGreen : pdfRed,
                   pdfLight),
               pw.SizedBox(width: 8),
               _pdfStatBox('Days Met\nWater Goal',
                   '$_daysMetWater / $_selectedDays',
-                  _daysMetWater >= (_selectedDays * 0.8).round()
-                      ? pdfGreen
-                      : pdfRed,
+                  _daysMetWater >= (_selectedDays * 0.8).round() ? pdfGreen : pdfRed,
                   pdfLight),
               pw.SizedBox(width: 8),
               _pdfStatBox('Current\nStreak',
                   '$_currentStreak days',
-                  _currentStreak >= 7 ? pdfGreen : pdfTeal,
-                  pdfLight),
+                  _currentStreak >= 7 ? pdfGreen : pdfTeal, pdfLight),
             ],
           ),
           pw.SizedBox(height: 20),
-
-          // ── Doctor note ───────────────────────────────────────────────
           pw.Container(
             padding: const pw.EdgeInsets.all(12),
             decoration: pw.BoxDecoration(
@@ -368,15 +347,12 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                   'and fluid intake (in oz) over the selected period. Goals are set by the '
                   'patient in consultation with their care team. Please review these trends '
                   'alongside clinical assessments.',
-                  style: pw.TextStyle(fontSize: 9, color: pdfGray,
-                      lineSpacing: 3),
+                  style: pw.TextStyle(fontSize: 9, color: pdfGray, lineSpacing: 3),
                 ),
               ],
             ),
           ),
           pw.SizedBox(height: 20),
-
-          // ── Daily log table (logged days only) ───────────────────────────
           pw.Text(logLabel,
               style: pw.TextStyle(
                   fontSize: 13,
@@ -386,7 +362,6 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
           pw.Text('Only days with at least one entry are shown.',
               style: pw.TextStyle(fontSize: 8, color: pdfGray)),
           pw.SizedBox(height: 8),
-
           if (loggedCount == 0)
             pw.Container(
               padding: const pw.EdgeInsets.all(16),
@@ -394,10 +369,8 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                   color: pdfLight,
                   borderRadius: pw.BorderRadius.circular(6)),
               child: pw.Center(
-                child: pw.Text(
-                  'No entries recorded in this period.',
-                  style: pw.TextStyle(fontSize: 10, color: pdfGray),
-                ),
+                child: pw.Text('No entries recorded in this period.',
+                    style: pw.TextStyle(fontSize: 10, color: pdfGray)),
               ),
             )
           else
@@ -412,7 +385,6 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                 4: const pw.FlexColumnWidth(1.5),
               },
               children: [
-                // Header row
                 pw.TableRow(
                   decoration: pw.BoxDecoration(color: pdfTeal),
                   children: [
@@ -423,7 +395,6 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                     _tableCell('Status',       isHeader: true, textColor: pdfWhite),
                   ],
                 ),
-                // Data rows — no-data days already removed
                 ...allRows.asMap().entries.map((entry) {
                   final i   = entry.key;
                   final row = entry.value;
@@ -432,7 +403,6 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                   final oxOk  = row['oxOk']  as bool?;
                   final watOk = row['watOk'] as bool;
                   final bg = i % 2 == 0 ? pdfWhite : pdfLight;
-
                   return pw.TableRow(
                     decoration: pw.BoxDecoration(color: bg),
                     children: [
@@ -459,8 +429,6 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
               ],
             ),
           pw.SizedBox(height: 24),
-
-          // ── Recommendations ───────────────────────────────────────────
           pw.Text('General Kidney Stone Prevention Reminders',
               style: pw.TextStyle(
                   fontSize: 11,
@@ -488,28 +456,22 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
         ],
       ),
     );
-
     return pdf.save();
   }
 
-  // ── PDF helpers ──────────────────────────────────────────────────────────
+  // ── PDF helpers ──────────────────────────────────────────────────────────────
   pw.Widget _pdfLabelValue(String label, String value, PdfColor color) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.end,
       children: [
-        pw.Text(label,
-            style: pw.TextStyle(fontSize: 8, color: PdfColor.fromHex('888888'))),
+        pw.Text(label, style: pw.TextStyle(fontSize: 8, color: PdfColor.fromHex('888888'))),
         pw.Text(value,
-            style: pw.TextStyle(
-                fontSize: 11,
-                fontWeight: pw.FontWeight.bold,
-                color: color)),
+            style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: color)),
       ],
     );
   }
 
-  pw.Widget _pdfStatBox(
-      String label, String value, PdfColor valueColor, PdfColor bg) {
+  pw.Widget _pdfStatBox(String label, String value, PdfColor valueColor, PdfColor bg) {
     return pw.Expanded(
       child: pw.Container(
         padding: const pw.EdgeInsets.all(10),
@@ -519,35 +481,27 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Text(label,
-                style: pw.TextStyle(
-                    fontSize: 7.5,
-                    color: PdfColor.fromHex('888888'),
-                    lineSpacing: 2)),
+                style: pw.TextStyle(fontSize: 7.5,
+                    color: PdfColor.fromHex('888888'), lineSpacing: 2)),
             pw.SizedBox(height: 4),
             pw.Text(value,
-                style: pw.TextStyle(
-                    fontSize: 12,
-                    fontWeight: pw.FontWeight.bold,
-                    color: valueColor)),
+                style: pw.TextStyle(fontSize: 12,
+                    fontWeight: pw.FontWeight.bold, color: valueColor)),
           ],
         ),
       ),
     );
   }
 
-  pw.Widget _tableCell(String text,
-      {bool isHeader = false, PdfColor? textColor}) {
+  pw.Widget _tableCell(String text, {bool isHeader = false, PdfColor? textColor}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-      child: pw.Text(
-        text,
-        style: pw.TextStyle(
-          fontSize: isHeader ? 9 : 8.5,
-          fontWeight:
-              isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
-          color: textColor,
-        ),
-      ),
+      child: pw.Text(text,
+          style: pw.TextStyle(
+            fontSize: isHeader ? 9 : 8.5,
+            fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
+            color: textColor,
+          )),
     );
   }
 
@@ -558,33 +512,41 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Text('•  ',
-              style: pw.TextStyle(
-                  fontSize: 9, color: PdfColor.fromHex('1A8A9A'))),
+              style: pw.TextStyle(fontSize: 9, color: PdfColor.fromHex('1A8A9A'))),
           pw.Expanded(
             child: pw.Text(text,
-                style: pw.TextStyle(
-                    fontSize: 9, color: color, lineSpacing: 2)),
+                style: pw.TextStyle(fontSize: 9, color: color, lineSpacing: 2)),
           ),
         ],
       ),
     );
   }
 
-  // ── Share / Preview actions ────────────────────────────────────────────
+  // ── Fix 7: Share actions now route through ExportGuard ───────────────────
+
+  /// Main share button: build PDF → private dir → OS share sheet → delete.
   Future<void> _sharePdf() async {
     setState(() => _isGenerating = true);
     try {
-      final bytes  = await _buildPdf();
-      final dir    = await getTemporaryDirectory();
-      final now    = DateTime.now();
-      final fname  = 'stoneguard_report_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.pdf';
-      final file   = File('${dir.path}/$fname');
-      await file.writeAsBytes(bytes);
-      await Share.shareXFiles(
-        [XFile(file.path, mimeType: 'application/pdf')],
-        subject: 'StoneGuard Health Report — $_patientName',
-        text: 'My StoneGuard kidney stone prevention report for doctor review.',
+      final bytes = await _buildPdf();
+      final now   = DateTime.now();
+      final fname = 'stoneguard_report_'
+          '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.pdf';
+
+      final result = await ExportGuard.saveShareAndClear(
+        bytes: bytes,
+        filename: fname,
+        shareText: 'My StoneGuard kidney stone prevention report for doctor review.',
       );
+
+      if (result is SaveFailure && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not save report — please try again.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -597,6 +559,18 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
     } finally {
       if (mounted) setState(() => _isGenerating = false);
     }
+  }
+
+  /// Share from the preview screen: same ExportGuard flow.
+  Future<void> _sharePdfBytes(Uint8List bytes) async {
+    final now   = DateTime.now();
+    final fname = 'stoneguard_report_'
+        '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.pdf';
+    await ExportGuard.saveShareAndClear(
+      bytes: bytes,
+      filename: fname,
+      shareText: 'My StoneGuard health report.',
+    );
   }
 
   Future<void> _previewPdf() async {
@@ -626,7 +600,9 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
               canDebug: false,
               pdfPreviewPageDecoration: const BoxDecoration(
                   color: Colors.white,
-                  boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)]),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black26, blurRadius: 4)
+                  ]),
             ),
           ),
         ),
@@ -645,19 +621,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
     }
   }
 
-  Future<void> _sharePdfBytes(Uint8List bytes) async {
-    final dir   = await getTemporaryDirectory();
-    final now   = DateTime.now();
-    final fname = 'stoneguard_report_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.pdf';
-    final file  = File('${dir.path}/$fname');
-    await file.writeAsBytes(bytes);
-    await Share.shareXFiles(
-      [XFile(file.path, mimeType: 'application/pdf')],
-      subject: 'StoneGuard Health Report — $_patientName',
-    );
-  }
-
-  // ── UI ──────────────────────────────────────────────────────────────────
+  // ── UI ────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -670,14 +634,12 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
         elevation: 0,
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: accentTeal))
+          ? const Center(child: CircularProgressIndicator(color: accentTeal))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header card
                   _sectionCard(
                     child: Row(
                       children: [
@@ -715,8 +677,6 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-
-                  // Report period selector — Wrap so all 5 chips fit on any screen
                   const Text('Report Period',
                       style: TextStyle(
                           color: textColor,
@@ -733,8 +693,6 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                     }).toList(),
                   ),
                   const SizedBox(height: 20),
-
-                  // Preview of what will be in the report
                   const Text('Report Preview',
                       style: TextStyle(
                           color: textColor,
@@ -744,71 +702,37 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                   _sectionCard(
                     child: Column(
                       children: [
-                        _previewRow(
-                          Icons.person_outline,
-                          'Patient',
-                          _patientName,
-                          accentTeal,
-                        ),
+                        _previewRow(Icons.person_outline, 'Patient', _patientName, accentTeal),
+                        _divider(),
+                        _previewRow(Icons.science_outlined, 'Stone Type', 'Calcium Oxalate', accentTeal),
                         _divider(),
                         _previewRow(
-                          Icons.science_outlined,
-                          'Stone Type',
-                          'Calcium Oxalate',
-                          accentTeal,
-                        ),
-                        _divider(),
-                        _previewRow(
-                          Icons.monitor_heart_outlined,
-                          'Avg Oxalate',
+                          Icons.monitor_heart_outlined, 'Avg Oxalate',
                           '${_avgOxalate.toStringAsFixed(0)} mg/day',
-                          _avgOxalate <= _oxalateGoal
-                              ? accentGreen
-                              : Colors.redAccent,
+                          _avgOxalate <= _oxalateGoal ? accentGreen : Colors.redAccent,
                         ),
                         _divider(),
                         _previewRow(
-                          Icons.water_drop_outlined,
-                          'Avg Water',
+                          Icons.water_drop_outlined, 'Avg Water',
                           '${_avgWater.toStringAsFixed(0)} oz/day',
-                          _avgWater >= _waterGoal
-                              ? accentTeal
-                              : Colors.orange,
+                          _avgWater >= _waterGoal ? accentTeal : Colors.orange,
                         ),
                         _divider(),
-                        _previewRow(
-                          Icons.check_circle_outline,
-                          'Days Under Oxalate Goal',
-                          '$_daysUnderGoal / $_selectedDays',
-                          accentGreen,
-                        ),
+                        _previewRow(Icons.check_circle_outline, 'Days Under Oxalate Goal',
+                            '$_daysUnderGoal / $_selectedDays', accentGreen),
                         _divider(),
-                        _previewRow(
-                          Icons.local_drink_outlined,
-                          'Days Met Water Goal',
-                          '$_daysMetWater / $_selectedDays',
-                          accentTeal,
-                        ),
+                        _previewRow(Icons.local_drink_outlined, 'Days Met Water Goal',
+                            '$_daysMetWater / $_selectedDays', accentTeal),
                         _divider(),
-                        _previewRow(
-                          Icons.local_fire_department_outlined,
-                          'Current Streak',
-                          '$_currentStreak days',
-                          Colors.deepOrange,
-                        ),
+                        _previewRow(Icons.local_fire_department_outlined,
+                            'Current Streak', '$_currentStreak days', Colors.deepOrange),
                         _divider(),
-                        _previewRow(
-                          Icons.calendar_today_outlined,
-                          'Total Days Logged',
-                          '$_totalDaysLogged days',
-                          accentTeal,
-                        ),
+                        _previewRow(Icons.calendar_today_outlined, 'Total Days Logged',
+                            '$_totalDaysLogged days', accentTeal),
                       ],
                     ),
                   ),
                   const SizedBox(height: 16),
-
-                  // What's included
                   _sectionCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -830,21 +754,17 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                     ),
                   ),
                   const SizedBox(height: 28),
-
-                  // Action buttons
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: _isGenerating ? null : _previewPdf,
-                          icon: const Icon(Icons.visibility_outlined,
-                              size: 18),
+                          icon: const Icon(Icons.visibility_outlined, size: 18),
                           label: const Text('Preview'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: accentTeal,
                             side: const BorderSide(color: accentTeal),
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 14),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12)),
                           ),
@@ -857,19 +777,15 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                           onPressed: _isGenerating ? null : _sharePdf,
                           icon: _isGenerating
                               ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
+                                  width: 18, height: 18,
                                   child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2))
+                                      color: Colors.white, strokeWidth: 2))
                               : const Icon(Icons.share_rounded, size: 18),
-                          label: Text(
-                              _isGenerating ? 'Generating…' : 'Share PDF'),
+                          label: Text(_isGenerating ? 'Generating…' : 'Share PDF'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: accentTeal,
                             foregroundColor: Colors.white,
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 14),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12)),
                             elevation: 0,
@@ -895,7 +811,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
     );
   }
 
-  // ── UI helpers ──────────────────────────────────────────────────────────
+  // ── UI helpers ────────────────────────────────────────────────────────────
   Widget _sectionCard({required Widget child}) {
     return Container(
       width: double.infinity,
@@ -964,8 +880,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
           const SizedBox(width: 10),
           Expanded(
               child: Text(label,
-                  style:
-                      const TextStyle(color: mutedColor, fontSize: 13))),
+                  style: const TextStyle(color: mutedColor, fontSize: 13))),
           Text(value,
               style: TextStyle(
                   color: valueColor,
@@ -976,10 +891,8 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
     );
   }
 
-  Widget _divider() => Divider(
-      height: 1,
-      thickness: 1,
-      color: borderColor.withValues(alpha: 0.5));
+  Widget _divider() =>
+      Divider(height: 1, thickness: 1, color: borderColor.withValues(alpha: 0.5));
 
   Widget _includedItem(String emoji, String text) {
     return Padding(
@@ -988,8 +901,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
         children: [
           Text(emoji, style: const TextStyle(fontSize: 14)),
           const SizedBox(width: 8),
-          Text(text,
-              style: const TextStyle(color: mutedColor, fontSize: 12)),
+          Text(text, style: const TextStyle(color: mutedColor, fontSize: 12)),
         ],
       ),
     );
