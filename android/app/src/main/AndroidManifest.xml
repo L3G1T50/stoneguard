@@ -4,23 +4,29 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <uses-permission android:name="android.permission.CALL_PHONE"/>
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <!--
+        Fix 10: CALL_PHONE removed.
+        StoneGuard never makes phone calls. This permission had no legitimate
+        use in the app and would trigger a Play Store sensitive-permissions
+        review. Removing it also improves user trust — a health/diet tracker
+        should not be requesting call access.
+    -->
 
-    <!-- Required alongside CALL_PHONE so app works on tablets/devices without a SIM -->
+    <!--
+        Required alongside internet permission so app works on
+        tablets/devices without a SIM card (telephony feature is optional).
+    -->
     <uses-feature android:name="android.hardware.telephony" android:required="false"/>
 
     <!--
-        Fix 10: android:allowBackup="false" disables system backup so Android cannot
-        copy app data to cloud or adb without the user explicitly exporting it.
-        This protects encrypted DB and prefs on older Android versions where backup
-        extracts raw files before encryption is applied.
-
-        Fix 10: android:networkSecurityConfig enforces HTTPS-only network traffic.
-        Prevents accidental plain-HTTP calls leaking data in transit.
+        allowBackup="false"      : prevents Android system backup from copying
+                                   encrypted DB/prefs to Google Drive or adb.
+        fullBackupContent="false": belt-and-suspenders for pre-API-23 devices.
+        networkSecurityConfig   : enforces HTTPS-only; blocks all cleartext HTTP.
     -->
     <application
-        android:label="KidneyShield"
+        android:label="StoneGuard"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:fullBackupContent="false"

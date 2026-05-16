@@ -1,3 +1,12 @@
+// android/app/build.gradle.kts
+//
+// Fix 10 — Android release hardening
+//   • proguardFiles() now explicitly references our proguard-rules.pro so R8
+//     uses both the default Android rules AND our custom keep rules.
+//     Without this line, isMinifyEnabled=true runs R8 with only the default
+//     rules, which strips FlutterSecureStorage, SQLCipher, and AdMob
+//     reflection-loaded classes — causing silent production crashes.
+
 import java.util.Properties
 
 val keyProperties = Properties()
@@ -30,8 +39,7 @@ android {
     }
 
     defaultConfig {
-        // Fix 10: Unique application ID — required for Play Store.
-        // com.example.* is rejected by Google Play.
+        // Non-example applicationId required by Google Play.
         applicationId = "com.lacaprara.kidneyshield"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
@@ -41,9 +49,9 @@ android {
 
     signingConfigs {
         create("release") {
-            keyAlias = keyProperties["keyAlias"] as String
-            keyPassword = keyProperties["keyPassword"] as String
-            storeFile = file(keyProperties["storeFile"] as String)
+            keyAlias     = keyProperties["keyAlias"]     as String
+            keyPassword  = keyProperties["keyPassword"]  as String
+            storeFile    = file(keyProperties["storeFile"] as String)
             storePassword = keyProperties["storePassword"] as String
         }
     }
@@ -51,10 +59,20 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
-            // Fix 10: R8 minification + resource shrinking enabled for release.
-            // Reduces APK size and makes reverse engineering harder.
-            isMinifyEnabled = true
+
+            // R8 minification + resource shrinking reduces APK size and makes
+            // reverse engineering significantly harder.
+            isMinifyEnabled   = true
             isShrinkResources = true
+
+            // Fix 10: Wire in our custom keep rules alongside the default ones.
+            // getDefaultProguardFile() = Android SDK's built-in baseline rules.
+            // proguard-rules.pro      = our per-library reflection/JNI keeps.
+            // Both files are required — dropping either causes issues.
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
