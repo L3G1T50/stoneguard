@@ -1,6 +1,17 @@
+// ─── ONBOARDING SCREEN ────────────────────────────────────────────────────
+//
+// Fix 11: Added privacy policy disclosure on the last onboarding page.
+//   Google Play requires an on-screen disclosure before first use for any
+//   app that collects data or shows ads. The text:
+//     "By continuing you agree to our Privacy Policy"
+//   appears directly above the 'Continue to setup' button on the final page
+//   only. Tapping 'Privacy Policy' opens PrivacyPolicyScreen full-screen so
+//   the user can read it before they tap Continue.
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'setup_screen.dart';
+import 'privacy_policy_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -22,7 +33,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPageData(
       title: 'Welcome to StoneGuard',
       description:
-      'A simple way to track habits that may help lower your kidney stone risk.',
+          'A simple way to track habits that may help lower your kidney stone risk.',
       accent: Color(0xFF0097A7),
       icon: Icons.shield_rounded,
       overlayIcon: Icons.water_drop_rounded,
@@ -30,7 +41,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPageData(
       title: 'Hydration is your first shield',
       description:
-      'Log water quickly and stay closer to your daily goal with simple reminders and progress tracking.',
+          'Log water quickly and stay closer to your daily goal with simple reminders and progress tracking.',
       accent: Color(0xFF00ACC1),
       icon: Icons.shield_rounded,
       overlayIcon: Icons.local_drink_rounded,
@@ -38,7 +49,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPageData(
       title: 'Watch oxalate before it adds up',
       description:
-      'Search foods, learn their oxalate level, and keep a closer eye on your daily intake.',
+          'Search foods, learn their oxalate level, and keep a closer eye on your daily intake.',
       accent: Color(0xFF2A9D8F),
       icon: Icons.shield_rounded,
       overlayIcon: Icons.restaurant_menu_rounded,
@@ -46,7 +57,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPageData(
       title: 'Spot patterns and share progress',
       description:
-      'See what is working over time and bring cleaner information to doctor visits and follow-ups.',
+          'See what is working over time and bring cleaner information to doctor visits and follow-ups.',
       accent: Color(0xFF3A86FF),
       icon: Icons.shield_rounded,
       overlayIcon: Icons.show_chart_rounded,
@@ -71,7 +82,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     super.dispose();
   }
 
-  // Fix: use 'has_seen_onboarding' to match the key checked in splash_screen.dart
   Future<void> _finishOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('has_seen_onboarding', true);
@@ -94,12 +104,21 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   void _onPageChanged(int index) {
-    // Fade out → update page → fade back in for a smooth icon swap
     _iconController.reverse().then((_) {
       if (!mounted) return;
       setState(() => _currentPage = index);
       _iconController.forward();
     });
+  }
+
+  void _openPrivacyPolicy() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => const PrivacyPolicyScreen(),
+      ),
+    );
   }
 
   @override
@@ -144,7 +163,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       ),
                     )
                   else
-                  // Invisible placeholder so the counter stays left-aligned
                     const SizedBox(width: 56),
                 ],
               ),
@@ -163,7 +181,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Hero badge with animated icon fade
                         FadeTransition(
                           opacity: _iconFade,
                           child: _StoneGuardHeroBadge(page: page),
@@ -196,7 +213,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               ),
             ),
 
-            // ── BOTTOM: dots + button + hint ──
+            // ── BOTTOM: dots + button + privacy disclosure ──
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
               child: Column(
@@ -206,7 +223,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
                       _pages.length,
-                          (index) => AnimatedContainer(
+                      (index) => AnimatedContainer(
                         duration: const Duration(milliseconds: 220),
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         height: 10,
@@ -250,13 +267,45 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    'You can change goals and settings later anytime.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade500,
+
+                  // Fix 11: Privacy policy disclosure — shown on last page only.
+                  // Google Play requires a visible, tappable link to the privacy
+                  // policy before the user first commits to using the app.
+                  if (isLastPage)
+                    RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                          height: 1.4,
+                        ),
+                        children: [
+                          const TextSpan(
+                              text: 'By continuing you agree to our '),
+                          TextSpan(
+                            text: 'Privacy Policy',
+                            style: const TextStyle(
+                              color: Color(0xFF0097A7),
+                              fontWeight: FontWeight.w600,
+                              decoration: TextDecoration.underline,
+                              decorationColor: Color(0xFF0097A7),
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = _openPrivacyPolicy,
+                          ),
+                          const TextSpan(text: '.'),
+                        ],
+                      ),
+                    )
+                  else
+                    Text(
+                      'You can change goals and settings later anytime.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade500,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -268,7 +317,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 }
 
-// ── Hero badge widget ──────────────────────────────────────────
+// ── Hero badge widget ───────────────────────────────────────────────────────
 class _StoneGuardHeroBadge extends StatelessWidget {
   final _OnboardingPageData page;
 
@@ -345,7 +394,7 @@ class _StoneGuardHeroBadge extends StatelessWidget {
   }
 }
 
-// ── Page data model ────────────────────────────────────────────
+// ── Page data model ──────────────────────────────────────────────────────────
 class _OnboardingPageData {
   final String title;
   final String description;
