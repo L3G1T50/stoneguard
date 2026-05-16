@@ -8,15 +8,19 @@
 // this codebase.  The 32-byte AES key is generated once and kept in
 // FlutterSecureStorage (Android Keystore / iOS Keychain).
 // Every value is stored as  base64( iv_16_bytes || ciphertext ).
+//
+// Fix 3b: all internal debugPrint calls replaced with AppLogger so release
+// builds produce zero log output (no stack traces, no key names, no PHI).
 
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:encrypt/encrypt.dart' as enc;
-import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'app_logger.dart';
 
 class SecurePrefs {
   // Singleton – one instance for the whole app lifetime.
@@ -62,7 +66,7 @@ class SecurePrefs {
       final encrypter   = enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
       return encrypter.decrypt(enc.Encrypted(cipherBytes), iv: iv);
     } catch (e, st) {
-      debugPrint('[SecurePrefs] decrypt error: $e\n$st');
+      AppLogger.error('SecurePrefs', 'decrypt failed', e, st);
       return null;
     }
   }
@@ -76,7 +80,7 @@ class SecurePrefs {
       final encoded = await _encrypt(value.toString());
       await prefs.setString('enc_$key', encoded);
     } catch (e, st) {
-      debugPrint('[SecurePrefs] setDouble error ($key): $e\n$st');
+      AppLogger.error('SecurePrefs', 'setDouble failed', e, st);
     }
   }
 
@@ -89,7 +93,7 @@ class SecurePrefs {
       if (plain == null) return defaultValue;
       return double.tryParse(plain) ?? defaultValue;
     } catch (e, st) {
-      debugPrint('[SecurePrefs] getDouble error ($key): $e\n$st');
+      AppLogger.error('SecurePrefs', 'getDouble failed', e, st);
       return defaultValue;
     }
   }
@@ -101,7 +105,7 @@ class SecurePrefs {
       final encoded = await _encrypt(value.toString());
       await prefs.setString('enc_$key', encoded);
     } catch (e, st) {
-      debugPrint('[SecurePrefs] setInt error ($key): $e\n$st');
+      AppLogger.error('SecurePrefs', 'setInt failed', e, st);
     }
   }
 
@@ -114,7 +118,7 @@ class SecurePrefs {
       if (plain == null) return defaultValue;
       return int.tryParse(plain) ?? defaultValue;
     } catch (e, st) {
-      debugPrint('[SecurePrefs] getInt error ($key): $e\n$st');
+      AppLogger.error('SecurePrefs', 'getInt failed', e, st);
       return defaultValue;
     }
   }
@@ -126,7 +130,7 @@ class SecurePrefs {
       final encoded = await _encrypt(value);
       await prefs.setString('enc_$key', encoded);
     } catch (e, st) {
-      debugPrint('[SecurePrefs] setString error ($key): $e\n$st');
+      AppLogger.error('SecurePrefs', 'setString failed', e, st);
     }
   }
 
@@ -138,7 +142,7 @@ class SecurePrefs {
       final plain   = await _decrypt(encoded);
       return plain ?? defaultValue;
     } catch (e, st) {
-      debugPrint('[SecurePrefs] getString error ($key): $e\n$st');
+      AppLogger.error('SecurePrefs', 'getString failed', e, st);
       return defaultValue;
     }
   }
@@ -150,7 +154,7 @@ class SecurePrefs {
       final encoded = await _encrypt(jsonEncode(value));
       await prefs.setString('enc_$key', encoded);
     } catch (e, st) {
-      debugPrint('[SecurePrefs] setStringList error ($key): $e\n$st');
+      AppLogger.error('SecurePrefs', 'setStringList failed', e, st);
     }
   }
 
@@ -163,7 +167,7 @@ class SecurePrefs {
       if (plain == null) return [];
       return (jsonDecode(plain) as List<dynamic>).cast<String>();
     } catch (e, st) {
-      debugPrint('[SecurePrefs] getStringList error ($key): $e\n$st');
+      AppLogger.error('SecurePrefs', 'getStringList failed', e, st);
       return [];
     }
   }
@@ -174,7 +178,7 @@ class SecurePrefs {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('enc_$key');
     } catch (e, st) {
-      debugPrint('[SecurePrefs] remove error ($key): $e\n$st');
+      AppLogger.error('SecurePrefs', 'remove failed', e, st);
     }
   }
 }
