@@ -6,6 +6,11 @@
 //     Without this line, isMinifyEnabled=true runs R8 with only the default
 //     rules, which strips FlutterSecureStorage, SQLCipher, and AdMob
 //     reflection-loaded classes — causing silent production crashes.
+//
+// Batch C — AdMob App ID injection
+//   • admobAppId is loaded from android/local.properties (gitignored).
+//   • Falls back to Google's official test App ID on CI / fresh clones.
+//   • manifestPlaceholders["admobAppId"] wires the value into AndroidManifest.
 
 import java.util.Properties
 
@@ -13,6 +18,13 @@ val keyProperties = Properties()
 val keyPropertiesFile = rootProject.file("key.properties")
 if (keyPropertiesFile.exists()) {
     keyProperties.load(keyPropertiesFile.inputStream())
+}
+
+// Load local.properties for secrets that must never be committed
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.inputStream())
 }
 
 plugins {
@@ -45,6 +57,13 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // Batch C: inject AdMob App ID from local.properties.
+        // Fallback is Google's official test App ID — safe for CI / fresh clones.
+        manifestPlaceholders["admobAppId"] = localProperties.getProperty(
+            "admobAppId",
+            "ca-app-pub-3940256099942544~3347511713"
+        )
     }
 
     signingConfigs {
@@ -66,9 +85,6 @@ android {
             isShrinkResources = true
 
             // Fix 10: Wire in our custom keep rules alongside the default ones.
-            // getDefaultProguardFile() = Android SDK's built-in baseline rules.
-            // proguard-rules.pro      = our per-library reflection/JNI keeps.
-            // Both files are required — dropping either causes issues.
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
