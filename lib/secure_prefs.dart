@@ -11,6 +11,10 @@
 //
 // Fix 3b: all internal debugPrint calls replaced with AppLogger so release
 // builds produce zero log output (no stack traces, no key names, no PHI).
+//
+// Fix 4: checkIntegrity() detects key-loss (OS wipe / app-data clear) and
+// returns false so the caller can show a recovery dialog rather than
+// silently returning default values for all health data.
 
 import 'dart:convert';
 import 'dart:math';
@@ -68,6 +72,32 @@ class SecurePrefs {
     } catch (e, st) {
       AppLogger.error('SecurePrefs', 'decrypt failed', e, st);
       return null;
+    }
+  }
+
+  // ── Fix 4: Integrity check ────────────────────────────────────────────────
+  /// Writes a known sentinel value, reads it back, and returns [true] if the
+  /// round-trip succeeds.  Returns [false] when the AES key has been wiped
+  /// (e.g. the user cleared app data or the OS rotated the Keystore) so that
+  /// all previously encrypted values are now unreadable.
+  ///
+  /// Call once on startup BEFORE reading any health data.  When this returns
+  /// false the app should show a one-time recovery dialog so the user knows
+  /// their data was reset — never let them discover it silently.
+  ///
+  /// The sentinel is removed after the check so it does not linger.
+  static const _sentinelKey   = '__integrity_check__';
+  static const _sentinelValue = 'stoneguard_ok';
+
+  Future<bool> checkIntegrity() async {
+    try {
+      await setString(_sentinelKey, _sentinelValue);
+      final result = await getString(_sentinelKey, defaultValue: '');
+      await remove(_sentinelKey);
+      return result == _sentinelValue;
+    } catch (e, st) {
+      AppLogger.error('SecurePrefs', 'checkIntegrity failed', e, st);
+      return false;
     }
   }
 

@@ -7,6 +7,12 @@
 //   • This ensures no ad SDK tracking begins before explicit user consent,
 //     satisfying GDPR / Play Store data-safety requirements.
 //
+// Fix 4: Decrypt-failure / key-loss recovery
+//   • SecurePrefs.checkIntegrity() is called once on every cold start.
+//   • If it returns false (OS wiped the Keystore or user cleared app data)
+//     a one-time AlertDialog is shown via a post-frame callback so the user
+//     knows their data was reset — no silent loss of health data.
+//
 // Fix 12: Global crash handler (retained from previous batch)
 //   • FlutterError.onError routes framework errors through AppLogger.
 //   • runZonedGuarded wraps runApp to catch all unhandled async errors.
@@ -30,12 +36,16 @@ import 'theme/app_theme.dart';
 import 'widgets/gradient_scaffold.dart';
 import 'hydration_repository.dart';
 import 'app_logger.dart';
+import 'secure_prefs.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 // Global ThemeNotifier — created once in main, accessed via ThemeNotifier.of(context)
 final ThemeNotifier themeNotifier = ThemeNotifier(ThemeMode.light);
+
+// ── Fix 4: navigator key lets us push a dialog from outside the widget tree ──
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   // ── Fix 12: Route Flutter framework errors through AppLogger ──────────────
@@ -45,6 +55,18 @@ Future<void> main() async {
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+
+      // ── Fix 4: Check encryption key integrity before anything else ────────
+      // If the Keystore was wiped (app-data clear, OS rotation, device restore)
+      // all encrypted health values are unreadable.  Detect this early and
+      // schedule a recovery dialog after the first frame is rendered.
+      final integrityOk = await SecurePrefs.instance.checkIntegrity();
+      if (!integrityOk) {
+        // Schedule the dialog after runApp() has built the widget tree.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _showKeyLossDialog();
+        });
+      }
 
       // Load saved theme preference
       final prefs = await SharedPreferences.getInstance();
@@ -82,6 +104,33 @@ Future<void> main() async {
   );
 }
 
+// ── Fix 4: Recovery dialog ────────────────────────────────────────────────────
+/// Shown once when checkIntegrity() returns false.
+/// Explains to the user that saved data was reset — no silent failure.
+void _showKeyLossDialog() {
+  final ctx = navigatorKey.currentContext;
+  if (ctx == null) return;
+  showDialog<void>(
+    context: ctx,
+    barrierDismissible: false,
+    builder: (_) => AlertDialog(
+      title: const Text('Data Reset Detected'),
+      content: const Text(
+        'StoneGuard could not read your saved data — this usually happens '
+        'after clearing app storage or restoring a backup.\n\n'
+        'Your daily entries and goals have been reset to defaults. '
+        'Your history (if exported) can be re-imported from the History screen.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: const Text('OK, Got It'),
+        ),
+      ],
+    ),
+  );
+}
+
 Future<void> requestExactAlarmPermission() async {
   if (await Permission.scheduleExactAlarm.isDenied) {
     await Permission.scheduleExactAlarm.request();
@@ -108,6 +157,7 @@ class _ThemeConsumer extends StatelessWidget {
     return MaterialApp(
       title: 'StoneGuard',
       debugShowCheckedModeBanner: false,
+      navigatorKey: navigatorKey, // Fix 4 — exposes context for key-loss dialog
       theme: buildAppTheme(),
       darkTheme: buildDarkTheme(),
       themeMode: notifier.mode,
