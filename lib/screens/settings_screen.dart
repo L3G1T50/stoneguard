@@ -1,5 +1,10 @@
 // settings_screen.dart
 //
+// Fix 11 — Privacy Policy in-app disclosure.
+//   Added a 'Privacy Policy' row in the Privacy & Ads card that
+//   navigates to PrivacyPolicyScreen via /privacy route.
+//   Required by Google Play Store policy (Data safety / privacy).
+//
 // SecurePrefs has no getBool/setBool.
 // Booleans are stored as the strings 'true' / 'false' via getString/setString.
 import 'package:flutter/material.dart';
@@ -7,6 +12,7 @@ import 'package:flutter/services.dart';
 import '../consent_manager.dart';
 import '../secure_prefs.dart';
 import '../app_logger.dart';
+import 'privacy_policy_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -41,11 +47,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _load() async {
     try {
       final sp = SecurePrefs.instance;
-      final name  = await sp.getString ('user_name',        defaultValue: '');
-      final ox    = await sp.getDouble ('goal_oxalate',     defaultValue: 200.0);
-      final wat   = await sp.getDouble ('goal_water',       defaultValue: 80.0);
-      // Booleans stored as string 'true'/'false'
-      final notifStr = await sp.getString('notifications_on', defaultValue: 'true');
+      final name     = await sp.getString('user_name',         defaultValue: '');
+      final ox       = await sp.getDouble('goal_oxalate',      defaultValue: 200.0);
+      final wat      = await sp.getDouble('goal_water',        defaultValue: 80.0);
+      final notifStr = await sp.getString('notifications_on',  defaultValue: 'true');
       setState(() {
         _userName      = name;
         _oxalateGoal   = ox;
@@ -65,18 +70,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _save() async {
     try {
       final sp = SecurePrefs.instance;
-      await sp.setString('user_name',
-          _nameCtrl.text.trim());
-      await sp.setDouble('goal_oxalate',
-          double.tryParse(_oxalateCtrl.text) ?? 200);
-      await sp.setDouble('goal_water',
-          double.tryParse(_waterCtrl.text) ?? 80);
-      // Store bool as string
-      await sp.setString('notifications_on',
-          _notifications ? 'true' : 'false');
+      await sp.setString('user_name',     _nameCtrl.text.trim());
+      await sp.setDouble('goal_oxalate',  double.tryParse(_oxalateCtrl.text) ?? 200);
+      await sp.setDouble('goal_water',    double.tryParse(_waterCtrl.text)   ?? 80);
+      await sp.setString('notifications_on', _notifications ? 'true' : 'false');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Settings saved ✔')),
+        const SnackBar(content: Text('Settings saved \u2714')),
       );
     } catch (e, st) {
       AppLogger.error('SettingsScreen', 'save failed', e, st);
@@ -89,8 +89,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _pickAvatar() async {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-          content: Text('Avatar upload coming soon!')),
+      const SnackBar(content: Text('Avatar upload coming soon!')),
     );
   }
 
@@ -150,6 +149,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── Profile ──────────────────────────────────────────────
               _sectionLabel('Profile'),
               _card(
                 child: Column(
@@ -193,6 +193,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: 20),
+
+              // ── Daily Goals ──────────────────────────────────────────
               _sectionLabel('Daily Goals'),
               _card(
                 child: Column(
@@ -218,6 +220,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: 20),
+
+              // ── Notifications ─────────────────────────────────────────
               _sectionLabel('Notifications'),
               _card(
                 child: Row(
@@ -239,7 +243,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     Switch.adaptive(
                       value: _notifications,
-                      // Use activeThumbColor to avoid deprecated activeColor
                       activeThumbColor: _teal,
                       activeTrackColor: _teal.withValues(alpha: 0.4),
                       onChanged: (v) =>
@@ -249,11 +252,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: 20),
+
+              // ── Privacy & Ads ─────────────────────────────────────────
+              // Fix 11: Privacy Policy row added — required by Google Play.
               _sectionLabel('Privacy & Ads'),
               _card(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Privacy Policy row
+                    InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const PrivacyPolicyScreen(),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.privacy_tip_outlined,
+                                    color: _teal, size: 18),
+                                SizedBox(width: 10),
+                                Text('Privacy Policy',
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: _dark)),
+                              ],
+                            ),
+                            const Icon(Icons.chevron_right_rounded,
+                                color: _muted, size: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const Divider(height: 20, thickness: 0.5),
+
+                    // Ad personalisation status
                     Row(
                       mainAxisAlignment:
                           MainAxisAlignment.spaceBetween,
@@ -269,10 +312,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               : 'Not granted',
                           style: TextStyle(
                             fontSize: 12,
-                            color:
-                                ConsentManager.instance.canShowAds
-                                    ? const Color(0xFF2E7D32)
-                                    : _danger,
+                            color: ConsentManager.instance.canShowAds
+                                ? const Color(0xFF2E7D32)
+                                : _danger,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
