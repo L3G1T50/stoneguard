@@ -1,0 +1,13 @@
+# local.properties.example
+# Copy this file to local.properties and fill in your values.
+# local.properties is gitignored and must NEVER be committed.
+
+# Android SDK path (set automatically by Android Studio / flutter)
+# sdk.dir=/Users/yourname/Library/Android/sdk
+
+# AdMob App ID
+# Used in android/app/build.gradle.kts as manifestPlaceholders["admobAppId"]
+admobAppId=ca-app-pub-2298666914293591~4166424993
+
+# Signing key (used by android/app/build.gradle.kts)
+# Copy key.properties.example to key.properties and fill in your keystore details.
