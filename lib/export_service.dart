@@ -21,7 +21,6 @@
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 import 'app_logger.dart';
 
@@ -53,48 +52,52 @@ class ExportService {
       final bytes = await doc.save();
       await outputFile.writeAsBytes(bytes, flush: true);
 
-      // Validate: a zero-byte file means pdf.save() silently failed.
-      final length = await outputFile.length();
-      if (length == 0) {
+      // Validate non-empty before sharing.
+      final size = await outputFile.length();
+      if (size == 0) {
         throw const ExportException(
-            'PDF was written as empty — report generation failed.');
+            'PDF was written but is empty — generation may have failed.');
       }
 
-      await Share.shareXFiles(
-        [XFile(outputFile.path, mimeType: 'application/pdf')],
-        subject: 'KidneyShield Report',
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(outputFile.path, mimeType: 'application/pdf')],
+          text: 'My StoneGuard health report',
+        ),
       );
     } catch (e, st) {
-      AppLogger.error('ExportService', 'exportPdf failed', e, st);
       if (e is ExportException) rethrow;
-      throw ExportException(e.toString());
+      AppLogger.error('ExportService', 'exportPdf failed', e, st);
+      throw ExportException('Export failed: $e');
     } finally {
-      // Always clean up the temp file, even if share failed.
-      if (outputFile != null) {
-        try {
-          if (await outputFile.exists()) await outputFile.delete();
-        } catch (_) {
-          // Non-fatal: temp file will be cleaned up by the OS eventually.
+      // Best-effort cleanup — ignore errors if file is still open.
+      try {
+        if (outputFile != null && await outputFile.exists()) {
+          await outputFile.delete();
         }
+      } catch (e) {
+        AppLogger.error('ExportService', 'cleanup failed', e);
       }
     }
   }
 
-  /// Returns a writable directory that does not require any runtime
-  /// permission on any Android API level.
+  /// Resolves a writable directory for the export file.
+  /// Primary: getApplicationDocumentsDirectory() — no permission needed.
+  /// Fallback: getTemporaryDirectory().
   Future<Directory> _resolveExportDirectory() async {
     try {
-      return await getApplicationDocumentsDirectory();
+      final dir = await getApplicationDocumentsDirectory();
+      final exportDir = Directory('${dir.path}/stoneguard_exports');
+      if (!await exportDir.exists()) await exportDir.create(recursive: true);
+      return exportDir;
     } catch (e) {
-      AppLogger.warn(
-          'ExportService', 'getApplicationDocumentsDirectory failed: $e');
+      AppLogger.error('ExportService', 'documents dir failed, using temp', e);
     }
     try {
-      return await getTemporaryDirectory();
+      return getTemporaryDirectory();
     } catch (e) {
-      AppLogger.warn('ExportService', 'getTemporaryDirectory failed: $e');
+      throw ExportException(
+          'Could not resolve a writable directory for export: $e');
     }
-    throw const ExportException(
-        'No writable directory available for export.');
   }
 }

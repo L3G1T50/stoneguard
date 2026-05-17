@@ -7,6 +7,7 @@
 //   • The export file is deleted after the share sheet closes.
 //   • _loadData() reads goals/name from SecurePrefs (not plain prefs).
 
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -28,36 +29,26 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
   // ── Colours ───────────────────────────────────────────────────────────────
   static const Color accentTeal  = Color(0xFF1A8A9A);
   static const Color cardColor   = Color(0xFFFFFFFF);
-  static const Color borderColor = Color(0xFFD0D0D8);
-  static const Color textColor   = Color(0xFF2C2C2C);
-  static const Color mutedColor  = Color(0xFF888888);
-  static const Color accentGreen = Color(0xFF2A9A5A);
-  static const Color bgColor     = Color(0xFFF5F7FA);
+  static const Color bgColor     = Color(0xFFF4F8FA);
+  static const Color textDark    = Color(0xFF1A2530);
+  static const Color textMuted   = Color(0xFF607D8B);
+  static const Color successGreen= Color(0xFF2E7D32);
+  static const Color warningOrange = Color(0xFFF57C00);
+  static const Color dangerRed   = Color(0xFFD32F2F);
 
-  // ── State ──────────────────────────────────────────────────────────────────
+  // ── State ─────────────────────────────────────────────────────────────────
   bool   _isLoading     = true;
   bool   _isGenerating  = false;
-  String _patientName   = 'Patient';
-  double _oxalateGoal   = 200.0;
-  double _waterGoal     = 80.0;
   int    _selectedDays  = 30;
 
-  static const List<Map<String, dynamic>> _periods = [
-    {'days': 7,   'label': '7 Days'},
-    {'days': 30,  'label': '30 Days'},
-    {'days': 90,  'label': '90 Days'},
-    {'days': 365, 'label': '1 Year'},
-    {'days': 730, 'label': '2 Years'},
-  ];
+  String _userName      = '';
+  double _oxalateGoal   = 200;
+  double _waterGoal     = 80;
 
   Map<String, double> _dailyOxalate = {};
   Map<String, double> _dailyWater   = {};
-  int    _currentStreak   = 0;
-  int    _totalDaysLogged = 0;
-  double _avgOxalate      = 0;
-  double _avgWater        = 0;
-  int    _daysUnderGoal   = 0;
-  int    _daysMetWater    = 0;
+
+  final List<int> _dayOptions = [7, 30, 90, 365, 730];
 
   @override
   void initState() {
@@ -65,87 +56,54 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
     _loadData();
   }
 
-  // ── Data loading ───────────────────────────────────────────────────────────
-  // Fix 7: read sensitive keys from SecurePrefs, not plain SharedPreferences.
   Future<void> _loadData() async {
-    final secure = SecurePrefs.instance;
-    _oxalateGoal = await secure.getDouble('goal_oxalate', defaultValue: 200.0);
-    _waterGoal   = await secure.getDouble('goal_water',   defaultValue: 80.0);
-    _patientName = await secure.getString('user_name',    defaultValue: 'Patient');
+    setState(() => _isLoading = true);
+    try {
+      final secure = SecurePrefs.instance;
+      final results = await Future.wait([
+        secure.getString('user_name',    defaultValue: ''),
+        secure.getDouble('goal_oxalate', defaultValue: 200.0),
+        secure.getDouble('goal_water',   defaultValue: 80.0),
+      ]);
+      _userName    = results[0] as String;
+      _oxalateGoal = results[1] as double;
+      _waterGoal   = results[2] as double;
 
-    // Load full daily history via HistoryStorage (already encrypted).
-    final history = await HistoryStorage().loadHistory();
-    final Map<String, double> oxMap  = {};
-    final Map<String, double> watMap = {};
-    for (final entry in history) {
-      final date = entry['date'] as String?;
-      if (date == null) continue;
-      oxMap[date]  = (entry['oxalate_mg'] as num?)?.toDouble() ?? 0.0;
-      watMap[date] = (entry['water_oz']   as num?)?.toDouble() ?? 0.0;
-    }
+      final storage = HistoryStorage.instance;
+      final now     = DateTime.now();
 
-    // Merge today’s live values.
-    final snap    = await HydrationRepository.instance.readToday();
-    final now     = DateTime.now();
-    final todayStr = _dateKey(now);
-    oxMap[todayStr]  = snap.oxalateMg;
-    watMap[todayStr] = snap.waterOz;
+      final oxMap  = <String, double>{};
+      final watMap = <String, double>{};
 
-    // Compute streak (cap at 730 days back).
-    int streak = 0;
-    DateTime cursor = now;
-    while (true) {
-      final k   = _dateKey(cursor);
-      final ox  = oxMap[k]  ?? 0.0;
-      final wat = watMap[k] ?? 0.0;
-      if (ox > 0 && ox <= _oxalateGoal && wat >= _waterGoal) {
-        streak++;
-        cursor = cursor.subtract(const Duration(days: 1));
-      } else {
-        break;
+      for (int i = 0; i < _selectedDays; i++) {
+        final day = now.subtract(Duration(days: i));
+        final k   = _dateKey(day);
+        final ox  = await storage.getDailyOxalate(day);
+        final wat = await storage.getDailyWater(day);
+        if (ox  != null) oxMap[k]  = ox;
+        if (wat != null) watMap[k] = wat;
       }
-      if (cursor.isBefore(now.subtract(const Duration(days: 730)))) break;
-    }
 
-    setState(() {
-      _dailyOxalate    = oxMap;
-      _dailyWater      = watMap;
-      _currentStreak   = streak;
-      _totalDaysLogged = oxMap.values.where((v) => v > 0).length;
-      _isLoading       = false;
-    });
-    _recalcStats();
-  }
-
-  void _recalcStats() {
-    final now = DateTime.now();
-    double sumOx = 0, sumWat = 0;
-    int logged = 0, underGoal = 0, metWater = 0;
-    for (int i = 0; i < _selectedDays; i++) {
-      final day = now.subtract(Duration(days: i));
-      final k   = _dateKey(day);
-      final ox  = _dailyOxalate[k] ?? 0.0;
-      final wat = _dailyWater[k]   ?? 0.0;
-      if (ox > 0) {
-        sumOx += ox;
-        logged++;
-        if (ox <= _oxalateGoal) underGoal++;
+      setState(() {
+        _dailyOxalate = oxMap;
+        _dailyWater   = watMap;
+        _isLoading    = false;
+      });
+    } catch (e, st) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load data: $e')),
+        );
       }
-      if (wat >= _waterGoal) metWater++;
-      sumWat += wat;
+      rethrow;
     }
-    setState(() {
-      _avgOxalate    = logged > 0 ? sumOx / logged : 0;
-      _avgWater      = sumWat / _selectedDays;
-      _daysUnderGoal = underGoal;
-      _daysMetWater  = metWater;
-    });
   }
 
   String _dateKey(DateTime d) =>
-      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+      '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
 
-  String get _periodLabel {
+  String get _rangeLabel {
     switch (_selectedDays) {
       case 7:   return 'Last 7 Days';
       case 30:  return 'Last 30 Days';
@@ -173,389 +131,253 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
         'ox':    ox,
         'wat':   wat,
         'oxOk':  ox == 0 ? null : ox <= _oxalateGoal,
-        'watOk': wat >= _waterGoal,
+        'watOk': wat == 0 ? null : wat >= _waterGoal,
       });
     }
 
-    final pdfTeal  = PdfColor.fromHex('1A8A9A');
-    final pdfGreen = PdfColor.fromHex('2A9A5A');
-    final pdfRed   = PdfColor.fromHex('E07070');
-    final pdfGray  = PdfColor.fromHex('888888');
-    final pdfLight = PdfColor.fromHex('F0F4F7');
-    final pdfWhite = PdfColors.white;
-    final dateGenerated = '${now.month}/${now.day}/${now.year}';
-    final reportPeriod  = _periodLabel;
-    final loggedCount   = allRows.length;
-    final logLabel = loggedCount == 0
-        ? 'Daily Log (no entries in this period)'
-        : 'Daily Log ($loggedCount day${loggedCount == 1 ? '' : 's'} logged)';
+    final double avgOx = allRows.isEmpty ? 0
+        : allRows.map((r) => r['ox'] as double).reduce((a,b) => a+b) / allRows.length;
+    final double avgWat = allRows.isEmpty ? 0
+        : allRows.map((r) => r['wat'] as double).reduce((a,b) => a+b) / allRows.length;
+    final int daysUnderOx = allRows.where((r) => r['oxOk'] == true).length;
+    final int daysMetWat  = allRows.where((r) => r['watOk'] == true).length;
+
+    pw.PdfColor teal(double opacity) =>
+        PdfColor.fromInt(0xFF1A8A9A).flatten(PdfColor.fromInt(0xFFFFFFFF), 1 - opacity);
+    const pw.PdfColor dark    = PdfColor.fromInt(0xFF1A2530);
+    const pw.PdfColor muted   = PdfColor.fromInt(0xFF607D8B);
+    const pw.PdfColor success = PdfColor.fromInt(0xFF2E7D32);
+    const pw.PdfColor warning = PdfColor.fromInt(0xFFF57C00);
+    const pw.PdfColor danger  = PdfColor.fromInt(0xFFD32F2F);
+    const pw.PdfColor white   = PdfColor.fromInt(0xFFFFFFFF);
+    const pw.PdfColor lightBg = PdfColor.fromInt(0xFFF4F8FA);
 
     pdf.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.letter,
-        margin: const pw.EdgeInsets.all(40),
-        header: (ctx) => pw.Container(
-          padding: const pw.EdgeInsets.only(bottom: 12),
-          decoration: const pw.BoxDecoration(
-              border: pw.Border(
-                  bottom: pw.BorderSide(
-                      color: PdfColor.fromInt(0xFF1A8A9A), width: 2))),
-          child: pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Text('StoneGuard Health Report',
-                      style: pw.TextStyle(
-                          fontSize: 18,
-                          fontWeight: pw.FontWeight.bold,
-                          color: pdfTeal)),
-                  pw.SizedBox(height: 2),
-                  pw.Text('Calcium Oxalate Kidney Stone Prevention',
-                      style: pw.TextStyle(fontSize: 9, color: pdfGray)),
-                ],
-              ),
-              pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.end,
-                children: [
-                  pw.Text('Generated: $dateGenerated',
-                      style: pw.TextStyle(fontSize: 9, color: pdfGray)),
-                  pw.Text('Period: $reportPeriod',
-                      style: pw.TextStyle(fontSize: 9, color: pdfGray)),
-                ],
-              ),
-            ],
-          ),
-        ),
-        footer: (ctx) => pw.Container(
-          padding: const pw.EdgeInsets.only(top: 8),
-          decoration: const pw.BoxDecoration(
-              border: pw.Border(
-                  top: pw.BorderSide(
-                      color: PdfColor.fromInt(0xFFD0D0D8), width: 1))),
-          child: pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Text(
-                  'This report was generated by StoneGuard and is for informational purposes only.',
-                  style: pw.TextStyle(fontSize: 7, color: pdfGray)),
-              pw.Text('Page ${ctx.pageNumber} of ${ctx.pagesCount}',
-                  style: pw.TextStyle(fontSize: 8, color: pdfGray)),
-            ],
-          ),
-        ),
-        build: (ctx) => [
-          pw.Container(
-            padding: const pw.EdgeInsets.all(14),
-            decoration: pw.BoxDecoration(
-                color: pdfLight,
-                borderRadius: pw.BorderRadius.circular(6)),
-            child: pw.Row(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        header: (ctx) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Expanded(
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text('PATIENT',
-                          style: pw.TextStyle(
-                              fontSize: 8,
-                              fontWeight: pw.FontWeight.bold,
-                              color: pdfGray,
-                              letterSpacing: 1.2)),
-                      pw.SizedBox(height: 3),
-                      pw.Text(_patientName,
-                          style: pw.TextStyle(
-                              fontSize: 16,
-                              fontWeight: pw.FontWeight.bold)),
-                      pw.SizedBox(height: 2),
-                      pw.Text('Stone Type: Calcium Oxalate',
-                          style: pw.TextStyle(
-                              fontSize: 10, color: pdfGray)),
-                    ],
+                pw.Text(
+                  'StoneGuard Health Report',
+                  style: pw.TextStyle(
+                    fontSize: 20,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColor.fromInt(0xFF1A8A9A),
                   ),
                 ),
-                pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.end,
-                  children: [
-                    _pdfLabelValue('Oxalate Goal',
-                        '${_oxalateGoal.toStringAsFixed(0)} mg/day', pdfTeal),
-                    pw.SizedBox(height: 4),
-                    _pdfLabelValue('Water Goal',
-                        '${_waterGoal.toStringAsFixed(0)} oz/day', pdfTeal),
-                    pw.SizedBox(height: 4),
-                    _pdfLabelValue('Total Days Logged',
-                        '$_totalDaysLogged days', pdfGray),
-                  ],
+                pw.Text(
+                  '${now.month}/${now.day}/${now.year}',
+                  style: pw.TextStyle(fontSize: 10, color: muted),
                 ),
               ],
             ),
-          ),
-          pw.SizedBox(height: 16),
-          pw.Text('Summary — $reportPeriod',
-              style: pw.TextStyle(
-                  fontSize: 13,
-                  fontWeight: pw.FontWeight.bold,
-                  color: pdfTeal)),
-          pw.SizedBox(height: 8),
+            if (_userName.isNotEmpty)
+              pw.Text(
+                'Prepared for: $_userName',
+                style: pw.TextStyle(fontSize: 10, color: muted),
+              ),
+            pw.Text(
+              _rangeLabel,
+              style: pw.TextStyle(fontSize: 10, color: muted),
+            ),
+            pw.Divider(color: PdfColor.fromInt(0xFFDDE3E7)),
+            pw.SizedBox(height: 4),
+          ],
+        ),
+        build: (ctx) => [
+          // ── Summary cards ──
           pw.Row(
             children: [
-              _pdfStatBox('Avg Oxalate',
-                  '${_avgOxalate.toStringAsFixed(0)} mg/day',
-                  _avgOxalate <= _oxalateGoal ? pdfGreen : pdfRed, pdfLight),
+              _pdfSummaryCard('Avg Oxalate',
+                  '${avgOx.toStringAsFixed(0)} mg/day',
+                  avgOx <= _oxalateGoal ? success : danger,
+                  lightBg),
               pw.SizedBox(width: 8),
-              _pdfStatBox('Avg Water',
-                  '${_avgWater.toStringAsFixed(0)} oz/day',
-                  _avgWater >= _waterGoal ? pdfGreen : pdfRed, pdfLight),
+              _pdfSummaryCard('Goal Met',
+                  '$daysUnderOx / ${allRows.length} days',
+                  daysUnderOx >= allRows.length * 0.8 ? success : warning,
+                  lightBg),
               pw.SizedBox(width: 8),
-              _pdfStatBox('Days Under\nOxalate Goal',
-                  '$_daysUnderGoal / $_selectedDays',
-                  _daysUnderGoal >= (_selectedDays * 0.8).round() ? pdfGreen : pdfRed,
-                  pdfLight),
+              _pdfSummaryCard('Avg Water',
+                  '${avgWat.toStringAsFixed(0)} oz/day',
+                  avgWat >= _waterGoal ? success : danger,
+                  lightBg),
               pw.SizedBox(width: 8),
-              _pdfStatBox('Days Met\nWater Goal',
-                  '$_daysMetWater / $_selectedDays',
-                  _daysMetWater >= (_selectedDays * 0.8).round() ? pdfGreen : pdfRed,
-                  pdfLight),
-              pw.SizedBox(width: 8),
-              _pdfStatBox('Current\nStreak',
-                  '$_currentStreak days',
-                  _currentStreak >= 7 ? pdfGreen : pdfTeal, pdfLight),
+              _pdfSummaryCard('Hydration Met',
+                  '$daysMetWat / ${allRows.length} days',
+                  daysMetWat >= allRows.length * 0.8 ? success : warning,
+                  lightBg),
             ],
           ),
-          pw.SizedBox(height: 20),
-          pw.Container(
-            padding: const pw.EdgeInsets.all(12),
-            decoration: pw.BoxDecoration(
-              border: pw.Border.all(
-                  color: PdfColor.fromInt(0xFF1A8A9A), width: 1),
-              borderRadius: pw.BorderRadius.circular(6),
-            ),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text('Note for Physician',
-                    style: pw.TextStyle(
-                        fontSize: 10,
-                        fontWeight: pw.FontWeight.bold,
-                        color: pdfTeal)),
-                pw.SizedBox(height: 6),
-                pw.Text(
-                  'This report was generated by the StoneGuard app, a kidney stone prevention '
-                  'tracking tool for patients with calcium oxalate stones. The data below '
-                  'reflects the patient\'s self-reported daily dietary oxalate intake (in mg) '
-                  'and fluid intake (in oz) over the selected period. Goals are set by the '
-                  'patient in consultation with their care team. Please review these trends '
-                  'alongside clinical assessments.',
-                  style: pw.TextStyle(fontSize: 9, color: pdfGray, lineSpacing: 3),
-                ),
-              ],
-            ),
-          ),
-          pw.SizedBox(height: 20),
-          pw.Text(logLabel,
-              style: pw.TextStyle(
-                  fontSize: 13,
-                  fontWeight: pw.FontWeight.bold,
-                  color: pdfTeal)),
-          pw.SizedBox(height: 4),
-          pw.Text('Only days with at least one entry are shown.',
-              style: pw.TextStyle(fontSize: 8, color: pdfGray)),
-          pw.SizedBox(height: 8),
-          if (loggedCount == 0)
-            pw.Container(
-              padding: const pw.EdgeInsets.all(16),
-              decoration: pw.BoxDecoration(
-                  color: pdfLight,
-                  borderRadius: pw.BorderRadius.circular(6)),
-              child: pw.Center(
-                child: pw.Text('No entries recorded in this period.',
-                    style: pw.TextStyle(fontSize: 10, color: pdfGray)),
+          pw.SizedBox(height: 16),
+
+          if (allRows.isEmpty)
+            pw.Center(
+              child: pw.Text(
+                'No data logged for this period.',
+                style: pw.TextStyle(color: muted, fontSize: 11),
               ),
             )
-          else
+          else ...[
+            // ── Table header ──
             pw.Table(
-              border: pw.TableBorder.all(
-                  color: PdfColor.fromInt(0xFFD0D0D8), width: 0.5),
+              border: pw.TableBorder(
+                bottom: pw.BorderSide(color: PdfColor.fromInt(0xFFDDE3E7)),
+              ),
               columnWidths: {
                 0: const pw.FlexColumnWidth(2),
-                1: const pw.FlexColumnWidth(2.5),
+                1: const pw.FlexColumnWidth(2),
                 2: const pw.FlexColumnWidth(1.5),
-                3: const pw.FlexColumnWidth(2.5),
+                3: const pw.FlexColumnWidth(2),
                 4: const pw.FlexColumnWidth(1.5),
               },
               children: [
                 pw.TableRow(
-                  decoration: pw.BoxDecoration(color: pdfTeal),
+                  decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFF1A8A9A)),
                   children: [
-                    _tableCell('Date',         isHeader: true, textColor: pdfWhite),
-                    _tableCell('Oxalate (mg)', isHeader: true, textColor: pdfWhite),
-                    _tableCell('Status',       isHeader: true, textColor: pdfWhite),
-                    _tableCell('Water (oz)',   isHeader: true, textColor: pdfWhite),
-                    _tableCell('Status',       isHeader: true, textColor: pdfWhite),
+                    _pdfHeaderCell('Date',    white),
+                    _pdfHeaderCell('Oxalate', white),
+                    _pdfHeaderCell('Status',  white),
+                    _pdfHeaderCell('Water',   white),
+                    _pdfHeaderCell('Status',  white),
                   ],
                 ),
                 ...allRows.asMap().entries.map((entry) {
-                  final i   = entry.key;
-                  final row = entry.value;
-                  final ox    = row['ox']    as double;
-                  final wat   = row['wat']   as double;
-                  final oxOk  = row['oxOk']  as bool?;
-                  final watOk = row['watOk'] as bool;
-                  final bg = i % 2 == 0 ? pdfWhite : pdfLight;
+                  final i = entry.key;
+                  final r = entry.value;
+                  final rowBg = i.isEven
+                      ? white
+                      : PdfColor.fromInt(0xFFF4F8FA);
                   return pw.TableRow(
-                    decoration: pw.BoxDecoration(color: bg),
+                    decoration: pw.BoxDecoration(color: rowBg),
                     children: [
-                      _tableCell(row['date'] as String),
-                      _tableCell(
-                        ox == 0 ? '—' : '${ox.toStringAsFixed(0)} mg',
-                        textColor: oxOk == null ? pdfGray : oxOk ? pdfGreen : pdfRed,
-                      ),
-                      _tableCell(
-                        oxOk == null ? '—' : oxOk ? 'Under' : 'Over',
-                        textColor: oxOk == null ? pdfGray : oxOk ? pdfGreen : pdfRed,
-                      ),
-                      _tableCell(
-                        wat == 0 ? '—' : '${wat.toStringAsFixed(0)} oz',
-                        textColor: watOk ? pdfGreen : pdfRed,
-                      ),
-                      _tableCell(
-                        watOk ? 'Met' : 'Low',
-                        textColor: watOk ? pdfGreen : pdfRed,
-                      ),
+                      _pdfCell(r['date'] as String, dark),
+                      _pdfCell('${(r['ox'] as double).toStringAsFixed(0)} mg', dark),
+                      _pdfStatusCell(r['oxOk'] as bool?, 'Under', 'Over', success, danger),
+                      _pdfCell('${(r['wat'] as double).toStringAsFixed(0)} oz', dark),
+                      _pdfStatusCell(r['watOk'] as bool?, 'Met', 'Low', success, warning),
                     ],
                   );
                 }),
               ],
             ),
+          ],
+
           pw.SizedBox(height: 24),
-          pw.Text('General Kidney Stone Prevention Reminders',
-              style: pw.TextStyle(
-                  fontSize: 11,
-                  fontWeight: pw.FontWeight.bold,
-                  color: pdfTeal)),
-          pw.SizedBox(height: 6),
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              _pdfBullet('Drink at least 2.5–3 liters of water per day (approximately 85–100 oz).', pdfGray),
-              _pdfBullet('Limit dietary oxalate to under 200 mg per day unless otherwise directed.', pdfGray),
-              _pdfBullet('Consume adequate dietary calcium (do not restrict calcium) to bind oxalate in the gut.', pdfGray),
-              _pdfBullet('Limit sodium and animal protein, which can increase urinary calcium and oxalate.', pdfGray),
-              _pdfBullet('Maintain a healthy body weight and avoid high-dose vitamin C supplements.', pdfGray),
-            ],
-          ),
-          pw.SizedBox(height: 16),
           pw.Text(
-            'DISCLAIMER: This report is generated from patient self-reported data in the StoneGuard '
-            'app. It is not a medical diagnosis and should be reviewed by a qualified healthcare '
-            'provider. Always follow your physician\'s specific dietary recommendations.',
-            style: pw.TextStyle(fontSize: 7, color: pdfGray,
-                fontStyle: pw.FontStyle.italic),
+            'Goals: Oxalate ≤ ${_oxalateGoal.toInt()} mg/day · Water ≥ ${_waterGoal.toInt()} oz/day',
+            style: pw.TextStyle(fontSize: 9, color: muted),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            'StoneGuard is a self-tracking tool, not a medical device. '
+            'Always consult your healthcare provider for clinical guidance.',
+            style: pw.TextStyle(
+              fontSize: 8,
+              color: muted,
+              fontStyle: pw.FontStyle.italic,
+            ),
           ),
         ],
       ),
     );
+
     return pdf.save();
   }
 
-  // ── PDF helpers ──────────────────────────────────────────────────────────────
-  pw.Widget _pdfLabelValue(String label, String value, PdfColor color) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.end,
-      children: [
-        pw.Text(label, style: pw.TextStyle(fontSize: 8, color: PdfColor.fromHex('888888'))),
-        pw.Text(value,
-            style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: color)),
-      ],
-    );
-  }
-
-  pw.Widget _pdfStatBox(String label, String value, PdfColor valueColor, PdfColor bg) {
+  pw.Widget _pdfSummaryCard(
+      String label, String value, pw.PdfColor valueColor, pw.PdfColor bg) {
     return pw.Expanded(
       child: pw.Container(
-        padding: const pw.EdgeInsets.all(10),
+        padding: const pw.EdgeInsets.all(8),
         decoration: pw.BoxDecoration(
-            color: bg, borderRadius: pw.BorderRadius.circular(6)),
+          color: bg,
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+        ),
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Text(label,
-                style: pw.TextStyle(fontSize: 7.5,
-                    color: PdfColor.fromHex('888888'), lineSpacing: 2)),
-            pw.SizedBox(height: 4),
+                style: pw.TextStyle(
+                    fontSize: 8,
+                    color: const PdfColor.fromInt(0xFF607D8B))),
+            pw.SizedBox(height: 2),
             pw.Text(value,
-                style: pw.TextStyle(fontSize: 12,
-                    fontWeight: pw.FontWeight.bold, color: valueColor)),
+                style: pw.TextStyle(
+                    fontSize: 11,
+                    fontWeight: pw.FontWeight.bold,
+                    color: valueColor)),
           ],
         ),
       ),
     );
   }
 
-  pw.Widget _tableCell(String text, {bool isHeader = false, PdfColor? textColor}) {
+  pw.Widget _pdfHeaderCell(String text, pw.PdfColor color) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-      child: pw.Text(text,
-          style: pw.TextStyle(
-            fontSize: isHeader ? 9 : 8.5,
-            fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
-            color: textColor,
-          )),
-    );
-  }
-
-  pw.Widget _pdfBullet(String text, PdfColor color) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.only(bottom: 4),
-      child: pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Text('•  ',
-              style: pw.TextStyle(fontSize: 9, color: PdfColor.fromHex('1A8A9A'))),
-          pw.Expanded(
-            child: pw.Text(text,
-                style: pw.TextStyle(fontSize: 9, color: color, lineSpacing: 2)),
-          ),
-        ],
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+            fontSize: 9, fontWeight: pw.FontWeight.bold, color: color),
       ),
     );
   }
 
-  // ── Fix 7: Share actions now route through ExportGuard ───────────────────
+  pw.Widget _pdfCell(String text, pw.PdfColor color) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      child: pw.Text(text,
+          style: pw.TextStyle(fontSize: 9, color: color)),
+    );
+  }
 
-  /// Main share button: build PDF → private dir → OS share sheet → delete.
+  pw.Widget _pdfStatusCell(
+      bool? ok,
+      String goodLabel,
+      String badLabel,
+      pw.PdfColor goodColor,
+      pw.PdfColor badColor) {
+    if (ok == null) return pw.SizedBox();
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      child: pw.Text(
+        ok ? goodLabel : badLabel,
+        style: pw.TextStyle(
+            fontSize: 9,
+            fontWeight: pw.FontWeight.bold,
+            color: ok ? goodColor : badColor),
+      ),
+    );
+  }
+
+  // ── Share flow ────────────────────────────────────────────────────────────
   Future<void> _sharePdf() async {
     setState(() => _isGenerating = true);
     try {
       final bytes = await _buildPdf();
+      if (!mounted) return;
       final now   = DateTime.now();
       final fname = 'stoneguard_report_'
-          '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.pdf';
-
-      final result = await ExportGuard.saveShareAndClear(
+          '${now.year}${now.month.toString().padLeft(2,'0')}${now.day.toString().padLeft(2,'0')}.pdf';
+      await ExportGuard.saveShareAndClear(
         bytes: bytes,
         filename: fname,
-        shareText: 'My StoneGuard kidney stone prevention report for doctor review.',
+        shareText: 'My StoneGuard health report.',
       );
-
-      if (result is SaveFailure && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not save report — please try again.'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not generate report: $e'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Export failed: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isGenerating = false);
     }
@@ -565,7 +387,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
   Future<void> _sharePdfBytes(Uint8List bytes) async {
     final now   = DateTime.now();
     final fname = 'stoneguard_report_'
-        '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.pdf';
+        '${now.year}${now.month.toString().padLeft(2,'0')}${now.day.toString().padLeft(2,'0')}.pdf';
     await ExportGuard.saveShareAndClear(
       bytes: bytes,
       filename: fname,
@@ -584,326 +406,258 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
           builder: (_) => Scaffold(
             appBar: AppBar(
               title: const Text('Report Preview'),
-              backgroundColor: accentTeal,
-              foregroundColor: Colors.white,
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.share_rounded),
-                  onPressed: () => _sharePdfBytes(bytes),
+                  icon: const Icon(Icons.share_outlined),
                   tooltip: 'Share PDF',
+                  onPressed: () => _sharePdfBytes(bytes),
                 ),
               ],
             ),
             body: PdfPreview(
-              build: (_) async => bytes,
+              build: (_) => bytes,
+              allowSharing: false,
+              allowPrinting: true,
               canChangePageFormat: false,
-              canDebug: false,
-              pdfPreviewPageDecoration: const BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(color: Colors.black26, blurRadius: 4)
-                  ]),
             ),
           ),
         ),
       );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Preview failed: $e'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Preview failed: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isGenerating = false);
     }
   }
 
-  // ── UI ────────────────────────────────────────────────────────────────────
+  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        title: const Text('Export to Doctor',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        backgroundColor: accentTeal,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          color: textDark,
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Export Report',
+          style: TextStyle(
+            color: Color(0xFF1A2530),
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+          ),
+        ),
+        centerTitle: false,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: accentTeal))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _sectionCard(
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(
-                            color: accentTeal.withValues(alpha: 0.1),
+          ? const Center(child: CircularProgressIndicator())
+          : SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Header ──
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: accentTeal.withValues(alpha: 0.10),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.description_outlined,
+                                color: accentTeal, size: 24),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Doctor Report',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _userName.isNotEmpty
+                                      ? 'Prepared for $_userName'
+                                      : 'Your hydration & oxalate summary',
+                                  style: const TextStyle(
+                                      fontSize: 12, color: textMuted),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ── Date range picker ──
+                    const Text(
+                      'Report Period',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _dayOptions.map((days) {
+                        final selected = days == _selectedDays;
+                        return GestureDetector(
+                          onTap: () async {
+                            setState(() => _selectedDays = days);
+                            await _loadData();
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? accentTeal
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: selected
+                                    ? accentTeal
+                                    : Colors.grey.shade300,
+                              ),
+                              boxShadow: selected
+                                  ? [
+                                      BoxShadow(
+                                        color: accentTeal.withValues(alpha: 0.25),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      )
+                                    ]
+                                  : [],
+                            ),
+                            child: Text(
+                              _rangeLabel,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: selected ? Colors.white : textMuted,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ── Action buttons ──
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        onPressed: _isGenerating ? null : _previewPdf,
+                        icon: _isGenerating
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.preview_outlined),
+                        label: Text(
+                            _isGenerating ? 'Generating…' : 'Preview Report'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: accentTeal,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          child: const Icon(Icons.picture_as_pdf_rounded,
-                              color: accentTeal, size: 28),
+                          elevation: 0,
                         ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Doctor Report',
-                                  style: TextStyle(
-                                      color: textColor,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Generate a shareable PDF summary of your oxalate & hydration data.',
-                                style: TextStyle(
-                                    color: mutedColor.withValues(alpha: 0.9),
-                                    fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Report Period',
-                      style: TextStyle(
-                          color: textColor,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _periods.map((p) {
-                      final days  = p['days']  as int;
-                      final label = p['label'] as String;
-                      return _periodChip(days, label);
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text('Report Preview',
-                      style: TextStyle(
-                          color: textColor,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 10),
-                  _sectionCard(
-                    child: Column(
-                      children: [
-                        _previewRow(Icons.person_outline, 'Patient', _patientName, accentTeal),
-                        _divider(),
-                        _previewRow(Icons.science_outlined, 'Stone Type', 'Calcium Oxalate', accentTeal),
-                        _divider(),
-                        _previewRow(
-                          Icons.monitor_heart_outlined, 'Avg Oxalate',
-                          '${_avgOxalate.toStringAsFixed(0)} mg/day',
-                          _avgOxalate <= _oxalateGoal ? accentGreen : Colors.redAccent,
-                        ),
-                        _divider(),
-                        _previewRow(
-                          Icons.water_drop_outlined, 'Avg Water',
-                          '${_avgWater.toStringAsFixed(0)} oz/day',
-                          _avgWater >= _waterGoal ? accentTeal : Colors.orange,
-                        ),
-                        _divider(),
-                        _previewRow(Icons.check_circle_outline, 'Days Under Oxalate Goal',
-                            '$_daysUnderGoal / $_selectedDays', accentGreen),
-                        _divider(),
-                        _previewRow(Icons.local_drink_outlined, 'Days Met Water Goal',
-                            '$_daysMetWater / $_selectedDays', accentTeal),
-                        _divider(),
-                        _previewRow(Icons.local_fire_department_outlined,
-                            'Current Streak', '$_currentStreak days', Colors.deepOrange),
-                        _divider(),
-                        _previewRow(Icons.calendar_today_outlined, 'Total Days Logged',
-                            '$_totalDaysLogged days', accentTeal),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _sectionCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('What\'s Included in the PDF',
-                            style: TextStyle(
-                                color: textColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13)),
-                        const SizedBox(height: 10),
-                        _includedItem('📄', 'Patient info & stone type'),
-                        _includedItem('📊', 'Summary stats (averages, goals met)'),
-                        _includedItem('📅', 'Daily log (logged days only, no blank rows)'),
-                        _includedItem('💧', 'Hydration tracking per day'),
-                        _includedItem('👨‍⚕️', 'Note for your physician'),
-                        _includedItem('✅', 'Prevention reminders'),
-                        _includedItem('⚠️', 'Medical disclaimer'),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _isGenerating ? null : _previewPdf,
-                          icon: const Icon(Icons.visibility_outlined, size: 18),
-                          label: const Text('Preview'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: accentTeal,
-                            side: const BorderSide(color: accentTeal),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: OutlinedButton.icon(
+                        onPressed: _isGenerating ? null : _sharePdf,
+                        icon: const Icon(Icons.share_outlined),
+                        label: const Text('Share / Save PDF'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: accentTeal,
+                          side: const BorderSide(color: accentTeal),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: ElevatedButton.icon(
-                          onPressed: _isGenerating ? null : _sharePdf,
-                          icon: _isGenerating
-                              ? const SizedBox(
-                                  width: 18, height: 18,
-                                  child: CircularProgressIndicator(
-                                      color: Colors.white, strokeWidth: 2))
-                              : const Icon(Icons.share_rounded, size: 18),
-                          label: Text(_isGenerating ? 'Generating…' : 'Share PDF'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: accentTeal,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            elevation: 0,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Center(
-                    child: Text(
-                      'Tip: Share directly to email, WhatsApp, or save to Files',
-                      style: TextStyle(
-                          color: mutedColor.withValues(alpha: 0.8),
-                          fontSize: 11),
-                      textAlign: TextAlign.center,
                     ),
-                  ),
-                  const SizedBox(height: 32),
-                ],
+                    const SizedBox(height: 24),
+
+                    // ── Disclaimer ──
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF8E1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: warningOrange.withValues(alpha: 0.30)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.info_outline_rounded,
+                              color: warningOrange, size: 18),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Text(
+                              'This report is a self-tracking summary only — '
+                              'not a clinical document. Share with your doctor '
+                              'as a conversation aid, not a diagnosis.',
+                              style: TextStyle(
+                                  fontSize: 11, color: Color(0xFF5D4037)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-    );
-  }
-
-  // ── UI helpers ────────────────────────────────────────────────────────────
-  Widget _sectionCard({required Widget child}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
-      ),
-      child: child,
-    );
-  }
-
-  Widget _periodChip(int days, String label) {
-    final selected = _selectedDays == days;
-    return GestureDetector(
-      onTap: () {
-        setState(() => _selectedDays = days);
-        _recalcStats();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
-        decoration: BoxDecoration(
-          color: selected ? accentTeal : cardColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? accentTeal : borderColor,
-            width: selected ? 1.5 : 1,
-          ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                      color: accentTeal.withValues(alpha: 0.2),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2))
-                ]
-              : [],
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: selected ? Colors.white : mutedColor,
-            fontWeight: selected ? FontWeight.bold : FontWeight.w500,
-            fontSize: 13,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _previewRow(
-      IconData icon, String label, String value, Color valueColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: accentTeal.withValues(alpha: 0.7)),
-          const SizedBox(width: 10),
-          Expanded(
-              child: Text(label,
-                  style: const TextStyle(color: mutedColor, fontSize: 13))),
-          Text(value,
-              style: TextStyle(
-                  color: valueColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  Widget _divider() =>
-      Divider(height: 1, thickness: 1, color: borderColor.withValues(alpha: 0.5));
-
-  Widget _includedItem(String emoji, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 14)),
-          const SizedBox(width: 8),
-          Text(text, style: const TextStyle(color: mutedColor, fontSize: 12)),
-        ],
-      ),
     );
   }
 }

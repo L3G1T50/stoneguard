@@ -53,7 +53,7 @@ class ConsentManager {
       await _loadConsentInfo(params);
 
       final required = await ConsentInformation.instance.isConsentFormAvailable();
-      final consentStatus = ConsentInformation.instance.consentStatus;
+      final consentStatus = await _getConsentStatus();
 
       if (consentStatus == ConsentStatus.required && required) {
         // Show the UMP form. This is a no-op if the form was already shown
@@ -63,7 +63,7 @@ class ConsentManager {
         }
       }
 
-      final updatedStatus = ConsentInformation.instance.consentStatus;
+      final updatedStatus = await _getConsentStatus();
       if (updatedStatus == ConsentStatus.obtained ||
           updatedStatus == ConsentStatus.notRequired) {
         _status = updatedStatus == ConsentStatus.obtained
@@ -113,6 +113,15 @@ class ConsentManager {
     await MobileAds.instance.initialize();
     _adMobInitialised = true;
     AppLogger.debug('ConsentManager', 'AdMob initialised.');
+  }
+
+  /// Safely retrieves consent status, defaulting to [ConsentStatus.unknown] on error.
+  Future<ConsentStatus> _getConsentStatus() async {
+    try {
+      return ConsentInformation.instance.consentStatus;
+    } catch (_) {
+      return ConsentStatus.unknown;
+    }
   }
 
   /// Reset consent — useful for testing or if the user revokes consent
