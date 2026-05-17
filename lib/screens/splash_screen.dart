@@ -1,39 +1,12 @@
-// ─── SPLASH SCREEN ────────────────────────────────────────────────────
-//
-// Fix 2: Wire ConsentManager.showIfNeeded() into the splash-to-home transition.
-//   • When the user is a returning user going to MainShell, we show the
-//     consent dialog exactly once (ConsentManager gates repeat showings).
-//   • New users see onboarding/setup first; consent is shown on their
-//     first arrival at MainShell instead, so it doesn't interrupt the
-//     onboarding flow.
-//   • If consent was already given/declined in a prior session, the call
-//     is a no-op (returns immediately without showing a dialog).
-//
-// Batch C: Key-loss warning
-//   • main.dart passes showKeyLossWarning: true when checkIntegrity()
-//     returns false.  The dialog is shown HERE instead of via a
-//     postFrameCallback in main(), because context is guaranteed to
-//     exist once _SplashScreenState is mounted.
-//
-// Batch F: Consent gap fix
-//   • ConsentManager.showIfNeeded() is now called in ALL paths that lead
-//     to MainShell (returning user AND post-setup). Previously new users
-//     who completed setup reached MainShell without ever seeing the consent
-//     dialog, so BannerAdWidget silently rendered nothing and they could
-//     never opt in to ads.
+// splash_screen.dart
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../main.dart';
 import '../consent_manager.dart';
-import 'setup_screen.dart';
-import 'onboarding_screen.dart';
+import '../secure_prefs.dart';
+import '../app_logger.dart';
 
 class SplashScreen extends StatefulWidget {
-  /// When true, a one-time dialog is shown after the splash animation
-  /// explaining that encrypted health data was reset (key-loss recovery).
-  final bool showKeyLossWarning;
-
-  const SplashScreen({super.key, this.showKeyLossWarning = false});
+  final bool integrityOk;
+  const SplashScreen({super.key, required this.integrityOk});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -41,214 +14,102 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeAnim;
-  late Animation<double> _scaleAnim;
+  late AnimationController _ctrl;
+  late Animation<double> _fade;
+  late Animation<double> _scale;
+
+  static const Color _teal = Color(0xFF1A8A9A);
+  static const Color _dark = Color(0xFF0D1F2D);
 
   @override
   void initState() {
     super.initState();
-
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    );
-
-    _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
-      ),
-    );
-
-    _scaleAnim = Tween<double>(begin: 0.75, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeOutBack),
-      ),
-    );
-
-    _controller.forward();
-    _goNext();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1200));
+    _fade  = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
+    _scale = Tween<double>(begin: 0.85, end: 1.0).animate(
+        CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack));
+    _ctrl.forward();
+    _init();
   }
 
-  Future<void> _goNext() async {
-    await Future.delayed(const Duration(milliseconds: 2800));
+  Future<void> _init() async {
+    // Minimum splash display time
+    await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
 
-    // Batch C: show key-loss dialog before navigating away, so context
-    // is guaranteed and the user sees it before any data screen loads.
-    if (widget.showKeyLossWarning) {
-      await _showKeyLossDialog();
-      if (!mounted) return;
+    try {
+      // Request consent & init AdMob (Fix 8)
+      await ConsentManager.instance.requestConsentAndInitAdMob(context);
+    } catch (e, st) {
+      AppLogger.error('SplashScreen', 'consent init failed', e, st);
     }
-
-    final prefs = await SharedPreferences.getInstance();
-
-    final hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
-    final hasCompletedSetup = prefs.getBool('has_completed_setup') ?? false;
 
     if (!mounted) return;
-
-    Widget nextScreen;
-
-    if (!hasSeenOnboarding) {
-      // Brand-new user — send to onboarding. Consent shown after setup.
-      nextScreen = const OnboardingScreen();
-    } else if (!hasCompletedSetup) {
-      // User saw onboarding but hasn't finished setup. Consent shown after setup.
-      nextScreen = const SetupScreen();
-    } else {
-      // Returning user OR user who just finished setup (SetupScreen pops back
-      // here via Navigator.pushReplacement). Show consent if not yet asked.
-      // Batch F: this was the only path that called showIfNeeded().
-      // The setup-completion path now also calls it (see SetupScreen).
-      await ConsentManager.showIfNeeded(context);
-      if (!mounted) return;
-      nextScreen = const MainShell();
-    }
-
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 600),
-        pageBuilder: (context, animation, secondaryAnimation) => nextScreen,
-        transitionsBuilder:
-            (context, animation, secondaryAnimation, child) =>
-            FadeTransition(opacity: animation, child: child),
-      ),
-    );
+    _navigate();
   }
 
-  /// One-time dialog shown when the AES key was wiped (app-data clear,
-  /// OS Keystore rotation, device restore). Blocks navigation until
-  /// the user acknowledges so they aren't confused by missing data.
-  Future<void> _showKeyLossDialog() async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        title: const Text('Data Reset Detected'),
-        content: const Text(
-          'KidneyShield could not read your saved data — this usually '
-          'happens after clearing app storage or restoring a backup.\n\n'
-          'Your daily entries and goals have been reset to defaults. '
-          'Your history (if exported) can be re-imported from the '
-          'History screen.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK, Got It'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _navigate() async {
+    try {
+      final onboarded = await SecurePrefs.instance
+          .getBool('onboarding_complete', defaultValue: false);
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(
+        context,
+        onboarded ? '/home' : '/onboarding',
+      );
+    } catch (e, st) {
+      AppLogger.error('SplashScreen', 'navigation failed', e, st);
+      if (mounted) Navigator.pushReplacementNamed(context, '/onboarding');
+    }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _ctrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: _dark,
       body: Center(
         child: FadeTransition(
-          opacity: _fadeAnim,
+          opacity: _fade,
           child: ScaleTransition(
-            scale: _scaleAnim,
+            scale: _scale,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: _teal.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                    border:
+                        Border.all(color: _teal.withValues(alpha: 0.4), width: 2),
+                  ),
+                  child: const Icon(Icons.shield_outlined,
+                      color: _teal, size: 52),
+                ),
+                const SizedBox(height: 24),
                 const Text(
-                  'KidneyShield',
+                  'StoneGuard',
                   style: TextStyle(
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF263238),
+                    fontSize: 32,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
                     letterSpacing: 1.2,
                   ),
                 ),
-                const SizedBox(height: 48),
-                Container(
-                  height: 200,
-                  width: 200,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFFF7F9FB), Color(0xFFE0E5EC)],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 32,
-                        spreadRadius: 2,
-                        offset: const Offset(0, 16),
-                      )
-                    ],
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Icon(
-                        Icons.shield,
-                        size: 130,
-                        color: Colors.grey.shade400,
-                      ),
-                      Positioned(
-                        top: 48,
-                        child: Container(
-                          width: 75,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.white.withValues(alpha: 0.65),
-                                Colors.white.withValues(alpha: 0.0),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      ShaderMask(
-                        shaderCallback: (b) => const LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Color(0xFF00B8D4), Color(0xFF0097A7)],
-                        ).createShader(b),
-                        child: const Icon(
-                          Icons.water_drop,
-                          size: 54,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 36),
+                const SizedBox(height: 8),
                 Text(
-                  'Protect Your Health',
+                  'Kidney stone prevention, simplified.',
                   style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade500,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-                const SizedBox(height: 48),
-                const SizedBox(
-                  height: 28,
-                  width: 28,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.teal),
+                    fontSize: 13,
+                    color: Colors.white.withValues(alpha: 0.55),
                   ),
                 ),
               ],

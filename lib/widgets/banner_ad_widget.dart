@@ -1,9 +1,4 @@
-// ─── BANNER AD WIDGET ────────────────────────────────────────────────────────
-// Fix 9 (follow-up): Uses AdConfig.bannerAdUnitId instead of a hardcoded
-// production string so debug builds serve test ads and release builds serve
-// real ads. Also gates ad loading behind ConsentManager so ads are never
-// loaded before the user has explicitly accepted.
-
+// banner_ad_widget.dart
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../ad_config.dart';
@@ -17,63 +12,48 @@ class BannerAdWidget extends StatefulWidget {
 }
 
 class _BannerAdWidgetState extends State<BannerAdWidget> {
-  BannerAd? _bannerAd;
-  bool _isLoaded = false;
+  BannerAd? _ad;
+  bool _loaded = false;
 
   @override
   void initState() {
     super.initState();
-    _loadIfConsented();
+    // Only load if consent has been obtained (Fix 9 — canShowAds is sync)
+    if (ConsentManager.instance.canShowAds) {
+      _loadAd();
+    }
   }
 
-  /// Only loads an ad when the user has explicitly accepted ads.
-  /// If they declined or haven't been asked yet, renders nothing.
-  Future<void> _loadIfConsented() async {
-    final consented = await ConsentManager.hasConsented();
-    if (!consented) return; // No consent → no ad, no tracking.
-    if (!mounted) return;
-
-    BannerAd(
-      // AdConfig.bannerAdUnitId returns:
-      //   debug   → Google's official test banner unit (safe to click)
-      //   release → your real production unit ID
-      adUnitId: AdConfig.bannerAdUnitId,
+  void _loadAd() {
+    _ad = BannerAd(
+      adUnitId: AdConfig.bannerHome,
       size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(
-        onAdLoaded: (ad) {
-          if (!mounted) {
-            ad.dispose();
-            return;
-          }
-          setState(() {
-            _bannerAd = ad as BannerAd;
-            _isLoaded = true;
-          });
+        onAdLoaded: (_) {
+          if (mounted) setState(() => _loaded = true);
         },
         onAdFailedToLoad: (ad, error) {
           ad.dispose();
+          _ad = null;
         },
       ),
-    ).load();
+    )..load();
   }
 
   @override
   void dispose() {
-    _bannerAd?.dispose();
+    _ad?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoaded && _bannerAd != null) {
-      return SizedBox(
-        width: _bannerAd!.size.width.toDouble(),
-        height: _bannerAd!.size.height.toDouble(),
-        child: AdWidget(ad: _bannerAd!),
-      );
-    }
-    // Returns nothing if consent was declined or ad hasn't loaded yet.
-    return const SizedBox.shrink();
+    if (!_loaded || _ad == null) return const SizedBox.shrink();
+    return SizedBox(
+      width: _ad!.size.width.toDouble(),
+      height: _ad!.size.height.toDouble(),
+      child: AdWidget(ad: _ad!),
+    );
   }
 }

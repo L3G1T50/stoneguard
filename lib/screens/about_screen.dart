@@ -1,316 +1,293 @@
-// ─── ABOUT SCREEN ──────────────────────────────────────────────────
-// Preflight Batch 1: Rebranded StoneGuard → KidneyShield throughout.
-// Batch H: Migrated from isolated local colour constants to AppTheme
-//   tokens (AppColors, AppTextStyles, AppSpacing, AppCard, AppDynamic).
+// about_screen.dart
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../theme/app_theme.dart';
-import '../widgets/gradient_scaffold.dart';
-import 'privacy_policy_screen.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
 
-  // Hosted privacy policy URL (matches Play Console declaration)
-  static const String _privacyUrl =
-      'https://www.freeprivacypolicy.com/live/c256b9ff-8fd7-4252-ac3b-2cc80b29633f';
-
-  Future<void> _launchUrl(BuildContext context, String url) async {
-    final uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open link.')),
-        );
-      }
-    }
-  }
-
-  void _openInAppPrivacyPolicy(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
-    );
-  }
+  static const Color _teal   = Color(0xFF1A8A9A);
+  static const Color _dark   = Color(0xFF1A2530);
+  static const Color _muted  = Color(0xFF607D8B);
+  static const Color _bgColor= Color(0xFFF4F8FA);
 
   @override
   Widget build(BuildContext context) {
-    return GradientScaffold(
-      title: 'About KidneyShield',
-      body: SingleChildScrollView(
-        padding: AppSpacing.pagePadding.add(
-            const EdgeInsets.only(bottom: 40)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-
-            // ── Hero ──────────────────────────────────────────────────
-            Center(
-              child: Column(
-                children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: AppColors.teal.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Icon(Icons.shield_rounded,
-                        size: 44, color: AppColors.teal),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    'KidneyShield',
-                    style: AppTextStyles.heading,
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Calcium Oxalate Stone Prevention',
-                    style: TextStyle(
-                        color: AppColors.teal,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Built by a survivor, for survivors.',
-                    style: AppTextStyles.body.copyWith(
-                        fontStyle: FontStyle.italic),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // ── My Story ─────────────────────────────────────────────
-            _buildSection(
-              icon: Icons.person_outline_rounded,
-              title: 'My Story',
-              content:
-                  'My journey with kidney stones began at just 10 years old '
-                  '-- a 10/10 pain emergency that landed me in the hospital '
-                  'in the middle of the night. Over the years, I have faced '
-                  'this battle 11 times and counting. Each stone has reinforced '
-                  'how important it is to stay on top of hydration and diet '
-                  'every single day. It is not just a health goal for me '
-                  '-- it is a necessity.',
-            ),
-            const SizedBox(height: 16),
-
-            // ── Why I Built This ─────────────────────────────────────
-            _buildSection(
-              icon: Icons.lightbulb_outline_rounded,
-              title: 'Why I Built This App',
-              content:
-                  'I tried other apps, but could not find a single one built '
-                  'specifically for calcium oxalate kidney stone sufferers. '
-                  'It is hard to remember which foods to avoid every day '
-                  'and to stay consistent with drinking enough water. '
-                  'That gap inspired me to build KidneyShield -- '
-                  'a one-of-a-kind app that benefits not just myself, '
-                  'but everyone who deals with stones.',
-            ),
-            const SizedBox(height: 16),
-
-            // ── What It Does ─────────────────────────────────────────
-            _buildSection(
-              icon: Icons.favorite_outline_rounded,
-              title: 'What KidneyShield Does',
-              content:
-                  'KidneyShield is designed to be simple enough to use every day, '
-                  'while being powerful enough to show you the bigger picture. '
-                  'It tracks your hydration, monitors your oxalate intake, '
-                  'and helps you understand where you are doing well and '
-                  'where you can improve.\n\n'
-                  'That real data can help you have more informed conversations '
-                  'with your healthcare provider about your daily habits. '
-                  'Knowledge is prevention -- and KidneyShield puts that '
-                  'knowledge in your hands.',
-            ),
-            const SizedBox(height: 24),
-
-            // ── Quote ────────────────────────────────────────────────
-            AppCard(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const Icon(Icons.format_quote_rounded,
-                      color: AppColors.teal, size: 28),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Wondering if you are on track? '
-                          'With KidneyShield, you will know for sure.',
-                      style: AppTextStyles.body.copyWith(
-                          fontStyle: FontStyle.italic),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // ── Disclaimer ───────────────────────────────────────────
-            // Play Store Health Policy: medical disclaimer must appear in-app.
-            // "not a medical device" phrasing required for Health Apps Declaration.
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: AppDynamic.border(
-                accentColor: AppColors.warning,
-                borderRadius: 12,
-                bgAlpha: 0.07,
-                borderAlpha: 0.30,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.info_outline_rounded,
-                      color: AppColors.warning, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'KidneyShield is a self-tracking tool, not a medical device. '
-                          'It does not diagnose, treat, cure, or replace medical advice, '
-                          'clinical evaluation, lab results, or imaging. '
-                          'Always consult your healthcare provider for '
-                          'diagnosis and treatment.',
-                      style: AppTextStyles.body,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // ── Legal / info tiles ────────────────────────────────────
-            AppCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  // In-app privacy policy (full text, no external browser needed)
-                  _buildActionTile(
-                    context,
-                    icon: Icons.privacy_tip_outlined,
-                    label: 'Privacy Policy',
-                    isFirst: true,
-                    onTap: () => _openInAppPrivacyPolicy(context),
-                    trailing: const Icon(Icons.chevron_right_rounded,
-                        color: AppColors.teal, size: 20),
-                  ),
-                  const Divider(height: 1),
-                  // External hosted policy (for Play Console link)
-                  _buildActionTile(
-                    context,
-                    icon: Icons.open_in_new_rounded,
-                    label: 'View Hosted Policy',
-                    onTap: () => _launchUrl(context, _privacyUrl),
-                    trailing: const Icon(Icons.open_in_new_rounded,
-                        color: AppColors.teal, size: 16),
-                  ),
-                  const Divider(height: 1),
-                  _buildInfoTile(
-                    icon: Icons.shield_outlined,
-                    label: 'Data Storage',
-                    value: 'On-device only',
-                  ),
-                  const Divider(height: 1),
-                  _buildInfoTile(
-                    icon: Icons.science_outlined,
-                    label: 'Stone Type',
-                    value: 'Calcium Oxalate (v1)',
-                  ),
-                  const Divider(height: 1),
-                  _buildInfoTile(
-                    icon: Icons.info_outline,
-                    label: 'Version',
-                    value: '1.0.0',
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            Center(
-              child: Text(
-                '\u00A9 2026 KidneyShield. Made with love for stone survivors.',
-                style: AppTextStyles.micro,
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ],
+    return Scaffold(
+      backgroundColor: _bgColor,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          color: _dark,
+          onPressed: () => Navigator.pop(context),
         ),
+        title: const Text(
+          'About StoneGuard',
+          style: TextStyle(
+            color: Color(0xFF1A2530),
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+          ),
+        ),
+        centerTitle: false,
       ),
-    );
-  }
-
-  Widget _buildSection({
-    required IconData icon,
-    required String title,
-    required String content,
-  }) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: AppColors.teal, size: 20),
-              const SizedBox(width: 8),
-              Text(title, style: AppTextStyles.itemTitle),
+              // App logo + version card
+              _card(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: _teal.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(Icons.shield_outlined,
+                          color: _teal, size: 34),
+                    ),
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'StoneGuard',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: _dark,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Version 1.0.0',
+                            style: TextStyle(fontSize: 12, color: _muted),
+                          ),
+                          Text(
+                            'Kidney stone prevention tracker',
+                            style: TextStyle(fontSize: 12, color: _muted),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Mission
+              const Text(
+                'Our Mission',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: _dark,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _card(
+                child: const Text(
+                  'StoneGuard helps calcium oxalate kidney stone formers '
+                  'stay on top of their daily hydration and dietary oxalate '
+                  'goals — the two most evidence-based lifestyle levers for '
+                  'reducing recurrence risk.\n\n'
+                  'Built by a kidney stone former, for kidney stone formers.',
+                  style: TextStyle(fontSize: 13, color: _muted, height: 1.55),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Key features
+              const Text(
+                'Key Features',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: _dark,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _featureCard(Icons.water_drop_outlined,
+                  'Hydration Tracker',
+                  'Log water intake and stay above your daily fluid goal.'),
+              const SizedBox(height: 8),
+              _featureCard(Icons.restaurant_menu_outlined,
+                  'Oxalate Logger',
+                  'Search 400+ foods and track daily oxalate mg.'),
+              const SizedBox(height: 8),
+              _featureCard(Icons.trending_up_outlined,
+                  'Progress Charts',
+                  'Weekly and monthly trend visualisations.'),
+              const SizedBox(height: 8),
+              _featureCard(Icons.picture_as_pdf_outlined,
+                  'Doctor Report',
+                  'Export a PDF summary to share at your next appointment.'),
+              const SizedBox(height: 16),
+
+              // Disclaimer
+              _disclaimerCard(),
+              const SizedBox(height: 16),
+
+              // Links
+              const Text(
+                'Links',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: _dark,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _linkTile(
+                  Icons.privacy_tip_outlined,
+                  'Privacy Policy',
+                  'https://sites.google.com/view/stoneguardprivacy/home',
+                  context),
+              const SizedBox(height: 32),
             ],
           ),
-          const SizedBox(height: 10),
-          Text(content, style: AppTextStyles.body),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionTile(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    Widget? trailing,
-    bool isFirst = false,
-  }) {
-    return InkWell(
-      borderRadius: isFirst
-          ? const BorderRadius.vertical(top: Radius.circular(14))
-          : BorderRadius.zero,
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Icon(icon, color: AppColors.teal, size: 20),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(label, style: AppTextStyles.itemTitle),
-            ),
-            if (trailing != null) trailing,
-          ],
         ),
       ),
     );
   }
 
-  Widget _buildInfoTile({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+  Widget _card({required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  Widget _featureCard(IconData icon, String title, String desc) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.textHint, size: 20),
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: _teal.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: _teal, size: 20),
+          ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(label, style: AppTextStyles.itemTitle),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _dark)),
+                const SizedBox(height: 2),
+                Text(desc,
+                    style:
+                        const TextStyle(fontSize: 11, color: _muted)),
+              ],
+            ),
           ),
-          Text(value, style: AppTextStyles.body),
         ],
+      ),
+    );
+  }
+
+  Widget _disclaimerCard() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8E1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF57C00).withValues(alpha: 0.30)),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline_rounded,
+              color: Color(0xFFF57C00), size: 18),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'StoneGuard is a wellness tracking tool, not a medical device. '
+              'It does not diagnose, treat, or prevent any condition. Always '
+              'follow your doctor\'s advice regarding kidney stone management.',
+              style:
+                  TextStyle(fontSize: 11, color: Color(0xFF5D4037), height: 1.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _linkTile(
+      IconData icon, String label, String url, BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () async {
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) await launchUrl(uri);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: _teal, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(label,
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: _dark)),
+            ),
+            const Icon(Icons.chevron_right_rounded,
+                color: _muted, size: 20),
+          ],
+        ),
       ),
     );
   }
