@@ -34,30 +34,26 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _init() async {
-    // Minimum splash display time
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
-
     try {
-      // Request consent & init AdMob (Fix 8)
       await ConsentManager.instance.requestConsentAndInitAdMob(context);
     } catch (e, st) {
       AppLogger.error('SplashScreen', 'consent init failed', e, st);
     }
-
     if (!mounted) return;
     _navigate();
   }
 
   Future<void> _navigate() async {
     try {
-      final onboarded = await SecurePrefs.instance
-          .getBool('onboarding_complete', defaultValue: false);
+      // SecurePrefs has no getBool — read bool stored as string
+      final raw = await SecurePrefs.instance
+          .getString('onboarding_complete', defaultValue: 'false');
+      final onboarded = raw == 'true';
       if (!mounted) return;
       Navigator.pushReplacementNamed(
-        context,
-        onboarded ? '/home' : '/onboarding',
-      );
+          context, onboarded ? '/home' : '/onboarding');
     } catch (e, st) {
       AppLogger.error('SplashScreen', 'navigation failed', e, st);
       if (mounted) Navigator.pushReplacementNamed(context, '/onboarding');
@@ -88,30 +84,24 @@ class _SplashScreenState extends State<SplashScreen>
                   decoration: BoxDecoration(
                     color: _teal.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
-                    border:
-                        Border.all(color: _teal.withValues(alpha: 0.4), width: 2),
+                    border: Border.all(
+                        color: _teal.withValues(alpha: 0.4), width: 2),
                   ),
                   child: const Icon(Icons.shield_outlined,
                       color: _teal, size: 52),
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  'StoneGuard',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    letterSpacing: 1.2,
-                  ),
-                ),
+                const Text('StoneGuard',
+                    style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: 1.2)),
                 const SizedBox(height: 8),
-                Text(
-                  'Kidney stone prevention, simplified.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white.withValues(alpha: 0.55),
-                  ),
-                ),
+                Text('Kidney stone prevention, simplified.',
+                    style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: 0.55))),
               ],
             ),
           ),

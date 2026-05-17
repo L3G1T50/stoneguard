@@ -1,7 +1,6 @@
 // setup_screen.dart
 //
-// image_picker re-added to pubspec.yaml.
-// _pickAvatar() stubbed with snackbar pending Play permissions review.
+// SecurePrefs has no setBool — store bool as string 'true'/'false'.
 import 'package:flutter/material.dart';
 import '../secure_prefs.dart';
 import '../app_logger.dart';
@@ -19,18 +18,12 @@ class _SetupScreenState extends State<SetupScreen> {
   static const Color _muted = Color(0xFF607D8B);
 
   final _nameCtrl = TextEditingController();
-  int    _step    = 0;
-  bool   _saving  = false;
+  bool _saving    = false;
 
-  // Stubbed: image_picker loaded but avatar upload pending Play review.
   Future<void> _pickAvatar() async {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text(
-          'Avatar upload coming soon! '
-          'This feature is pending Play Store permissions review.',
-        ),
-      ),
+          content: Text('Avatar upload coming soon!')),
     );
   }
 
@@ -39,7 +32,8 @@ class _SetupScreenState extends State<SetupScreen> {
     try {
       final sp = SecurePrefs.instance;
       await sp.setString('user_name', _nameCtrl.text.trim());
-      await sp.setBool('onboarding_complete', true);
+      // SecurePrefs has no setBool — store as string
+      await sp.setString('onboarding_complete', 'true');
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
     } catch (e, st) {
@@ -65,11 +59,11 @@ class _SetupScreenState extends State<SetupScreen> {
       backgroundColor: const Color(0xFFF4F8FA),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Logo
               Container(
                 width: 56,
                 height: 56,
@@ -77,39 +71,32 @@ class _SetupScreenState extends State<SetupScreen> {
                   color: _teal.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child:
-                    const Icon(Icons.shield_outlined, color: _teal, size: 30),
+                child: const Icon(Icons.shield_outlined,
+                    color: _teal, size: 30),
               ),
               const SizedBox(height: 24),
-              const Text(
-                'Welcome to StoneGuard',
-                style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: _dark),
-              ),
+              const Text('Welcome to StoneGuard',
+                  style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: _dark)),
               const SizedBox(height: 8),
-              const Text(
-                "Let's personalise your experience.",
-                style: TextStyle(fontSize: 14, color: _muted),
-              ),
+              const Text("Let's personalise your experience.",
+                  style: TextStyle(fontSize: 14, color: _muted)),
               const SizedBox(height: 32),
-
-              // Name field
-              const Text(
-                'What should we call you?',
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: _dark),
-              ),
+              const Text('What should we call you?',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: _dark)),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _nameCtrl,
                 textCapitalization: TextCapitalization.words,
                 decoration: InputDecoration(
                   hintText: 'Your name',
-                  hintStyle: const TextStyle(color: Color(0xFFB0BEC5)),
+                  hintStyle:
+                      const TextStyle(color: Color(0xFFB0BEC5)),
                   filled: true,
                   fillColor: Colors.white,
                   contentPadding: const EdgeInsets.symmetric(
@@ -126,8 +113,6 @@ class _SetupScreenState extends State<SetupScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // Avatar (stubbed)
               GestureDetector(
                 onTap: _pickAvatar,
                 child: Row(
@@ -142,28 +127,21 @@ class _SetupScreenState extends State<SetupScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Add a profile photo',
-                          style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: _dark),
-                        ),
-                        Text(
-                          'Optional · coming soon',
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: _muted.withValues(alpha: 0.7)),
-                        ),
+                        const Text('Add a profile photo',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: _dark)),
+                        Text('Optional · coming soon',
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: _muted.withValues(alpha: 0.7))),
                       ],
                     ),
                   ],
                 ),
               ),
-
               const Spacer(),
-
-              // Get started button
               SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -173,8 +151,7 @@ class _SetupScreenState extends State<SetupScreen> {
                     backgroundColor: _teal,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
+                        borderRadius: BorderRadius.circular(14)),
                     elevation: 0,
                   ),
                   child: _saving
@@ -182,13 +159,11 @@ class _SetupScreenState extends State<SetupScreen> {
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Text(
-                          'Get Started',
+                              strokeWidth: 2, color: Colors.white))
+                      : const Text('Get Started',
                           style: TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.w700),
-                        ),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700)),
                 ),
               ),
             ],
