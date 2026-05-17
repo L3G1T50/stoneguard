@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   google_fonts: ^6.2.1
-  # image_picker removed — unused in v1.0 (re-add when photo feature ships)
+  image_picker: ^1.1.2
   flutter_local_notifications: ^18.0.0
   timezone: ^0.9.4
   fl_chart: ^0.69.0

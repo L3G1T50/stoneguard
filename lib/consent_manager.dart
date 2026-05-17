@@ -3,7 +3,7 @@
 // Fix 8 — GDPR Ad Consent Wiring
 //
 // Problem: MobileAds.instance.initialize() was being called at cold start in
-// main.dart before the user’s consent status was known. Under GDPR/CCPA this
+// main.dart before the user's consent status was known. Under GDPR/CCPA this
 // is a policy violation — the SDK must not load personalised ads until the
 // user has either granted consent or is determined to be outside a regulated
 // region.
@@ -52,9 +52,8 @@ class ConsentManager {
       // Load / refresh the consent information.
       await _loadConsentInfo(params);
 
-      final info = ConsentInformation.instance;
-      final required = await info.isConsentFormAvailable();
-      final consentStatus = info.consentStatus;
+      final required = await ConsentInformation.instance.isConsentFormAvailable();
+      final consentStatus = ConsentInformation.instance.consentStatus;
 
       if (consentStatus == ConsentStatus.required && required) {
         // Show the UMP form. This is a no-op if the form was already shown
@@ -64,7 +63,7 @@ class ConsentManager {
         }
       }
 
-      final updatedStatus = info.consentStatus;
+      final updatedStatus = ConsentInformation.instance.consentStatus;
       if (updatedStatus == ConsentStatus.obtained ||
           updatedStatus == ConsentStatus.notRequired) {
         _status = updatedStatus == ConsentStatus.obtained
@@ -73,14 +72,14 @@ class ConsentManager {
         await _initAdMob();
       } else {
         _status = AdConsentStatus.required;
-        AppLogger.info(
+        AppLogger.debug(
             'ConsentManager', 'Consent required but not yet obtained.');
       }
     } catch (e, st) {
       AppLogger.error(
           'ConsentManager', 'requestConsentAndInitAdMob failed', e, st);
       // Fail open for users outside regulated regions: attempt AdMob init
-      // so we don’t silently lose revenue on non-GDPR traffic.
+      // so we don't silently lose revenue on non-GDPR traffic.
       await _initAdMob();
     }
   }
@@ -113,7 +112,7 @@ class ConsentManager {
     if (_adMobInitialised) return;
     await MobileAds.instance.initialize();
     _adMobInitialised = true;
-    AppLogger.info('ConsentManager', 'AdMob initialised.');
+    AppLogger.debug('ConsentManager', 'AdMob initialised.');
   }
 
   /// Reset consent — useful for testing or if the user revokes consent

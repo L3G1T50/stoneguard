@@ -6,7 +6,7 @@ import 'package:kidneyshield/main.dart';
 void main() {
   testWidgets('MyApp smoke test — renders without crashing',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const MyApp(integrityOk: true));
     // The app should mount without throwing.
     expect(find.byType(MaterialApp), findsOneWidget);
   });
