@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'app_logger.dart';
 import 'secure_prefs.dart';
+import 'services/revenue_cat_service.dart';
+import 'services/subscription_notifier.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/home_shield_screen.dart';
@@ -23,13 +25,17 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
+/// App-wide subscription notifier — initialised in main() before runApp().
+/// Any widget can read it via: SubscriptionNotifier.of(context)
+final SubscriptionNotifier subscriptionNotifier = SubscriptionNotifier();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Fix 12 — Global Flutter error handler
+  // Global Flutter error handler
   FlutterError.onError = AppLogger.flutterError;
 
-  // Fix 12 — Catch async errors outside the widget tree
+  // Catch async errors outside the widget tree
   WidgetsBinding.instance.platformDispatcher.onError = (error, stack) {
     AppLogger.error('PlatformDispatcher', error.toString(), error, stack);
     return true;
@@ -41,11 +47,25 @@ Future<void> main() async {
   const initSettings = InitializationSettings(android: androidSettings);
   await flutterLocalNotificationsPlugin.initialize(initSettings);
 
-  // Fix 4 — Key-loss integrity check
+  // Key-loss integrity check
   final integrityOk = await SecurePrefs.instance.checkIntegrity();
+
+  // ── RevenueCat initialisation ────────────────────────────────────────────
+  // Initialise the SDK before runApp so subscription status is ready
+  // as early as possible. Anonymous user ID used (no auth layer yet).
+  await RevenueCatService().initialise();
+
+  // Fire the first subscriber-status fetch in the background.
+  // The notifier starts with isLoading = true; widgets show a loader until
+  // this completes and notifyListeners() fires.
+  unawaited(subscriptionNotifier.init());
+  // ─────────────────────────────────────────────────────────────────────────
 
   runApp(MyApp(integrityOk: integrityOk));
 }
+
+// Suppress "unawaited future" lint for intentional fire-and-forget calls.
+void unawaited(Future<void> future) {}
 
 class MyApp extends StatefulWidget {
   final bool integrityOk;
@@ -91,32 +111,38 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'StoneGuard',
-      navigatorKey: navigatorKey,
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1A8A9A),
-          brightness: Brightness.light,
+    // ── SubscriptionProvider wraps the entire app ────────────────────────
+    // This makes `SubscriptionNotifier.of(context)` available to every
+    // widget in the tree — screens, dialogs, bottom sheets, everything.
+    return SubscriptionProvider(
+      notifier: subscriptionNotifier,
+      child: MaterialApp(
+        title: 'StoneGuard',
+        navigatorKey: navigatorKey,
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF1A8A9A),
+            brightness: Brightness.light,
+          ),
+          useMaterial3: true,
+          fontFamily: 'Nunito',
         ),
-        useMaterial3: true,
-        fontFamily: 'Nunito',
+        initialRoute: '/',
+        routes: {
+          '/':           (_) => SplashScreen(integrityOk: widget.integrityOk),
+          '/onboarding': (_) => const OnboardingScreen(),
+          '/setup':      (_) => const SetupScreen(),
+          '/home':       (_) => const HomeShieldScreen(),
+          '/progress':   (_) => const ProgressScreen(),
+          '/history':    (_) => const HistoryScreen(),
+          '/doctor':     (_) => const DoctorViewScreen(),
+          '/export':     (_) => const ExportReportScreen(),
+          '/settings':   (_) => const SettingsScreen(),
+          '/about':      (_) => const AboutScreen(),
+          '/privacy':    (_) => const PrivacyPolicyScreen(),
+        },
       ),
-      initialRoute: '/',
-      routes: {
-        '/':           (_) => SplashScreen(integrityOk: widget.integrityOk),
-        '/onboarding': (_) => const OnboardingScreen(),
-        '/setup':      (_) => const SetupScreen(),
-        '/home':       (_) => const HomeShieldScreen(),
-        '/progress':   (_) => const ProgressScreen(),
-        '/history':    (_) => const HistoryScreen(),
-        '/doctor':     (_) => const DoctorViewScreen(),
-        '/export':     (_) => const ExportReportScreen(),
-        '/settings':   (_) => const SettingsScreen(),
-        '/about':      (_) => const AboutScreen(),
-        '/privacy':    (_) => const PrivacyPolicyScreen(),
-      },
     );
   }
 }
