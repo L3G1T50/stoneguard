@@ -16,16 +16,15 @@ import 'screens/doctor_view_screen.dart';
 import 'screens/export_report_screen.dart';
 import 'screens/privacy_policy_screen.dart';
 import 'screens/setup_screen.dart';
+import 'widgets/premium_gate.dart';
 
 /// Global notifications plugin instance.
-/// Declared here so home_shield_screen.dart (and any other screen)
-/// can import it from main.dart without creating duplicate instances.
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-/// App-wide subscription notifier — initialised in main() before runApp().
+/// App-wide subscription notifier — initialised before runApp().
 /// Any widget can read it via: SubscriptionNotifier.of(context)
 final SubscriptionNotifier subscriptionNotifier = SubscriptionNotifier();
 
@@ -41,7 +40,7 @@ Future<void> main() async {
     return true;
   };
 
-  // Initialise local notifications (Android settings; iOS handled by plugin)
+  // Initialise local notifications
   const androidSettings =
       AndroidInitializationSettings('@mipmap/ic_launcher');
   const initSettings = InitializationSettings(android: androidSettings);
@@ -50,21 +49,14 @@ Future<void> main() async {
   // Key-loss integrity check
   final integrityOk = await SecurePrefs.instance.checkIntegrity();
 
-  // ── RevenueCat initialisation ────────────────────────────────────────────
-  // Initialise the SDK before runApp so subscription status is ready
-  // as early as possible. Anonymous user ID used (no auth layer yet).
+  // ── RevenueCat ─────────────────────────────────────────────────────
   await RevenueCatService().initialise();
-
-  // Fire the first subscriber-status fetch in the background.
-  // The notifier starts with isLoading = true; widgets show a loader until
-  // this completes and notifyListeners() fires.
   unawaited(subscriptionNotifier.init());
   // ─────────────────────────────────────────────────────────────────────────
 
   runApp(MyApp(integrityOk: integrityOk));
 }
 
-// Suppress "unawaited future" lint for intentional fire-and-forget calls.
 void unawaited(Future<void> future) {}
 
 class MyApp extends StatefulWidget {
@@ -111,9 +103,6 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    // ── SubscriptionProvider wraps the entire app ────────────────────────
-    // This makes `SubscriptionNotifier.of(context)` available to every
-    // widget in the tree — screens, dialogs, bottom sheets, everything.
     return SubscriptionProvider(
       notifier: subscriptionNotifier,
       child: MaterialApp(
@@ -136,8 +125,26 @@ class _MyAppState extends State<MyApp> {
           '/home':       (_) => const HomeShieldScreen(),
           '/progress':   (_) => const ProgressScreen(),
           '/history':    (_) => const HistoryScreen(),
-          '/doctor':     (_) => const DoctorViewScreen(),
-          '/export':     (_) => const ExportReportScreen(),
+
+          // ── PREMIUM-GATED ROUTES ───────────────────────────────────────
+          // Doctor Report: high-value clinical feature — Plus only
+          '/doctor': (_) => const PremiumGate(
+            featureName: 'Doctor Report',
+            lockedSubtitle:
+                'Generate a full clinical PDF report for your urologist.\n'
+                'Upgrade to StoneGuard Plus to unlock it.',
+            child: DoctorViewScreen(),
+          ),
+          // Export Report: PDF download — Plus only
+          '/export': (_) => const PremiumGate(
+            featureName: 'Export Report',
+            lockedSubtitle:
+                'Export and share your health data as a PDF.\n'
+                'Upgrade to StoneGuard Plus to unlock it.',
+            child: ExportReportScreen(),
+          ),
+          // ─────────────────────────────────────────────────────────────────
+
           '/settings':   (_) => const SettingsScreen(),
           '/about':      (_) => const AboutScreen(),
           '/privacy':    (_) => const PrivacyPolicyScreen(),
