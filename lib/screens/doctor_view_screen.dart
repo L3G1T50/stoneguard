@@ -236,7 +236,7 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
 
     final buf = StringBuffer();
     buf.writeln('════════════════════════════════');
-    buf.writeln('   StoneGuard — Doctor Report');
+    buf.writeln('   KidneyShield — Doctor Report');
     buf.writeln('════════════════════════════════');
     buf.writeln('${patLine}Generated : ${_fmt(now)}');
     buf.writeln('Period    : $dateFrom → $dateTo ($_daysBack-day window)');
@@ -275,7 +275,7 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     }
     buf.writeln();
     buf.writeln('─── DISCLAIMER ─────────────────');
-    buf.writeln('StoneGuard is a self-tracking tool only.');
+    buf.writeln('KidneyShield is a self-tracking tool only.');
     buf.writeln('This report does not replace clinical evaluation,');
     buf.writeln('lab results, imaging, or medical advice.');
     buf.writeln('Please review with your healthcare provider.');
@@ -309,9 +309,7 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
             onSelected: (val) async {
               if (val == 'text') {
                 final text = _buildReportText();
-                // Fix C: Share.share is fire-and-forget but we still guard
-                // any post-share work (future-proofing for analytics hooks).
-                await Share.share(text, subject: 'StoneGuard Doctor Report');
+                await Share.share(text, subject: 'KidneyShield Doctor Report');
                 if (!mounted) return;
               } else if (val == 'pdf') {
                 if (!context.mounted) return;
@@ -658,8 +656,6 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     );
   }
 
-  // Fix 6: redesigned as a prominent yellow warning card shown at the TOP
-  // of the screen so it is unmissable by both users and Play Store reviewers.
   Widget _disclaimer() => Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
@@ -687,7 +683,7 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'StoneGuard is a self-tracking tool only. This report does '
+                    'KidneyShield is a self-tracking tool only. This report does '
                     'not replace clinical evaluation, lab results, imaging, or '
                     'medical advice. Always review with your healthcare provider.',
                     style: TextStyle(

@@ -23,7 +23,7 @@ class AboutScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          'About StoneGuard',
+          'About KidneyShield',
           style: TextStyle(
             color: Color(0xFF1A2530),
             fontWeight: FontWeight.w700,
@@ -58,7 +58,7 @@ class AboutScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'StoneGuard',
+                            'KidneyShield',
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
@@ -94,7 +94,7 @@ class AboutScreen extends StatelessWidget {
               const SizedBox(height: 8),
               _card(
                 child: const Text(
-                  'StoneGuard helps calcium oxalate kidney stone formers '
+                  'KidneyShield helps calcium oxalate kidney stone formers '
                   'stay on top of their daily hydration and dietary oxalate '
                   'goals — the two most evidence-based lifestyle levers for '
                   'reducing recurrence risk.\n\n'
@@ -148,7 +148,7 @@ class AboutScreen extends StatelessWidget {
               _linkTile(
                   Icons.privacy_tip_outlined,
                   'Privacy Policy',
-                  'https://sites.google.com/view/stoneguardprivacy/home',
+                  'https://sites.google.com/view/kidneyshieldprivacy/home',
                   context),
               const SizedBox(height: 32),
             ],
@@ -240,7 +240,7 @@ class AboutScreen extends StatelessWidget {
           SizedBox(width: 10),
           Expanded(
             child: Text(
-              'StoneGuard is a wellness tracking tool, not a medical device. '
+              'KidneyShield is a wellness tracking tool, not a medical device. '
               'It does not diagnose, treat, or prevent any condition. Always '
               'follow your doctor\'s advice regarding kidney stone management.',
               style:
