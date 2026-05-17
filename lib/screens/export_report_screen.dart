@@ -40,7 +40,6 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
 
   final List<int> _dayOptions = [7, 30, 90, 365, 730];
 
-  // HistoryStorage has no .instance — instantiate normally.
   final _storage = HistoryStorage();
 
   @override
@@ -109,9 +108,6 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
     }
   }
 
-  // ── PDF colours ─────────────────────────────────────────────────────────────
-  // PdfColor is from package:pdf/pdf.dart — NO pw. prefix.
-  // PdfColor(r, g, b) takes 0.0–1.0 doubles.
   static PdfColor _pc(int r, int g, int b) =>
       PdfColor(r / 255, g / 255, b / 255);
 
@@ -163,7 +159,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('StoneGuard Health Report',
+                pw.Text('KidneyShield Health Report',
                     style: pw.TextStyle(
                         fontSize: 20,
                         fontWeight: pw.FontWeight.bold,
@@ -256,13 +252,12 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
             ),
           pw.SizedBox(height: 24),
           pw.Text(
-            'Goals: Oxalate \u2264 ${_oxalateGoal.toInt()} mg/day \u00b7'
-            ' Water \u2265 ${_waterGoal.toInt()} oz/day',
+            'Goals: Oxalate ≤ ${_oxalateGoal.toInt()} mg/day · Water ≥ ${_waterGoal.toInt()} oz/day',
             style: pw.TextStyle(fontSize: 9, color: _pdfMuted),
           ),
           pw.SizedBox(height: 4),
           pw.Text(
-            'StoneGuard is a self-tracking tool, not a medical device. '
+            'KidneyShield is a self-tracking tool, not a medical device. '
             'Always consult your healthcare provider for clinical guidance.',
             style: pw.TextStyle(
                 fontSize: 8,
@@ -346,13 +341,13 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
       final bytes = await _buildPdf();
       if (!mounted) return;
       final now   = DateTime.now();
-      final fname = 'stoneguard_report_'
+      final fname = 'kidneyshield_report_'
           '${now.year}${now.month.toString().padLeft(2, '0')}'
           '${now.day.toString().padLeft(2, '0')}.pdf';
       await ExportGuard.saveShareAndClear(
         bytes: bytes,
         filename: fname,
-        shareText: 'My StoneGuard health report.',
+        shareText: 'My KidneyShield health report.',
       );
     } catch (e) {
       if (!mounted) return;
@@ -368,13 +363,13 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
 
   Future<void> _sharePdfBytes(Uint8List bytes) async {
     final now   = DateTime.now();
-    final fname = 'stoneguard_report_'
+    final fname = 'kidneyshield_report_'
         '${now.year}${now.month.toString().padLeft(2, '0')}'
         '${now.day.toString().padLeft(2, '0')}.pdf';
     await ExportGuard.saveShareAndClear(
       bytes: bytes,
       filename: fname,
-      shareText: 'My StoneGuard health report.',
+      shareText: 'My KidneyShield health report.',
     );
   }
 
@@ -560,7 +555,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                                     strokeWidth: 2, color: Colors.white))
                             : const Icon(Icons.preview_outlined),
                         label: Text(_isGenerating
-                            ? 'Generating\u2026'
+                            ? 'Generating…'
                             : 'Preview Report'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: accentTeal,
@@ -604,7 +599,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'This report is a self-tracking summary only \u2014 '
+                              'This report is a self-tracking summary only — '
                               'not a clinical document. Share with your '
                               'doctor as a conversation aid.',
                               style: TextStyle(

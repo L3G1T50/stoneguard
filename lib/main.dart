@@ -49,10 +49,10 @@ Future<void> main() async {
   // Key-loss integrity check
   final integrityOk = await SecurePrefs.instance.checkIntegrity();
 
-  // ── RevenueCat ─────────────────────────────────────────────────────
+  // ── RevenueCat ──────────────────────────────────────────────────────────────
   await RevenueCatService().initialise();
   unawaited(subscriptionNotifier.init());
-  // ─────────────────────────────────────────────────────────────────────────
+  // ────────────────────────────────────────────────────────────────────────────
 
   runApp(MyApp(integrityOk: integrityOk));
 }
@@ -106,7 +106,7 @@ class _MyAppState extends State<MyApp> {
     return SubscriptionProvider(
       notifier: subscriptionNotifier,
       child: MaterialApp(
-        title: 'StoneGuard',
+        title: 'KidneyShield',
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
@@ -126,24 +126,22 @@ class _MyAppState extends State<MyApp> {
           '/progress':   (_) => const ProgressScreen(),
           '/history':    (_) => const HistoryScreen(),
 
-          // ── PREMIUM-GATED ROUTES ───────────────────────────────────────
-          // Doctor Report: high-value clinical feature — Plus only
+          // ── PREMIUM-GATED ROUTES ─────────────────────────────────────────────
           '/doctor': (_) => const PremiumGate(
             featureName: 'Doctor Report',
             lockedSubtitle:
                 'Generate a full clinical PDF report for your urologist.\n'
-                'Upgrade to StoneGuard Plus to unlock it.',
+                'Upgrade to KidneyShield Plus to unlock it.',
             child: DoctorViewScreen(),
           ),
-          // Export Report: PDF download — Plus only
           '/export': (_) => const PremiumGate(
             featureName: 'Export Report',
             lockedSubtitle:
                 'Export and share your health data as a PDF.\n'
-                'Upgrade to StoneGuard Plus to unlock it.',
+                'Upgrade to KidneyShield Plus to unlock it.',
             child: ExportReportScreen(),
           ),
-          // ─────────────────────────────────────────────────────────────────
+          // ────────────────────────────────────────────────────────────────────
 
           '/settings':   (_) => const SettingsScreen(),
           '/about':      (_) => const AboutScreen(),

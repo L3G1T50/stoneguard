@@ -1,15 +1,6 @@
 // lib/screens/paywall_screen.dart
 //
 // KidneyShieldPaywall — conversion-optimised paywall with full error handling.
-//
-// Stage 4 additions over Stage 3:
-//   • All billing try-catch blocks route through BillingErrorHandler
-//   • Network-drop snackbar with Retry action
-//   • Payment-pending informational snackbar
-//   • Product-already-purchased dialog prompting restore
-//   • Store-problem dialog
-//   • Cancellations are silently swallowed (no UI noise)
-//   • mounted guards before every setState / Navigator call
 
 import 'package:flutter/material.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
@@ -47,10 +38,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
     _loadOfferings();
   }
 
-  // ---------------------------------------------------------------------------
-  // Offerings fetch — with error boundary
-  // ---------------------------------------------------------------------------
-
   Future<void> _loadOfferings() async {
     if (!mounted) return;
     setState(() { _isLoading = true; _fetchError = null; });
@@ -75,10 +62,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Purchase — full error boundary
-  // ---------------------------------------------------------------------------
-
   Future<void> _purchaseSelected() async {
     if (_selectedPackage == null || !mounted) return;
     setState(() => _isPurchasing = true);
@@ -90,7 +73,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
       if (status.isSubscribed) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Welcome to StoneGuard Plus! 🎉'),
+            content: Text('Welcome to KidneyShield Plus! 🎉'),
             backgroundColor: Color(0xFF0D6B78),
             behavior: SnackBarBehavior.floating,
           ),
@@ -99,12 +82,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
       }
     } on RevenueCatServiceException catch (e) {
       if (!mounted) return;
-      // Route every billing exception through the centralised handler.
-      BillingErrorHandler.handle(
-        context,
-        e,
-        onRetry: _purchaseSelected, // network errors get a Retry button
-      );
+      BillingErrorHandler.handle(context, e, onRetry: _purchaseSelected);
     } catch (e) {
       if (!mounted) return;
       BillingErrorHandler.handleGeneric(context, e);
@@ -112,10 +90,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
       if (mounted) setState(() => _isPurchasing = false);
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // Restore — full error boundary
-  // ---------------------------------------------------------------------------
 
   Future<void> _restorePurchases() async {
     if (!mounted) return;
@@ -156,10 +130,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
-
   String _priceLabel(Package package) {
     final price = package.storeProduct.priceString;
     switch (package.packageType) {
@@ -179,10 +149,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Build
-  // ---------------------------------------------------------------------------
-
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -199,7 +165,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   _isPurchasing ? null : () => Navigator.pop(context, false),
             ),
             title: const Text(
-              'StoneGuard Plus',
+              'KidneyShield Plus',
               style: TextStyle(
                 color: _textPri,
                 fontWeight: FontWeight.bold,
@@ -248,7 +214,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
         children: [
           _buildHeroBadge(),
           const SizedBox(height: 20),
-          const Text('Unlock StoneGuard Plus',
+          const Text('Unlock KidneyShield Plus',
               style: TextStyle(
                   fontSize: 24, fontWeight: FontWeight.bold, color: _textPri),
               textAlign: TextAlign.center),
@@ -435,7 +401,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
       ),
       child: const Column(
         children: [
-          Text('StoneGuard Plus',
+          Text('KidneyShield Plus',
               style: TextStyle(
                   fontSize: 16, fontWeight: FontWeight.bold, color: _tealDark)),
           SizedBox(height: 4),
