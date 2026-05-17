@@ -1,14 +1,11 @@
-// export_report_screen.dart  (Fix 7 — Export path hardening)
+// export_report_screen.dart
 //
-// Changes from previous version:
-//   - dart:typed_data import added (Uint8List)
-//   - HistoryStorage has no .instance — use HistoryStorage() constructor
-//   - PdfColor: use PdfColor.fromHex() or PdfColor(r,g,b) — no fromInt()
-//   - Removed unused static fields (cardColor, successGreen, dangerRed)
-//   - _sharePdfBytes routed through ExportGuard
+// PdfColor is exported from package:pdf/pdf.dart — it is NOT under
+// the 'pw' alias (package:pdf/widgets.dart). All PdfColor references
+// must be unqualified (PdfColor, not pw.PdfColor).
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:pdf/pdf.dart';
+import 'package:pdf/pdf.dart';         // PdfColor, PdfPageFormat
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
@@ -56,16 +53,14 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
     setState(() => _isLoading = true);
     try {
       final sp = SecurePrefs.instance;
-      // getBool does not exist — bools stored as 'true'/'false' strings.
-      final nameRaw    = await sp.getString('user_name',    defaultValue: '');
-      final oxRaw      = await sp.getDouble('goal_oxalate', defaultValue: 200.0);
-      final watRaw     = await sp.getDouble('goal_water',   defaultValue: 80.0);
+      final nameRaw = await sp.getString('user_name',    defaultValue: '');
+      final oxRaw   = await sp.getDouble('goal_oxalate', defaultValue: 200.0);
+      final watRaw  = await sp.getDouble('goal_water',   defaultValue: 80.0);
 
       _userName    = nameRaw;
       _oxalateGoal = oxRaw;
       _waterGoal   = watRaw;
 
-      // Load history once and build daily maps from it.
       final history = await _storage.loadHistory();
       final now     = DateTime.now();
       final oxMap   = <String, double>{};
@@ -78,7 +73,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
         if (entryDate == null) continue;
         final diff = now.difference(entryDate).inDays;
         if (diff < 0 || diff >= _selectedDays) continue;
-        final k   = date.substring(0, 10); // yyyy-MM-dd
+        final k   = date.substring(0, 10);
         final ox  = (entry['oxalate']  as num?)?.toDouble() ?? 0.0;
         final wat = (entry['water']    as num?)?.toDouble() ?? 0.0;
         oxMap[k]  = (oxMap[k]  ?? 0) + ox;
@@ -114,19 +109,20 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
     }
   }
 
-  // ── PDF colours (pdf package uses PdfColor, not Flutter Color)
+  // ── PDF colours ─────────────────────────────────────────────────────────────
+  // PdfColor is from package:pdf/pdf.dart — NO pw. prefix.
   // PdfColor(r, g, b) takes 0.0–1.0 doubles.
-  static pw.PdfColor _pc(int r, int g, int b) =>
+  static PdfColor _pc(int r, int g, int b) =>
       PdfColor(r / 255, g / 255, b / 255);
 
-  static final _pdfTeal    = _pc(0x1A, 0x8A, 0x9A);
-  static final _pdfDark    = _pc(0x1A, 0x25, 0x30);
-  static final _pdfMuted   = _pc(0x60, 0x7D, 0x8B);
-  static final _pdfSuccess = _pc(0x2E, 0x7D, 0x32);
-  static final _pdfWarning = _pc(0xF5, 0x7C, 0x00);
-  static final _pdfDanger  = _pc(0xD3, 0x2F, 0x2F);
-  static final _pdfWhite   = _pc(0xFF, 0xFF, 0xFF);
-  static final _pdfLightBg = _pc(0xF4, 0xF8, 0xFA);
+  static final PdfColor _pdfTeal    = _pc(0x1A, 0x8A, 0x9A);
+  static final PdfColor _pdfDark    = _pc(0x1A, 0x25, 0x30);
+  static final PdfColor _pdfMuted   = _pc(0x60, 0x7D, 0x8B);
+  static final PdfColor _pdfSuccess = _pc(0x2E, 0x7D, 0x32);
+  static final PdfColor _pdfWarning = _pc(0xF5, 0x7C, 0x00);
+  static final PdfColor _pdfDanger  = _pc(0xD3, 0x2F, 0x2F);
+  static final PdfColor _pdfWhite   = _pc(0xFF, 0xFF, 0xFF);
+  static final PdfColor _pdfLightBg = _pc(0xF4, 0xF8, 0xFA);
 
   Future<Uint8List> _buildPdf() async {
     final pdf = pw.Document();
@@ -143,7 +139,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
         'date':  '${day.month}/${day.day}/${day.year}',
         'ox':    ox,
         'wat':   wat,
-        'oxOk':  ox == 0 ? null : ox  <= _oxalateGoal,
+        'oxOk':  ox == 0  ? null : ox  <= _oxalateGoal,
         'watOk': wat == 0 ? null : wat >= _waterGoal,
       });
     }
@@ -260,8 +256,8 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
             ),
           pw.SizedBox(height: 24),
           pw.Text(
-            'Goals: Oxalate ≤ ${_oxalateGoal.toInt()} mg/day ·'
-            ' Water ≥ ${_waterGoal.toInt()} oz/day',
+            'Goals: Oxalate \u2264 ${_oxalateGoal.toInt()} mg/day \u00b7'
+            ' Water \u2265 ${_waterGoal.toInt()} oz/day',
             style: pw.TextStyle(fontSize: 9, color: _pdfMuted),
           ),
           pw.SizedBox(height: 4),
@@ -280,14 +276,14 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
   }
 
   pw.Widget _pdfSummaryCard(
-      String label, String value, pw.PdfColor valueColor) {
+      String label, String value, PdfColor valueColor) {
     return pw.Expanded(
       child: pw.Container(
         padding: const pw.EdgeInsets.all(8),
-        decoration:
-            pw.BoxDecoration(color: _pdfLightBg,
-                borderRadius:
-                    const pw.BorderRadius.all(pw.Radius.circular(6))),
+        decoration: pw.BoxDecoration(
+            color: _pdfLightBg,
+            borderRadius:
+                const pw.BorderRadius.all(pw.Radius.circular(6))),
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
@@ -305,7 +301,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
     );
   }
 
-  pw.Widget _pdfHeaderCell(String text, pw.PdfColor color) =>
+  pw.Widget _pdfHeaderCell(String text, PdfColor color) =>
       pw.Padding(
         padding:
             const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
@@ -316,7 +312,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                 color: color)),
       );
 
-  pw.Widget _pdfCell(String text, pw.PdfColor color) =>
+  pw.Widget _pdfCell(String text, PdfColor color) =>
       pw.Padding(
         padding:
             const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -328,8 +324,8 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
       bool? ok,
       String goodLabel,
       String badLabel,
-      pw.PdfColor goodColor,
-      pw.PdfColor badColor) {
+      PdfColor goodColor,
+      PdfColor badColor) {
     if (ok == null) return pw.SizedBox();
     return pw.Padding(
       padding:
@@ -430,8 +426,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon:
-              const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           color: textDark,
           onPressed: () => Navigator.pop(context),
         ),
@@ -459,8 +454,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                              color: Colors.black
-                                  .withValues(alpha: 0.04),
+                              color: Colors.black.withValues(alpha: 0.04),
                               blurRadius: 8,
                               offset: const Offset(0, 2))
                         ],
@@ -471,10 +465,8 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: accentTeal
-                                  .withValues(alpha: 0.10),
-                              borderRadius:
-                                  BorderRadius.circular(12),
+                              color: accentTeal.withValues(alpha: 0.10),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Icon(
                                 Icons.description_outlined,
@@ -484,8 +476,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                           const SizedBox(width: 14),
                           Expanded(
                             child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text('Doctor Report',
                                     style: TextStyle(
@@ -498,8 +489,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                                       ? 'Prepared for $_userName'
                                       : 'Your hydration & oxalate summary',
                                   style: const TextStyle(
-                                      fontSize: 12,
-                                      color: textMuted),
+                                      fontSize: 12, color: textMuted),
                                 ),
                               ],
                             ),
@@ -525,16 +515,12 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                             await _loadData();
                           },
                           child: AnimatedContainer(
-                            duration:
-                                const Duration(milliseconds: 200),
+                            duration: const Duration(milliseconds: 200),
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
-                              color: selected
-                                  ? accentTeal
-                                  : Colors.white,
-                              borderRadius:
-                                  BorderRadius.circular(999),
+                              color: selected ? accentTeal : Colors.white,
+                              borderRadius: BorderRadius.circular(999),
                               border: Border.all(
                                   color: selected
                                       ? accentTeal
@@ -554,9 +540,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                               style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: selected
-                                      ? Colors.white
-                                      : textMuted),
+                                  color: selected ? Colors.white : textMuted),
                             ),
                           ),
                         );
@@ -567,18 +551,16 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                       width: double.infinity,
                       height: 52,
                       child: ElevatedButton.icon(
-                        onPressed:
-                            _isGenerating ? null : _previewPdf,
+                        onPressed: _isGenerating ? null : _previewPdf,
                         icon: _isGenerating
                             ? const SizedBox(
                                 width: 18,
                                 height: 18,
                                 child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white))
+                                    strokeWidth: 2, color: Colors.white))
                             : const Icon(Icons.preview_outlined),
                         label: Text(_isGenerating
-                            ? 'Generating…'
+                            ? 'Generating\u2026'
                             : 'Preview Report'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: accentTeal,
@@ -612,8 +594,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                         color: const Color(0xFFFFF8E1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: warningOrange
-                                .withValues(alpha: 0.30)),
+                            color: warningOrange.withValues(alpha: 0.30)),
                       ),
                       child: const Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -623,7 +604,7 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'This report is a self-tracking summary only — '
+                              'This report is a self-tracking summary only \u2014 '
                               'not a clinical document. Share with your '
                               'doctor as a conversation aid.',
                               style: TextStyle(

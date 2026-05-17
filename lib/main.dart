@@ -1,5 +1,6 @@
 // main.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'app_logger.dart';
 import 'secure_prefs.dart';
 import 'screens/splash_screen.dart';
@@ -14,12 +15,18 @@ import 'screens/export_report_screen.dart';
 import 'screens/privacy_policy_screen.dart';
 import 'screens/setup_screen.dart';
 
+/// Global notifications plugin instance.
+/// Declared here so home_shield_screen.dart (and any other screen)
+/// can import it from main.dart without creating duplicate instances.
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Fix 12 — Global Flutter error handler (uses flutterError, not fatal)
+  // Fix 12 — Global Flutter error handler
   FlutterError.onError = AppLogger.flutterError;
 
   // Fix 12 — Catch async errors outside the widget tree
@@ -27,6 +34,12 @@ Future<void> main() async {
     AppLogger.error('PlatformDispatcher', error.toString(), error, stack);
     return true;
   };
+
+  // Initialise local notifications (Android settings; iOS handled by plugin)
+  const androidSettings =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+  const initSettings = InitializationSettings(android: androidSettings);
+  await flutterLocalNotificationsPlugin.initialize(initSettings);
 
   // Fix 4 — Key-loss integrity check
   final integrityOk = await SecurePrefs.instance.checkIntegrity();
