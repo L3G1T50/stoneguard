@@ -20,8 +20,8 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 // ---------------------------------------------------------------------------
 // API key placeholders – replace before first build
 // ---------------------------------------------------------------------------
-const String _kAndroidApiKey = 'YOUR_REVENUECAT_ANDROID_API_KEY';
-const String _kIosApiKey     = 'YOUR_REVENUECAT_IOS_API_KEY';
+const String _kAndroidApiKey = 'test_YJBIHcHfyxKzrLgBVUeBWHvKKfg';
+const String _kIosApiKey     = 'test_YJBIHcHfyxKzrLgBVUeBWHvKKfg';
 
 // The entitlement identifier configured in the RevenueCat dashboard.
 const String kPremiumEntitlement = 'premium';
