@@ -1,7 +1,7 @@
 // consent_manager.dart  (Fix 8 — GDPR Ad Consent Wiring)
 //
 // google_mobile_ads ^5.x: ConsentInformation.instance.consentStatus
-// returns a Future<ConsentStatus>, NOT a synchronous getter.
+// returns a `Future<ConsentStatus>`, NOT a synchronous getter.
 // All status reads are now awaited via _getConsentStatus().
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -85,7 +85,7 @@ class ConsentManager {
     AppLogger.debug('ConsentManager', 'AdMob initialised.');
   }
 
-  /// In google_mobile_ads ^5.x consentStatus is a Future<ConsentStatus>.
+  /// In google_mobile_ads ^5.x `consentStatus` is a `Future<ConsentStatus>`.
   Future<ConsentStatus> _getConsentStatus() async {
     try {
       // The property is async in v5 — await it.

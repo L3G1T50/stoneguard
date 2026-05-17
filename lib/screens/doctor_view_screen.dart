@@ -180,8 +180,8 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
       final w = e['water_oz']   as double;
       final o = e['oxalate_mg'] as double;
       tw += w; to += o;
-      if (w >= _waterGoal) wg++;
-      if (o <= _oxGoal)    og++;
+      if (w >= _waterGoal) { wg++; }
+      if (o <= _oxGoal)    { og++; }
       if (w > bestWater) { bestWater = w; bestWaterDay = _fmt(e['date'] as DateTime); }
       if (o > worstOx)   { worstOx  = o; worstOxDay  = _fmt(e['date'] as DateTime); }
     }
@@ -194,16 +194,16 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
       final prior  = _entries.sublist(n - 14, n - 7);
       final rAvg = recent.fold(0.0, (s, e) => s + (e['water_oz'] as double)) / 7;
       final pAvg = prior.fold(0.0,  (s, e) => s + (e['water_oz'] as double)) / 7;
-      if      (rAvg > pAvg + 5) trend = '📈 Improving (water intake up)';
-      else if (rAvg < pAvg - 5) trend = '📉 Declining (water intake down)';
-      else                      trend = '➡️ Stable';
+      if      (rAvg > pAvg + 5) { trend = '📈 Improving (water intake up)'; }
+      else if (rAvg < pAvg - 5) { trend = '📉 Declining (water intake down)'; }
+      else                      { trend = '➡️ Stable'; }
     }
 
     int streak = 0;
     for (int i = _entries.length - 1; i >= 0; i--) {
       final w = _entries[i]['water_oz']   as double;
       final o = _entries[i]['oxalate_mg'] as double;
-      if (w >= _waterGoal && o <= _oxGoal) streak++; else break;
+      if (w >= _waterGoal && o <= _oxGoal) { streak++; } else { break; }
     }
 
     return {
@@ -282,22 +282,6 @@ class _DoctorViewScreenState extends State<DoctorViewScreen> {
     buf.writeln();
     buf.writeln('Privacy Policy: https://www.freeprivacypolicy.com/live/c256b9ff-8fd7-4252-ac3b-2cc80b29633f');
     return buf.toString();
-  }
-
-  // ── pw helper (PDF table cells) ─────────────────────────────────
-  static pw.Widget _cell(String text,
-      {bool bold = false, PdfColor? color, int colspan = 1}) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      child: pw.Text(
-        text,
-        style: pw.TextStyle(
-          fontSize: 9,
-          fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
-          color: color ?? const PdfColor.fromInt(0xFF2C2C2C),
-        ),
-      ),
-    );
   }
 
   // ── build ──────────────────────────────────────────────────────────

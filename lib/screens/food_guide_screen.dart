@@ -22,7 +22,9 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
   OxalateLevel? _filterLevel;
   bool          _showFavoritesOnly = false;
   Set<String>   _favorites         = {};
-  Set<String>   _expandedTips      = {};
+  // lint: prefer_final_fields — _expandedTips is mutated via setState so it
+  // cannot be final (the Set contents change), but the field itself can be.
+  final Set<String> _expandedTips  = {};
   late TabController _tabController;
 
   static const String _favKey = 'food_favorites';
@@ -429,7 +431,7 @@ class _FoodGuideScreenState extends State<FoodGuideScreen>
                       child: const Icon(
                         Icons.add_circle_outline,
                         color: Color(0xFF01696F),
-                        size: 28,   // ← increased from 22
+                        size: 28,
                       ),
                     ),
                   ],

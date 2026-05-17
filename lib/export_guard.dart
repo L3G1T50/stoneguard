@@ -27,7 +27,7 @@
 //
 //   // 3. Share via OS sheet (user picks destination)
 //   await ExportGuard.shareFile(
-//       filePath: (result as SaveSuccess<String>).value,
+//       filePath: (result as SaveSuccess).value,
 //       shareText: 'My StoneGuard health report');
 //
 //   // 4. Clean up after share
@@ -47,8 +47,8 @@ abstract final class ExportGuard {
 
   // ── Save to private dir ────────────────────────────────────────────────
   /// Writes [bytes] to app-private Documents storage.
-  /// Returns SaveSuccess<String>(absolutePath) on success.
-  /// Returns SaveFailure<String>(reason) on any error.
+  /// Returns `SaveSuccess<String>(absolutePath)` on success.
+  /// Returns `SaveFailure<String>(reason)` on any error.
   ///
   /// Security: getApplicationDocumentsDirectory() is:
   ///   • Android: internal app storage, not accessible to other apps.
@@ -125,7 +125,7 @@ abstract final class ExportGuard {
 
   // ── Convenience: save + share + clear in one call ─────────────────────
   /// Full flow: write bytes to private dir → open share sheet → wipe file.
-  /// Returns SaveFailure if the write step fails (share sheet is not opened).
+  /// Returns `SaveFailure` if the write step fails (share sheet is not opened).
   static Future<SaveResult<void>> saveShareAndClear({
     required Uint8List bytes,
     required String filename,
